@@ -79,13 +79,19 @@ def lambda_handler(event, context):
     policy_path = '/tmp/policy.rego'
     
     policies_key = event['Policies']['Key']
+    print(f'policies_key:')
     print(policies_key)
     
+    # service = policies_key.split('::')[1]
     service = re_search('(.*)/.*\.rego',policies_key)
     print(f'service:\n{service}')
     
+    # package_suffix = re_search(f'{service.lower()}/(.*)',policies_key)
+    # package_suffix = package_suffix.replace('::','')
     package_suffix = re_search(f'{service}/(.*)\.rego',policies_key)
     print(f'package_suffix:\n{package_suffix}')
+    
+    # todo liase with cfn-rego-pair package naming strategy
     
     s3_download(
         Bucket = event['Policies']['Bucket'],
@@ -115,9 +121,8 @@ def lambda_handler(event, context):
     
     opa_eval_result = run_bash(BashPath='/tmp/opa-eval.sh')
     
-    print(f'opa_eval_result:\n{opa_eval_result}')
-    print(type(opa_eval_result))
-    
+    print(f'eval_result:\n{opa_eval_result}\n{type(opa_eval_result)}')
+
     stdout_ = json.loads(opa_eval_result.get('stdout'))
     print(f'stdout_:\n{stdout_}\n{type(stdout_)}')
     
