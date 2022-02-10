@@ -32,7 +32,6 @@ provider "aws" {
 locals {
   region          = "us-east-1"
   resource_prefix = "control-broker-eval-engine"
-  azs             = formatlist("${local.region}%s", ["a", "b", "c"])
 }
 
 data "aws_caller_identity" "i" {}
@@ -47,7 +46,7 @@ locals {
   repos = {
     policies = {
       name   = "opa-eval-serverless-opa-policies"
-      branch = "master"
+      branch = "fake-stack"
     }
     cdk = {
       name   = "opa-eval-serverless-cdk-source"
@@ -60,151 +59,19 @@ data "aws_codecommit_repository" "cdk" {
   repository_name = local.repos.cdk.name
 }
 
-data "aws_iam_policy_document" "eb_can_log" {
-  statement {
-    actions = [
-      "logs:CreateLogStream",
-      "logs:PutLogEvents",
-      "logs:PutLogEventsBatch",
-    ]
-
-    resources = ["arn:aws:logs:*"]
-
-    principals {
-      identifiers = ["events.amazonaws.com"]
-      type        = "Service"
-    }
-  }
-}
-
-resource "aws_cloudwatch_log_resource_policy" "eb_can_log" { # not attached to any resources
-  policy_document = data.aws_iam_policy_document.eb_can_log.json
-  policy_name     = "eb_can_log"
-}
 
 ##################################################################
-#                       repo-bucket-sync
+##################################################################
+#######                 root pipeline                       ######
+##################################################################
 ##################################################################
 
-# empty bucket
-
-data "aws_iam_policy_document" "lambda_empty_bucket" {
-  statement {
-    actions = [
-      "s3:ListBucket",
-    ]
-    resources = [
-      module.bucket_opa_policies.s3_bucket_arn,
-    ]
-  }
-  statement {
-    actions = [
-      "s3:ListObjectsV2",
-      "s3:DeleteObject",
-    ]
-    resources = [
-      "${module.bucket_opa_policies.s3_bucket_arn}/*",
-    ]
-  }
-  statement {
-    actions = [
-      "codepipeline:PutJobFailureResult",
-      "codepipeline:PutJobSuccessResult",
-    ]
-    resources = [
-      "*", # Must be *
-    ]
-  }
-}
-
-module "lambda_empty_bucket" {
-  source = "terraform-aws-modules/lambda/aws"
-
-  function_name = "${local.resource_prefix}-empty-bucket"
-  handler       = "lambda_function.lambda_handler"
-  runtime       = "python3.9"
-  timeout       = 60
-  memory_size   = 512
-
-  source_path = "./lambda/functions/empty-bucket"
-
-  attach_policy_json = true
-  policy_json        = data.aws_iam_policy_document.lambda_empty_bucket.json
-}
-
-# opa policies
-
-module "bucket_opa_policies" {
-  source = "terraform-aws-modules/s3-bucket/aws"
-
-  bucket = "${local.resource_prefix}-opa-policies"
-
-  # Allow deletion of non-empty bucket
-  force_destroy = true
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-module "repo_bucket_sync_opa_policies" {
-  source = "./modules/repo-bucket-sync"
-
-  repo               = local.repos.policies
-  destination_bucket = module.bucket_opa_policies.s3_bucket_id
-
-  resource_prefix                   = local.resource_prefix
-  empty_bucket_lambda_function_name = module.lambda_empty_bucket.lambda_function_name
-}
 
 ##################################################################
-#                         ExampleCICDPipeline
+#                        codebuild
 ##################################################################
 
-# ssm
-locals {
-  ssm_parameter_name_for_cfn_template_name = "/${local.resource_prefix}/${local.repos.cdk.name}/CfnTemplateName"
-}
-
-# s3
-
-module "bucket_synthed_templates" {
-  source = "terraform-aws-modules/s3-bucket/aws"
-
-  bucket = "${local.resource_prefix}-synthed-templates"
-
-  # Allow deletion of non-empty bucket
-  force_destroy = true
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_notification" "eval" {
-  bucket      = module.bucket_synthed_templates.s3_bucket_id
-  eventbridge = true
-}
-
-module "bucket_pipeline_artifacts_eval" {
-  source = "terraform-aws-modules/s3-bucket/aws"
-
-  bucket = "${local.resource_prefix}-codepipeline-artifacts-eval"
-
-  # Allow deletion of non-empty bucket
-  force_destroy = true
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-# codebuild
-
-data "aws_iam_policy_document" "codebuild" {
+data "aws_iam_policy_document" "codebuild_external_buildspec" {
   statement {
     actions = [
       "logs:CreateLogGroup",
@@ -245,48 +112,29 @@ data "aws_iam_policy_document" "codebuild" {
       "s3:Put*",
     ]
     resources = [
-      module.bucket_pipeline_artifacts_eval.s3_bucket_arn,
-      "${module.bucket_pipeline_artifacts_eval.s3_bucket_arn}/*",
-    ]
-  }
-  statement {
-    actions = [
-      "s3:List*",
-      "s3:Head*",
-      "s3:PutObject",
-    ]
-    resources = [
-      module.bucket_synthed_templates.s3_bucket_arn,
-      "${module.bucket_synthed_templates.s3_bucket_arn}/*",
-    ]
-  }
-  statement {
-    actions = [
-      "ssm:PutParameter",
-    ]
-    resources = [
-      "arn:aws:ssm:${local.region}:${data.aws_caller_identity.i.id}:parameter${local.ssm_parameter_name_for_cfn_template_name}"
+      module.bucket_pipeline_artifacts_external_buildspec.s3_bucket_arn,
+      "${module.bucket_pipeline_artifacts_external_buildspec.s3_bucket_arn}/*",
     ]
   }
 }
 
-module "policy_codebuild" {
+module "policy_codebuild_external_buildspec" {
   source = "terraform-aws-modules/iam/aws//modules/iam-policy"
 
-  name = "${local.resource_prefix}-codebuild"
+  name = "${local.resource_prefix}-codebuild_external_buildspec"
   path = "/"
 
-  policy = data.aws_iam_policy_document.codebuild.json
+  policy = data.aws_iam_policy_document.codebuild_external_buildspec.json
 }
 
-module "role_codebuild" {
+module "role_codebuild_external_buildspec" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role"
   version = "4.7.0"
 
   create_role       = true
   role_requires_mfa = false
 
-  role_name = "${local.resource_prefix}-codebuild"
+  role_name = "${local.resource_prefix}-codebuild_external_buildspec"
 
   trusted_role_arns = [
     data.aws_caller_identity.i.arn
@@ -297,15 +145,15 @@ module "role_codebuild" {
   ]
 
   custom_role_policy_arns = [
-    module.policy_codebuild.arn,
+    module.policy_codebuild_external_buildspec.arn,
   ]
 
 }
 
-resource "aws_codebuild_project" "eval" {
-  name = "${local.resource_prefix}--eval"
+resource "aws_codebuild_project" "external_buildspec" {
+  name = "${local.resource_prefix}--codebuild_external_buildspec"
   #   build_timeout = "5"
-  service_role = module.role_codebuild.iam_role_arn
+  service_role = module.role_codebuild_external_buildspec.iam_role_arn
 
   artifacts {
     type = "CODEPIPELINE"
@@ -330,9 +178,11 @@ resource "aws_codebuild_project" "eval" {
   #   }
 }
 
-# codepipeline
+##################################################################
+#                        codepipeline
+##################################################################
 
-data "aws_iam_policy_document" "codepipeline_eval" {
+data "aws_iam_policy_document" "codepipeline_external_buildspec" {
   statement {
     actions = [
       "codecommit:CancelUploadArchive",
@@ -358,8 +208,8 @@ data "aws_iam_policy_document" "codepipeline_eval" {
       "s3:Put*",
     ]
     resources = [
-      module.bucket_pipeline_artifacts_eval.s3_bucket_arn,
-      "${module.bucket_pipeline_artifacts_eval.s3_bucket_arn}/*",
+      module.bucket_pipeline_artifacts_external_buildspec.s3_bucket_arn,
+      "${module.bucket_pipeline_artifacts_external_buildspec.s3_bucket_arn}/*",
     ]
   }
   statement {
@@ -368,6 +218,15 @@ data "aws_iam_policy_document" "codepipeline_eval" {
     ]
     resources = [
       "*", #FIXME
+    ]
+  }
+  statement {
+    actions = [
+      "lambda:InvokeFunction",
+    ]
+    resources = [
+      module.lambda_add_buildspec.lambda_function_arn,
+      module.lambda_eval_engine_wrapper.lambda_function_arn,
     ]
   }
   statement {
@@ -389,23 +248,23 @@ data "aws_iam_policy_document" "codepipeline_eval" {
   }
 }
 
-module "policy_codepipeline_eval" {
+module "policy_codepipeline_external_buildspec" {
   source = "terraform-aws-modules/iam/aws//modules/iam-policy"
 
-  name = "${local.resource_prefix}-codepipeline-eval"
+  name = "${local.resource_prefix}-codepipeline_external_buildspec"
   path = "/"
 
-  policy = data.aws_iam_policy_document.codepipeline_eval.json
+  policy = data.aws_iam_policy_document.codepipeline_external_buildspec.json
 }
 
-module "role_codepipeline_eval" {
+module "role_codepipeline_external_buildspec" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role"
   version = "4.7.0"
 
   create_role       = true
   role_requires_mfa = false
 
-  role_name = "${local.resource_prefix}-codepipeline_eval"
+  role_name = "${local.resource_prefix}-codepipeline_external_buildspec"
 
   trusted_role_arns = [
     data.aws_caller_identity.i.arn
@@ -416,20 +275,30 @@ module "role_codepipeline_eval" {
   ]
 
   custom_role_policy_arns = [
-    module.policy_codepipeline_eval.arn,
+    module.policy_codepipeline_external_buildspec.arn,
   ]
 
 }
 
-locals {
-  eval_pipeline_name = "${local.resource_prefix}--eval" # avoid cycle
+module "bucket_pipeline_artifacts_external_buildspec" {
+  source = "terraform-aws-modules/s3-bucket/aws"
+
+  bucket = "${local.resource_prefix}-codepipeline-external-buildspec"
+
+  # Allow deletion of non-empty bucket
+  force_destroy = true
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
-resource "aws_codepipeline" "eval" {
-  role_arn = module.role_codepipeline_eval.iam_role_arn
-  name     = local.eval_pipeline_name
+resource "aws_codepipeline" "external_buildspec" {
+  role_arn = module.role_codepipeline_external_buildspec.iam_role_arn
+  name     = "${local.resource_prefix}"
   artifact_store {
-    location = module.bucket_pipeline_artifacts_eval.s3_bucket_id
+    location = module.bucket_pipeline_artifacts_external_buildspec.s3_bucket_id
     type     = "S3"
   }
 
@@ -442,7 +311,7 @@ resource "aws_codepipeline" "eval" {
       owner            = "AWS"
       provider         = "CodeCommit"
       version          = "1"
-      output_artifacts = ["CDKSourceArtifact"]
+      output_artifacts = ["Repo"]
 
       configuration = {
         RepositoryName = local.repos.cdk.name
@@ -450,6 +319,31 @@ resource "aws_codepipeline" "eval" {
       }
     }
   }
+
+  stage {
+    name = "AddBuildspec"
+
+    action {
+      name     = "AddBuildspec"
+      category = "Invoke"
+      owner    = "AWS"
+      provider = "Lambda"
+      version  = "1"
+
+      input_artifacts  = ["Repo"]
+      output_artifacts = ["RepoAndBuildSpec"]
+      configuration = {
+        FunctionName = module.lambda_add_buildspec.lambda_function_name
+        UserParameters = jsonencode({
+          "Buildspec" : {
+            "Bucket" : aws_s3_bucket_object.buildspec.bucket,
+            "Key" : aws_s3_bucket_object.buildspec.key
+          }
+        })
+      }
+    }
+  }
+
   stage {
     name = "CDKSynth"
 
@@ -459,26 +353,15 @@ resource "aws_codepipeline" "eval" {
       owner            = "AWS"
       provider         = "CodeBuild"
       version          = "1"
-      input_artifacts  = ["CDKSourceArtifact"]
-      output_artifacts = ["CDKSynthArtifact"]
+      input_artifacts  = ["RepoAndBuildSpec"]
+      output_artifacts = ["Synthed"]
 
       configuration = {
-        ProjectName = aws_codebuild_project.eval.name
-        EnvironmentVariables = jsonencode([
-          {
-            name  = "SYNTHED_TEMPLATES_BUCKET"
-            value = module.bucket_synthed_templates.s3_bucket_id
-            type  = "PLAINTEXT"
-          },
-          {
-            name  = "SSM_PARAMETER_NAME_FOR_CFN_TEMPLATE_NAME"
-            value = local.ssm_parameter_name_for_cfn_template_name
-            type  = "PLAINTEXT"
-          }
-        ])
+        ProjectName = aws_codebuild_project.external_buildspec.name
       }
     }
   }
+
   stage {
     name = "EvalEngine"
 
@@ -486,13 +369,15 @@ resource "aws_codepipeline" "eval" {
       name     = "EvalEngine"
       category = "Invoke"
       owner    = "AWS"
-      provider = "StepFunctions"
+      provider = "Lambda"
       version  = "1"
 
+      input_artifacts = ["Synthed"]
       configuration = {
-        StateMachineArn = aws_sfn_state_machine.eval_engine.arn
-        Input = jsonencode({
-          "SYNTHED_TEMPLATES_BUCKET" : module.bucket_synthed_templates.s3_bucket_id
+        FunctionName = module.lambda_eval_engine_wrapper.lambda_function_name
+        UserParameters = jsonencode({
+          SynthedTemplatesBucket = module.bucket_synthed_templates.s3_bucket_id
+          EvalEngineSfnArn       = aws_sfn_state_machine.eval_engine.arn
         })
       }
     }
@@ -500,7 +385,7 @@ resource "aws_codepipeline" "eval" {
 }
 
 ##################################################################
-#                      eval results
+#                        misc
 ##################################################################
 
 resource "aws_dynamodb_table" "eval_results" {
@@ -520,6 +405,48 @@ resource "aws_dynamodb_table" "eval_results" {
   }
 
 }
+
+module "bucket_synthed_templates" {
+  source = "terraform-aws-modules/s3-bucket/aws"
+
+  bucket = "${local.resource_prefix}-synthed-templates"
+
+  # Allow deletion of non-empty bucket
+  force_destroy = true
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+module "bucket_utils" {
+  source = "terraform-aws-modules/s3-bucket/aws"
+
+  bucket = "${local.resource_prefix}-utils"
+
+  # Allow deletion of non-empty bucket
+  force_destroy = true
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_object" "buildspec" {
+  bucket = module.bucket_utils.s3_bucket_id
+  key    = "buildspec.yaml"
+  source = "./resources/buildspec/buildspec.yaml"
+}
+
+
+##################################################################
+##################################################################
+#######                     lambdas                         ######
+##################################################################
+##################################################################
+
 
 ##################################################################
 #                      parse active services
@@ -581,7 +508,8 @@ module "lambda_opa_eval_python_subprocess" {
   handler       = "lambda_function.lambda_handler"
   runtime       = "python3.9"
   timeout       = 60
-  memory_size   = 1024 # TODO: power-tune
+  # memory_size   = 1024 # TODO: power-tune
+  memory_size = 10240 # TODO: power-tune
 
   source_path = "./lambda/functions/opa-eval/python-subprocess"
 
@@ -658,6 +586,141 @@ module "lambda_infractions_feedback_git_codecommit" {
 }
 
 ##################################################################
+#                        add buildspec
+##################################################################
+
+data "aws_iam_policy_document" "lambda_add_buildspec" {
+  statement {
+    actions = [
+      "s3:ListBucket",
+    ]
+    resources = [
+      module.bucket_utils.s3_bucket_arn,
+      module.bucket_pipeline_artifacts_external_buildspec.s3_bucket_arn,
+    ]
+  }
+  statement {
+    actions = [
+      "s3:GetObject",
+      "s3:HeadObject",
+    ]
+    resources = [
+      "${module.bucket_utils.s3_bucket_arn}/*",
+      "${module.bucket_pipeline_artifacts_external_buildspec.s3_bucket_arn}/*",
+    ]
+  }
+  statement {
+    actions = [
+      "s3:PutObject",
+    ]
+    resources = [
+      "${module.bucket_pipeline_artifacts_external_buildspec.s3_bucket_arn}/*",
+    ]
+  }
+  statement {
+    actions = [
+      "codepipeline:PutJobSuccessResult",
+      "codepipeline:PutJobFailureResult",
+    ]
+    resources = [
+      "*"
+    ]
+  }
+}
+
+module "lambda_add_buildspec" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name = "${local.resource_prefix}-add-buildspec"
+  handler       = "lambda_function.lambda_handler"
+  runtime       = "python3.9"
+  timeout       = 60
+  memory_size   = 512
+
+  source_path = "./lambda/functions/add-buildspec"
+
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_add_buildspec.json
+
+}
+
+##################################################################
+#                      eval-engine-wrapper
+##################################################################
+
+data "aws_iam_policy_document" "lambda_eval_engine_wrapper" {
+  statement {
+    actions = [
+      "s3:ListBucket",
+    ]
+    resources = [
+      module.bucket_pipeline_artifacts_external_buildspec.s3_bucket_arn,
+      module.bucket_synthed_templates.s3_bucket_arn,
+    ]
+  }
+  statement {
+    actions = [
+      "s3:GetObject",
+      "s3:HeadObject",
+    ]
+    resources = [
+      "${module.bucket_pipeline_artifacts_external_buildspec.s3_bucket_arn}/*",
+    ]
+  }
+  statement {
+    actions = [
+      "s3:PutObject",
+    ]
+    resources = [
+      "${module.bucket_synthed_templates.s3_bucket_arn}/*",
+    ]
+  }
+  statement {
+    actions = [
+      "states:StartExecution",
+      "states:StartSyncExecution",
+    ]
+    resources = [
+      aws_sfn_state_machine.eval_engine.arn,
+      "${aws_sfn_state_machine.eval_engine.arn}/*",
+    ]
+  }
+  statement {
+    actions = [
+      "codepipeline:PutJobSuccessResult",
+      "codepipeline:PutJobFailureResult",
+    ]
+    resources = [
+      "*"
+    ]
+  }
+}
+
+module "lambda_eval_engine_wrapper" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name = "${local.resource_prefix}-eval-engine-wrapper"
+  handler       = "lambda_function.lambda_handler"
+  runtime       = "python3.9"
+  timeout       = 60
+  memory_size   = 512
+
+  source_path = "./lambda/functions/eval-engine-wrapper"
+
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_eval_engine_wrapper.json
+
+}
+
+
+##################################################################
+##################################################################
+#######                       sfn                           ######
+##################################################################
+##################################################################
+
+
+##################################################################
 #                      eval engine
 ##################################################################
 
@@ -668,6 +731,143 @@ data "aws_iam_policy_document" "sfn_eval_engine" {
     ]
     resources = [
       "*", #FIXME
+      aws_cloudwatch_log_group.sfn_eval_engine.arn,
+      "${aws_cloudwatch_log_group.sfn_eval_engine.arn}:"
+    ]
+  }
+  statement {
+    actions = [
+      "states:StartExecution",
+      "states:StartSyncExecution",
+    ]
+    resources = [
+      aws_sfn_state_machine.for_each_template.arn,
+    ]
+  }
+  statement {
+    actions = [
+      "states:DescribeExecution",
+      "states:StopExecution"
+    ]
+    resources = [
+      "*"
+    ]
+  }
+  statement {
+    actions = [
+      "events:PutTargets",
+      "events:PutRule",
+      "events:DescribeRule"
+    ]
+    resources = [
+      "arn:aws:events:${local.region}:${data.aws_caller_identity.i.id}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule",
+      "*"
+    ]
+  }
+}
+
+module "policy_sfn_eval_engine" {
+  source = "terraform-aws-modules/iam/aws//modules/iam-policy"
+
+  name = "${local.resource_prefix}-sfn_eval_engine"
+  path = "/"
+
+  policy = data.aws_iam_policy_document.sfn_eval_engine.json
+}
+
+module "role_sfn_eval_engine" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role"
+  version = "4.7.0"
+
+  create_role       = true
+  role_requires_mfa = false
+
+  role_name = "${local.resource_prefix}-sfn_eval_engine"
+
+  trusted_role_arns = [
+    data.aws_caller_identity.i.arn
+  ]
+
+  trusted_role_services = [
+    "states.amazonaws.com"
+  ]
+
+  custom_role_policy_arns = [
+    module.policy_sfn_eval_engine.arn,
+  ]
+
+}
+
+resource "aws_cloudwatch_log_group" "sfn_eval_engine" {
+  name = "${local.resource_prefix}-sfn_eval_engine"
+}
+
+resource "aws_sfn_state_machine" "eval_engine" {
+  name     = "${local.resource_prefix}-eval-engine"
+  role_arn = module.role_sfn_eval_engine.iam_role_arn
+  # type = "STANDARD"
+
+  type = "EXPRESS"
+  logging_configuration {
+    log_destination        = "${aws_cloudwatch_log_group.sfn_eval_engine.arn}:*"
+    include_execution_data = true
+    # level                  = "ERROR"
+    level = "ALL"
+  }
+
+
+  definition = jsonencode({
+    "StartAt" : "ForEachTemplate",
+    "States" : {
+      "ForEachTemplate" : {
+        "Type" : "Map",
+        "End" : true
+        "ResultPath" : "$.ForEachTemplate",
+        "ItemsPath" : "$.CFN.Keys",
+        "Parameters" : {
+          "Template" : {
+            "Bucket.$" : "$.CFN.Bucket"
+            "Key.$" : "$$.Map.Item.Value",
+          }
+        },
+        "Iterator" : {
+          "StartAt" : "TemplateToNestedSFN",
+          "States" : {
+            "TemplateToNestedSFN" : {
+              "Type" : "Task",
+              "End" : true
+              "ResultPath" : "$.TemplateToNestedSFN",
+              # "Resource" : "arn:aws:states:::states:startExecution.sync:2",
+              "Resource" : "arn:aws:states:::aws-sdk:sfn:startSyncExecution",
+              "Parameters" : {
+                "StateMachineArn" : aws_sfn_state_machine.for_each_template.arn,
+                # "Name":"ExecutionName"
+                "Input" : {
+                  "Template.$" : "$.Template"
+                },
+              },
+            }
+          }
+        }
+
+      }
+    }
+  })
+}
+
+##################################################################
+#                      for each template
+##################################################################
+
+data "aws_iam_policy_document" "sfn_for_each_template" {
+  statement {
+    actions = [
+      "logs:*",
+    ]
+    resources = [
+      "*", #FIXME
+      aws_cloudwatch_log_group.sfn_for_each_template.arn,
+      "${aws_cloudwatch_log_group.sfn_for_each_template.arn}:*"
     ]
   }
   statement {
@@ -703,33 +903,25 @@ data "aws_iam_policy_document" "sfn_eval_engine" {
       "${aws_dynamodb_table.eval_results.arn}/*"
     ]
   }
-  statement {
-    actions = [
-      "ssm:GetParameter",
-    ]
-    resources = [
-      "arn:aws:ssm:${local.region}:${data.aws_caller_identity.i.id}:parameter${local.ssm_parameter_name_for_cfn_template_name}"
-    ]
-  }
 }
 
-module "policy_sfn_eval_engine" {
+module "policy_sfn_for_each_template" {
   source = "terraform-aws-modules/iam/aws//modules/iam-policy"
 
-  name = "sfn_eval_engine"
+  name = "${local.resource_prefix}-sfn_for_each_template"
   path = "/"
 
-  policy = data.aws_iam_policy_document.sfn_eval_engine.json
+  policy = data.aws_iam_policy_document.sfn_for_each_template.json
 }
 
-module "role_sfn_eval_engine" {
+module "role_sfn_for_each_template" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role"
   version = "4.7.0"
 
   create_role       = true
   role_requires_mfa = false
 
-  role_name = "sfn_eval_engine"
+  role_name = "${local.resource_prefix}-sfn_for_each_template"
 
   trusted_role_arns = [
     data.aws_caller_identity.i.arn
@@ -740,38 +932,38 @@ module "role_sfn_eval_engine" {
   ]
 
   custom_role_policy_arns = [
-    module.policy_sfn_eval_engine.arn,
+    module.policy_sfn_for_each_template.arn,
   ]
 
 }
 
-resource "aws_sfn_state_machine" "eval_engine" {
-  name     = "${local.resource_prefix}-eval-engine"
-  role_arn = module.role_sfn_eval_engine.iam_role_arn
-  type     = "STANDARD"
+resource "aws_cloudwatch_log_group" "sfn_for_each_template" {
+  name = "${local.resource_prefix}-sfn_for_each_template"
+}
+
+resource "aws_sfn_state_machine" "for_each_template" {
+  name     = "${local.resource_prefix}-for-each-template"
+  role_arn = module.role_sfn_for_each_template.iam_role_arn
+  # type = "STANDARD"
+
+  type = "EXPRESS"
+  logging_configuration {
+    log_destination        = "${aws_cloudwatch_log_group.sfn_for_each_template.arn}:*"
+    include_execution_data = true
+    level                  = "ERROR"
+  }
+
 
   definition = jsonencode({
-    "StartAt" : "GetCfnTemplateName",
+    "StartAt" : "CFN",
     "States" : {
-      "GetCfnTemplateName" : {
-        "Type" : "Task",
-        "Next" : "CFN",
-        "ResultPath" : "$.GetCfnTemplateName",
-        "Resource" : "arn:aws:states:::aws-sdk:ssm:getParameter",
-        "Parameters" : {
-          "Name" : local.ssm_parameter_name_for_cfn_template_name
-        },
-        "ResultSelector" : {
-          "CfnTemplateName.$" : "$.Parameter.Value"
-        }
-      },
       "CFN" : {
         "Type" : "Pass",
         "Next" : "ParseActiveServices",
         "Parameters" : {
           "CFN" : {
-            "Bucket.$" = "$.SYNTHED_TEMPLATES_BUCKET",
-            "Key.$"    = "$.GetCfnTemplateName.CfnTemplateName",
+            "Bucket.$" = "$.Template.Bucket",
+            "Key.$"    = "$.Template.Key",
           }
         },
         "ResultPath" : "$"
@@ -970,4 +1162,93 @@ resource "aws_sfn_state_machine" "eval_engine" {
       },
     }
   })
+}
+
+
+
+
+
+##################################################################
+##################################################################
+#######                 optional                       ######
+##################################################################
+##################################################################
+
+# used to sync a repo of opa policies to s3 for testing
+# but Control-Broker-Eval-Engine solution might assume they're already in S3
+
+##################################################################
+#                       repo-bucket-sync
+##################################################################
+
+# empty bucket
+
+data "aws_iam_policy_document" "lambda_empty_bucket" {
+  statement {
+    actions = [
+      "s3:ListBucket",
+    ]
+    resources = [
+      module.bucket_opa_policies.s3_bucket_arn,
+    ]
+  }
+  statement {
+    actions = [
+      "s3:ListObjectsV2",
+      "s3:DeleteObject",
+    ]
+    resources = [
+      "${module.bucket_opa_policies.s3_bucket_arn}/*",
+    ]
+  }
+  statement {
+    actions = [
+      "codepipeline:PutJobFailureResult",
+      "codepipeline:PutJobSuccessResult",
+    ]
+    resources = [
+      "*", # Must be *
+    ]
+  }
+}
+
+module "lambda_empty_bucket" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name = "${local.resource_prefix}-empty-bucket"
+  handler       = "lambda_function.lambda_handler"
+  runtime       = "python3.9"
+  timeout       = 60
+  memory_size   = 512
+
+  source_path = "./lambda/functions/empty-bucket"
+
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_empty_bucket.json
+}
+
+# opa policies
+
+module "bucket_opa_policies" {
+  source = "terraform-aws-modules/s3-bucket/aws"
+
+  bucket = "${local.resource_prefix}-opa-policies"
+
+  # Allow deletion of non-empty bucket
+  force_destroy = true
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+module "repo_bucket_sync_opa_policies" {
+  source = "./modules/repo-bucket-sync"
+
+  repo               = local.repos.policies
+  destination_bucket = module.bucket_opa_policies.s3_bucket_id
+
+  resource_prefix                   = local.resource_prefix
+  empty_bucket_lambda_function_name = module.lambda_empty_bucket.lambda_function_name
 }

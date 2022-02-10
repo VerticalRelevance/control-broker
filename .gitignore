@@ -1,3 +1,6 @@
+**/ignored/**
+**/venv/**
+**/downloads/**
 **/.terraform/*
 **/builds/*
 

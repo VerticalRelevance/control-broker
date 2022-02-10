@@ -39,15 +39,18 @@ def lambda_handler(event, context):
     
     standard_services = list(set([i.split('::')[1] for i in resource_types if i.startswith('AWS')]))
     
+    unparsable_services = [] # TODO handle e.g. Custom::ADConnectorResource
+    
     def service_from_custom_cfn(CustomCfn):
         m = re.search('Custom::AWSCDK-(.*)-.*',CustomCfn)
         return m.group(1)
     
-    custom_services = list(set([service_from_custom_cfn(i) for i in resource_types if i.startswith('Custom')]))
+    custom_services = list(set([service_from_custom_cfn(i) for i in resource_types if i.startswith('Custom::AWSCDK')]))
     
     active_services = list(set(standard_services + custom_services))
     
-    active_services = [i.lower() for i in active_services]
+    # active_services = [i.lower() for i in active_services]
+    active_services = [i for i in active_services]
     
     print(f'active_services:\n{active_services}')
     
