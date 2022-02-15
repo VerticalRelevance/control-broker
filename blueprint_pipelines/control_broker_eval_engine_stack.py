@@ -158,16 +158,32 @@ class ControlBrokerEvalEngineStack(Stack):
             ],
             resources=[
                 self.table_eval_results.table_arn,
-                f'{self.table_eval_results.table_arn}/*'
+                f'{self.table_eval_results.table_arn}*'
             ]
         ))
         self.lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
-            not_actions=[
-                "codecommit:Delete*",
+            actions = [
+                "codecommit:ListBranches",
+                "codecommit:ListPullRequests",
+                "codecommit:GetBranch",
+                "codecommit:GetCommit",
+                "codecommit:GetPullRequest",
+                "codecommit:CreateBranch",
+                "codecommit:CreateCommit",
+                "codecommit:CreatePullRequest",
             ],
             resources=[
                 self.repo_app_team_cdk.repository_arn,
-                f'{self.repo_app_team_cdk.repository_arn}/*'
+                f'{self.repo_app_team_cdk.repository_arn}*'
+            ]
+        ))
+        self.lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
+            actions = [
+                "codecommit:ListRepositories",
+                "codecommit:GetRepository",
+            ],
+            resources=[
+                self.repo_app_team_cdk.repository_arn,
             ]
         ))
     
@@ -553,16 +569,16 @@ class ControlBrokerEvalEngineStack(Stack):
                       "StartAt" : "TemplateToNestedSFN",
                       "States" : {
                         "TemplateToNestedSFN" : {
-                          "Type" : "Task",
-                          "End" : True,
-                          "ResultPath" : "$.TemplateToNestedSFN",
-                          "Resource" : "arn:aws:states:::aws-sdk:sfn:startSyncExecution",
-                          "Parameters" : {
-                            "StateMachineArn" : self.sfn_inner_eval_engine.attr_arn,
-                            "Input" : {
-                              "Template.$" : "$.Template"
-                            },
-                          },
+                            "Type" : "Task",
+                            "End" : True,
+                            "ResultPath" : "$.TemplateToNestedSFN",
+                            "Resource" : "arn:aws:states:::aws-sdk:sfn:startSyncExecution",
+                            "Parameters" : {
+                                "StateMachineArn" : self.sfn_inner_eval_engine.attr_arn,
+                                "Input" : {
+                                    "Template.$" : "$.Template"
+                                }
+                            }
                         }
                       }
                     }
