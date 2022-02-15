@@ -180,9 +180,26 @@ def lambda_handler(event, context):
             
             print(results)
             
-            if any(i['Status'] != 'SUCCEEDED' for i in results):
-                fail_pipeline(JobId=job_id,Message='A eval engine result was not SUCCEEDED')
-            elif all(i['Status'] == 'SUCCEEDED' for i in results):
-                pass_pipeline(JobId=job_id,Message='All eval engine results were SUCCEEDED')
+            if all(i['Status'] == 'SUCCEEDED' for i in results):
+                
+                pass_message = 'EvalEngineErrored == False\nAllNestedSFNReturnedSUCCEEDED == True\nInfractionsExist == False\nPipelineProceeds == True '
+                
+                pass_pipeline(JobId=job_id,Message=pass_message)
+                
+            elif [i for i in results if i['Status'] != 'SUCCEEDED' and i['Cause'] != 'InfractionsExist']:
+                
+                fail_message = 'EvalEngineErrored == True | AllNestedSFNReturnedSUCCEEDED == False | InfractionsExist == Unknown | PipelineProceeds == False | EvalEngine return status != "SUCCEEDED" with Cause != "InfractionsExist"'
+                
+                fail_pipeline(JobId=job_id,Message=fail_message)
+                
+            elif [i for i in results if i['Status'] != 'SUCCEEDED' and i['Cause'] == 'InfractionsExist']:
+                
+                fail_message = 'EvalEngineErrored == False | AllNestedSFNReturnedSUCCEEDED == False | InfractionsExist == True | PipelineProceeds == False'
+                
+                fail_pipeline(JobId=job_id,Message=fail_message)
+                
             else:
-                fail_pipeline(JobId=job_id,Message='DefaultFailure')
+                
+                fail_message = 'Wrapper Unable to Parse SFN Response. Failing pipeline by default.'
+                
+                fail_pipeline(JobId=job_id,Message=fail_message)
