@@ -4,6 +4,7 @@ import json
 from aws_cdk import (
     Duration,
     Stack,
+    RemovalPolicy,
     aws_codecommit,
     aws_dynamodb,
     aws_s3,
@@ -18,148 +19,159 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-class ControlBrokerEvalEngineCdkStack(Stack):
+class ControlBrokerEvalEngineStack(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(
+        self,
+        scope: Construct,
+        construct_id: str,
+        application_team_cdk_app: dict,
+        **kwargs
+    ) -> None:
+        
         super().__init__(scope, construct_id, **kwargs)
+        self.application_team_cdk_app = application_team_cdk_app
+        
+        self.deploy_utils()
+        self.s3_deploy_local_assets()
+        self.deploy_inner_sfn_lambdas()
+        self.deploy_inner_sfn()
+        self.deploy_outer_sfn()
+        self.deploy_root_pipeline()
+        
+    def deploy_utils(self):
 
-        ##################################################################
-        #                       Required Existing Resources
-        ##################################################################
-
-        repo_app_team_cdk = aws_codecommit.Repository.from_repository_name(self,"AppTeamCdk",
-            repository_name = 'opa-eval-serverless-cdk-source'
+        self.repo_app_team_cdk = aws_codecommit.Repository.from_repository_name(self,"AppTeamCdk",
+            repository_name = self.application_team_cdk_app['CodeCommitRepository']
         )
         
-        repo_branch_app_team_cdk = "master"
-
-        ##################################################################
-        #                            misc
-        ##################################################################
-        
-        # eval results
-        
-        table_eval_results = aws_dynamodb.Table(self,"EvalResults",
+        self.table_eval_results = aws_dynamodb.Table(self,"EvalResults",
             partition_key = aws_dynamodb.Attribute(name="pk", type=aws_dynamodb.AttributeType.STRING),
             sort_key = aws_dynamodb.Attribute(name="sk", type=aws_dynamodb.AttributeType.STRING),
             billing_mode = aws_dynamodb.BillingMode.PAY_PER_REQUEST,
         )
         
-        bucket_synthed_templates = aws_s3.Bucket(self, "SynthedTemplates",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL
+        self.bucket_synthed_templates = aws_s3.Bucket(self, "SynthedTemplates",
+            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy = RemovalPolicy.DESTROY,
+            auto_delete_objects = True
         )
+        
+    def s3_deploy_local_assets(self):
       
         # buildspec
         
-        bucket_buildspec = aws_s3.Bucket(self, "Buildspec",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL
+        self.bucket_buildspec = aws_s3.Bucket(self, "Buildspec",
+            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy = RemovalPolicy.DESTROY,
+            auto_delete_objects = True
         )
         
         aws_s3_deployment.BucketDeployment(self, "Buildspec.yaml",
-            sources=[aws_s3_deployment.Source.asset("./resources/buildspec")],
-            destination_bucket=bucket_buildspec,
+            sources=[aws_s3_deployment.Source.asset("./supplementary_files/buildspec")],
+            destination_bucket=self.bucket_buildspec,
+            retain_on_delete = False
         )
         
         # opa policies
         
-        bucket_opa_policies = aws_s3.Bucket(self,"OpaPolicies",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL
+        self.bucket_opa_policies = aws_s3.Bucket(self,"OpaPolicies",
+            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy = RemovalPolicy.DESTROY,
+            auto_delete_objects = True
         )
         
         aws_s3_deployment.BucketDeployment(self, "OpaPoliciesByService",
-            sources=[aws_s3_deployment.Source.asset("./resources/opa-policies")],
-            destination_bucket=bucket_opa_policies,
+            sources=[aws_s3_deployment.Source.asset("./supplementary_files/opa-policies")],
+            destination_bucket=self.bucket_opa_policies,
+            retain_on_delete = False
         )
         
-        ##################################################################
-        #                     lambdas in sfn
-        ##################################################################
+    def deploy_inner_sfn_lambdas(self):
         
         # parse active services
         
-        lambda_parse_active_services = aws_lambda.Function(self, "ParseActiveServices",
+        self.lambda_parse_active_services = aws_lambda.Function(self, "ParseActiveServices",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout = Duration.seconds(60),
             memory_size = 1024,
-            code=aws_lambda.Code.from_asset("./resources/lambdas/parse-active-services")
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/parse-active-services")
         )
-        lambda_parse_active_services.role.add_to_policy(aws_iam.PolicyStatement(
+        self.lambda_parse_active_services.role.add_to_policy(aws_iam.PolicyStatement(
             actions=[
                 "s3:HeadObject",
                 "s3:GetObject"
             ],
             resources=[
-                f'{bucket_synthed_templates.bucket_arn}/*'
+                f'{self.bucket_synthed_templates.bucket_arn}/*'
             ]
         ))
         
         # opa eval - python subprocess
         
-        lambda_opa_eval_python_subprocess = aws_lambda.Function(self, "OpaEvalPythonSubprocess",
+        self.lambda_opa_eval_python_subprocess = aws_lambda.Function(self, "OpaEvalPythonSubprocess",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout = Duration.seconds(60),
             memory_size = 1024,
-            code=aws_lambda.Code.from_asset("./resources/lambdas/opa-eval/python-subprocess")
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/opa-eval/python-subprocess")
         )
         
-        lambda_opa_eval_python_subprocess.role.add_to_policy(aws_iam.PolicyStatement(
+        self.lambda_opa_eval_python_subprocess.role.add_to_policy(aws_iam.PolicyStatement(
             actions=[
                 "s3:HeadObject",
                 "s3:GetObject"
             ],
             resources=[
-                f'{bucket_opa_policies.bucket_arn}/*',
-                f'{bucket_synthed_templates.bucket_arn}/*'
+                f'{self.bucket_opa_policies.bucket_arn}/*',
+                f'{self.bucket_synthed_templates.bucket_arn}/*'
             ]
         ))
         
         # infractions feedback
         
-        lambda_infractions_feedback_git_codecommit = aws_lambda.Function(self, "InfractionsFeedbackGitCodeCommit",
+        self.lambda_infractions_feedback_git_codecommit = aws_lambda.Function(self, "InfractionsFeedbackGitCodeCommit",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout = Duration.seconds(60),
             memory_size = 1024,
             environment = {
-              "AppTeamCdkRepo"       : repo_app_team_cdk.repository_name,
-              "AppTeamCdkRepoBranch" : repo_branch_app_team_cdk
+              "AppTeamCdkRepo"       : self.application_team_cdk_app['CodeCommitRepository'],
+              "AppTeamCdkRepoBranch" : self.application_team_cdk_app['Branch']
             },
-            code=aws_lambda.Code.from_asset("./resources/lambdas/infractions-feedback/git/codecommit")
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/infractions-feedback/git/codecommit")
         )
         
-        lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
+        self.lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
             actions=[
                 "s3:HeadObject",
                 "s3:GetObject"
             ],
             resources=[
-                f'{bucket_synthed_templates.bucket_arn}/*'
+                f'{self.bucket_synthed_templates.bucket_arn}/*'
             ]
         ))
-        lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
+        self.lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
             actions=[
                 "dynamodb:Query",
             ],
             resources=[
-                table_eval_results.table_arn,
-                f'{table_eval_results.table_arn}/*'
+                self.table_eval_results.table_arn,
+                f'{self.table_eval_results.table_arn}/*'
             ]
         ))
-        lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
+        self.lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
             not_actions=[
                 "codecommit:Delete*",
             ],
             resources=[
-                repo_app_team_cdk.repository_arn,
-                f'{repo_app_team_cdk.repository_arn}/*'
+                self.repo_app_team_cdk.repository_arn,
+                f'{self.repo_app_team_cdk.repository_arn}/*'
             ]
         ))
-        
-        ##################################################################
-        #                       inner sfn
-        ##################################################################
+    
+    def deploy_inner_sfn(self):
         
         log_group_inner_eval_engine_sfn = aws_logs.LogGroup(self,"InnerEvalEngineSfnLogs")
         
@@ -169,11 +181,20 @@ class ControlBrokerEvalEngineCdkStack(Stack):
         
         role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
             actions=[
-                "logs:*"
+                "logs:*",
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups",
             ],
             resources=[
                 "*",
-                log_group_inner_eval_engine_sfn.log_group_arn
+                log_group_inner_eval_engine_sfn.log_group_arn,
+                f'{log_group_inner_eval_engine_sfn.log_group_arn}:*'
             ]
         ))
         role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
@@ -181,9 +202,9 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                 "lambda:InvokeFunction"
             ],
             resources=[
-                lambda_parse_active_services.function_arn,
-                lambda_opa_eval_python_subprocess.function_arn,
-                lambda_infractions_feedback_git_codecommit.function_arn,
+                self.lambda_parse_active_services.function_arn,
+                self.lambda_opa_eval_python_subprocess.function_arn,
+                self.lambda_infractions_feedback_git_codecommit.function_arn,
             ]
         ))
         role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
@@ -191,8 +212,8 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                 "dynamodb:UpdateItem",
             ],
             resources=[
-                table_eval_results.table_arn,
-                f'{table_eval_results.table_arn}/*'
+                self.table_eval_results.table_arn,
+                f'{self.table_eval_results.table_arn}/*'
             ]
         ))
         role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
@@ -200,7 +221,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                 "s3:ListBucket",
             ],
             resources=[
-                bucket_opa_policies.bucket_arn
+                self.bucket_opa_policies.bucket_arn
             ]
         ))
         role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
@@ -210,17 +231,18 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                 "s3:GetObject",
             ],
             resources=[
-                f'{bucket_opa_policies.bucket_arn}/*'
+                f'{self.bucket_opa_policies.bucket_arn}/*'
             ]
         ))
         
-        sfn_inner_eval_engine = aws_stepfunctions.CfnStateMachine(self, "InnerEvalEngine",
+        self.sfn_inner_eval_engine = aws_stepfunctions.CfnStateMachine(self, "InnerEvalEngine",
             state_machine_type = "EXPRESS",
             role_arn = role_inner_eval_engine_sfn.role_arn,
         
             logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
                 destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
                     cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
+                        # log_group_arn = f'{log_group_inner_eval_engine_sfn.log_group_arn}:*'
                         log_group_arn = log_group_inner_eval_engine_sfn.log_group_arn
                     )
                 )],
@@ -248,7 +270,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                     "ResultPath" : "$.ParseActiveServices",
                     "Resource" : "arn:aws:states:::lambda:invoke",
                     "Parameters" : {
-                      "FunctionName" : lambda_parse_active_services.function_name,
+                      "FunctionName" : self.lambda_parse_active_services.function_name,
                       "Payload.$" : "$.CFN"
                     },
                     "ResultSelector" : {
@@ -273,7 +295,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                           "ResultPath" : "$.ListPoliciesByService",
                           "Resource" : "arn:aws:states:::aws-sdk:s3:listObjectsV2",
                           "Parameters" : {
-                            "Bucket" : bucket_opa_policies.bucket_name,
+                            "Bucket" : self.bucket_opa_policies.bucket_name,
                             "Prefix.$" : "$.ActiveService"
                           },
                         },
@@ -299,7 +321,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                           "ItemsPath" : "$.ListPoliciesByService.Contents",
                           "Parameters" : {
                             "Policies" : {
-                              "Bucket" : bucket_opa_policies.bucket_name,
+                              "Bucket" : self.bucket_opa_policies.bucket_name,
                               "Key.$" : "$$.Map.Item.Value.Key",
                             },
                             "CFN.$" : "$.CFN"
@@ -313,7 +335,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                                 "ResultPath" : "$.OPAEvalPythonSubprocess",
                                 "Resource" : "arn:aws:states:::lambda:invoke",
                                 "Parameters" : {
-                                  "FunctionName" : lambda_opa_eval_python_subprocess.function_name,
+                                  "FunctionName" : self.lambda_opa_eval_python_subprocess.function_name,
                                   "Payload" : {
                                     "Policies.$" : "$.Policies",
                                     "CFN.$" : "$.CFN",
@@ -364,7 +386,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                                         "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
                                       },
                                       "Parameters" : {
-                                        "TableName" : table_eval_results.table_name,
+                                        "TableName" : self.table_eval_results.table_name,
                                         "Key" : {
                                           "pk" : {
                                             "S.$" : "$$.Execution.Id"
@@ -403,11 +425,11 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                     "ResultPath" : "$.InfractionsFeedback",
                     "Resource" : "arn:aws:states:::lambda:invoke",
                     "Parameters" : {
-                      "FunctionName" : lambda_infractions_feedback_git_codecommit.function_name,
+                      "FunctionName" : self.lambda_infractions_feedback_git_codecommit.function_name,
                       "Payload" : {
                         "CFN.$" : "$.CFN",
                         "DynamoDB" : {
-                          "Table" : table_eval_results.table_name,
+                          "Table" : self.table_eval_results.table_name,
                           "Pk.$" : "$$.Execution.Id"
                         }
                       }
@@ -439,9 +461,9 @@ class ControlBrokerEvalEngineCdkStack(Stack):
             
         )
         
-        ##################################################################
-        #                       outer sfn
-        ##################################################################
+        self.sfn_inner_eval_engine.node.add_dependency(role_inner_eval_engine_sfn)
+
+    def deploy_outer_sfn(self):
         
         log_group_outer_eval_engine_sfn = aws_logs.LogGroup(self,"OuterEvalEngineSfnLogs")
         
@@ -451,11 +473,20 @@ class ControlBrokerEvalEngineCdkStack(Stack):
         
         role_outer_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
             actions=[
-                "logs:*"
+                "logs:*",
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups"
             ],
             resources=[
                 "*",
-                log_group_outer_eval_engine_sfn.log_group_arn
+                log_group_outer_eval_engine_sfn.log_group_arn,
+                f'{log_group_outer_eval_engine_sfn.log_group_arn}:*'
 
             ]
         ))
@@ -465,7 +496,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                 "states:StartSyncExecution",
             ],
             resources=[
-                sfn_inner_eval_engine.attr_arn
+                self.sfn_inner_eval_engine.attr_arn
             ]
         ))
         role_outer_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
@@ -489,10 +520,11 @@ class ControlBrokerEvalEngineCdkStack(Stack):
             ]
         ))
         
-        sfn_outer_eval_engine = aws_stepfunctions.CfnStateMachine(self, "OuterEvalEngine",
+        self.sfn_outer_eval_engine = aws_stepfunctions.CfnStateMachine(self, "OuterEvalEngine",
             state_machine_type = "EXPRESS",
+            
             role_arn = role_outer_eval_engine_sfn.role_arn,
-        
+            
             logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
                 destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
                     cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
@@ -526,7 +558,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                           "ResultPath" : "$.TemplateToNestedSFN",
                           "Resource" : "arn:aws:states:::aws-sdk:sfn:startSyncExecution",
                           "Parameters" : {
-                            "StateMachineArn" : sfn_inner_eval_engine.attr_arn,
+                            "StateMachineArn" : self.sfn_inner_eval_engine.attr_arn,
                             "Input" : {
                               "Template.$" : "$.Template"
                             },
@@ -540,19 +572,18 @@ class ControlBrokerEvalEngineCdkStack(Stack):
             }),
             
         )
-   
-   
-        ##################################################################
-        #                       root pipeline
-        ##################################################################
         
+        self.sfn_outer_eval_engine.node.add_dependency(role_outer_eval_engine_sfn)
+        
+    def deploy_root_pipeline(self):
+       
         # source
         
         artifact_source = aws_codepipeline.Artifact()
         
         action_source = aws_codepipeline_actions.CodeCommitSourceAction(
             action_name="CodeCommit",
-            repository=repo_app_team_cdk,
+            repository=self.repo_app_team_cdk,
             output=artifact_source
         )
         
@@ -563,7 +594,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
             handler="lambda_function.lambda_handler",
             timeout = Duration.seconds(60),
             memory_size = 1024,
-            code=aws_lambda.Code.from_asset("./resources/lambdas/add-buildspec")
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/add-buildspec")
         )
         
         lambda_add_buildspec.role.add_to_policy(aws_iam.PolicyStatement(
@@ -572,7 +603,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                 "s3:GetObject"
             ],
             resources=[
-                f'{bucket_buildspec.bucket_arn}/*'
+                f'{self.bucket_buildspec.bucket_arn}/*'
             ]
         ))
         
@@ -589,7 +620,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
             lambda_ = lambda_add_buildspec,
             user_parameters={
                 "Buildspec" : {
-                    "Bucket" : bucket_buildspec.bucket_name,
+                    "Bucket" : self.bucket_buildspec.bucket_name,
                     "Key" : "buildspec.yaml"
                 }
             },
@@ -617,7 +648,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
             handler="lambda_function.lambda_handler",
             timeout = Duration.seconds(60),
             memory_size = 1024,
-            code=aws_lambda.Code.from_asset("./resources/lambdas/eval-engine-wrapper")
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/eval-engine-wrapper")
         )
         
         lambda_eval_engine_wrapper.role.add_to_policy(aws_iam.PolicyStatement(
@@ -625,7 +656,7 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                 "s3:PutObject",
             ],
             resources=[
-                f'{bucket_synthed_templates.bucket_arn}/*'
+                f'{self.bucket_synthed_templates.bucket_arn}/*'
             ]
         ))
         
@@ -634,8 +665,8 @@ class ControlBrokerEvalEngineCdkStack(Stack):
                 "states:StartSyncExecution",
             ],
             resources=[
-                sfn_outer_eval_engine.attr_arn,
-                f'{sfn_outer_eval_engine.attr_arn}*'
+                self.sfn_outer_eval_engine.attr_arn,
+                f'{self.sfn_outer_eval_engine.attr_arn}*'
             ]
         ))
         
@@ -646,14 +677,18 @@ class ControlBrokerEvalEngineCdkStack(Stack):
             ],
             lambda_ = lambda_eval_engine_wrapper,
             user_parameters={
-                "SynthedTemplatesBucket" : bucket_synthed_templates.bucket_name,
-                "EvalEngineSfnArn" : sfn_outer_eval_engine.attr_arn
+                "SynthedTemplatesBucket" : self.bucket_synthed_templates.bucket_name,
+                "EvalEngineSfnArn" : self.sfn_outer_eval_engine.attr_arn
             },
         )
         
         # pipeline
 
         root_pipeline = aws_codepipeline.Pipeline(self,"ControlBrokerEvalEngine",
+            artifact_bucket=aws_s3.Bucket(self, "RootPipelineArtifactBucket",
+                removal_policy= RemovalPolicy.DESTROY,
+                auto_delete_objects = True
+            ),
             stages = [
                 aws_codepipeline.StageProps(
                     stage_name = "Source",
