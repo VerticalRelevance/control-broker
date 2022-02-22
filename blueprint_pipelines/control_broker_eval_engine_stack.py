@@ -49,6 +49,7 @@ class ControlBrokerEvalEngineStack(Stack):
             partition_key = aws_dynamodb.Attribute(name="pk", type=aws_dynamodb.AttributeType.STRING),
             sort_key = aws_dynamodb.Attribute(name="sk", type=aws_dynamodb.AttributeType.STRING),
             billing_mode = aws_dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy = RemovalPolicy.DESTROY,
         )
         
         self.bucket_synthed_templates = aws_s3.Bucket(self, "SynthedTemplates",
