@@ -4,10 +4,10 @@ import input
 
 type = "AWS::SQS::Queue"
 
-default deny = true
+default allow = false
 
-deny {
-    count(infraction) > 0
+allow {
+    count(infraction) == 0
 }
 
 infraction[r] {
@@ -15,7 +15,7 @@ infraction[r] {
     offending_resources[offending_resource]
     r := {
         "resource": offending_resource,
-        "deny": true,
+        "allow": false,
         "reason": "Queue must use ContentBasedDeduplication"
     }
 }

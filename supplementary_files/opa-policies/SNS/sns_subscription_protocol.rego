@@ -4,10 +4,10 @@ import input
 
 type = "AWS::SNS::Subscription"
 
-default deny = true
+default allow = false
 
-deny {
-    count(infraction) > 0
+allow {
+    count(infraction) == 0
 }
 
 infraction[r] {
@@ -15,8 +15,8 @@ infraction[r] {
     offending_resources[offending_resource]
     r := {
         "resource": offending_resource,
-        "deny": true,
-        "reason": "Protocol must be queue"
+        "allow": false,
+        "reason": "Subscription must use protocol of queue"
     }
 }
 

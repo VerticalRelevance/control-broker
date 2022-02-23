@@ -25,13 +25,20 @@ def s3_download(*,Bucket,Key,LocalPath):
         print('No ClientError download_file')
         return True
 
-def s3_download_dir(*,Bucket, PathToS3Dir, LocalPath):
+def s3_download_dir(*,Bucket, Prefix=None, LocalPath):
+    print(f'Begin s3_download_dir\nBucket:\n{Bucket}\nPrefix:\n{Prefix}\nLocalPath:\n{LocalPath}')
     paginator = s3.get_paginator('list_objects')
-    for result in paginator.paginate(Bucket=Bucket, Delimiter='/', Prefix=PathToS3Dir):
+    
+    if Prefix:
+        pagination = paginator.paginate(Bucket=Bucket, Delimiter='/', Prefix=Prefix)
+    else:
+        pagination = paginator.paginate(Bucket=Bucket, Delimiter='/')
+            
+    for result in pagination:
         if result.get('CommonPrefixes') is not None:
             for subdir in result.get('CommonPrefixes'):
                 s3_download_dir(
-                    PathToS3Dir = subdir.get('Prefix'),
+                    Prefix = subdir.get('Prefix'),
                     LocalPath = LocalPath,
                     Bucket = Bucket
                 )
@@ -45,7 +52,6 @@ def s3_download_dir(*,Bucket, PathToS3Dir, LocalPath):
                     Key=file.get('Key'),
                     LocalPath=dest_pathname
                 )
-                
                 
 def run_bash(*, BashPath):
     subprocess.run(["chmod","u+rx", BashPath])
@@ -69,44 +75,38 @@ def re_search(RegexGroup,SearchMe):
         print(f'Regex:\n{RegexGroup}')
         print(f'SearchMe:\n{SearchMe}')
         raise
+
+def mkdir(Dir):
+    p = Path(Dir)
+    p.mkdir(parents=True,exist_ok=True)
+    return str(p)
+    
         
 def lambda_handler(event, context):
     
     print(event)
     
-    # get policy
+    opa_policies_bucket = event['OpaPolicies']['Bucket']
     
-    policy_path = '/tmp/policy.rego'
+    json_input = event['JsonInput']
     
-    policies_key = event['Policies']['Key']
-    print(f'policies_key:')
-    print(policies_key)
+    # get policies
     
-    # service = policies_key.split('::')[1]
-    service = re_search('(.*)/.*\.rego',policies_key)
-    print(f'service:\n{service}')
+    policy_path_root = mkdir('/tmp/opa-policies')
     
-    # package_suffix = re_search(f'{service.lower()}/(.*)',policies_key)
-    # package_suffix = package_suffix.replace('::','')
-    package_suffix = re_search(f'{service}/(.*)\.rego',policies_key)
-    print(f'package_suffix:\n{package_suffix}')
-    
-    # todo liase with cfn-rego-pair package naming strategy
-    
-    s3_download(
-        Bucket = event['Policies']['Bucket'],
-        Key = event['Policies']['Key'],
-        LocalPath = policy_path
+    s3_download_dir(
+        Bucket = opa_policies_bucket,
+        LocalPath = policy_path_root
     )
     
-    # get cfn
+    # get json_input
     
-    cfn_path = '/tmp/cfn.json'
+    json_input_path = '/tmp/input.json'
     
     s3_download(
-        Bucket = event['CFN']['Bucket'],
-        Key = event['CFN']['Key'],
-        LocalPath = cfn_path
+        Bucket = json_input['Bucket'],
+        Key = json_input['Key'],
+        LocalPath = json_input_path
     )
     
     # to tmp
@@ -117,7 +117,7 @@ def lambda_handler(event, context):
         
     shutil.copy('./opa-eval.sh','/tmp/opa-eval.sh')
     
-    # eval
+    # # eval
     
     opa_eval_result = run_bash(BashPath='/tmp/opa-eval.sh')
     
@@ -126,13 +126,9 @@ def lambda_handler(event, context):
     stdout_ = json.loads(opa_eval_result.get('stdout'))
     print(f'stdout_:\n{stdout_}\n{type(stdout_)}')
     
-    deny = stdout_[package_suffix]['deny']
-    print(f'deny:\n{deny}\n{type(deny)}')
-    
-    infractions = stdout_[package_suffix]['infraction']
-    print(f'infractions:\n{infractions}\n{type(infractions)}')
+    opa_eval_results = [{"PackagePlaceholder":stdout_[i]} for i in stdout_]
+    print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
     
     return {
-        'OPAEvalDenyResult' : str(deny),
-        'Infractions': infractions,
+        "OpaEvalResults": opa_eval_results
     }
