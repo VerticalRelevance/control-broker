@@ -180,6 +180,7 @@ def lambda_handler(event, context):
             
             print(results)
             
+            
             if all(i['Status'] == 'SUCCEEDED' for i in results):
                 
                 pass_message = 'EvalEngineErrored == False\nAllNestedSFNReturnedSUCCEEDED == True\nInfractionsExist == False\nPipelineProceeds == True '

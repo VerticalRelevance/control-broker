@@ -17,6 +17,7 @@ from aws_cdk import (
     aws_iam,
     aws_logs,
 )
+
 from constructs import Construct
 
 class ControlBrokerEvalEngineStack(Stack):
@@ -31,7 +32,7 @@ class ControlBrokerEvalEngineStack(Stack):
         
         super().__init__(scope, construct_id, **kwargs)
         self.application_team_cdk_app = application_team_cdk_app
-        
+
         self.deploy_utils()
         self.s3_deploy_local_assets()
         self.deploy_inner_sfn_lambdas()
@@ -87,107 +88,55 @@ class ControlBrokerEvalEngineStack(Stack):
             destination_bucket=self.bucket_opa_policies,
             retain_on_delete = False
         )
-        
+    
     def deploy_inner_sfn_lambdas(self):
         
-        # parse active services
+        # opa eval - python subprocess - single threaded
         
-        self.lambda_parse_active_services = aws_lambda.Function(self, "ParseActiveServices",
+        self.lambda_opa_eval_python_subprocess_single_threaded = aws_lambda.Function(self, "OpaEvalPythonSubprocessSingleThreaded",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout = Duration.seconds(60),
-            memory_size = 1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/parse-active-services")
-        )
-        self.lambda_parse_active_services.role.add_to_policy(aws_iam.PolicyStatement(
-            actions=[
-                "s3:HeadObject",
-                "s3:GetObject"
-            ],
-            resources=[
-                f'{self.bucket_synthed_templates.bucket_arn}/*'
-            ]
-        ))
-        
-        # opa eval - python subprocess
-        
-        self.lambda_opa_eval_python_subprocess = aws_lambda.Function(self, "OpaEvalPythonSubprocess",
-            runtime=aws_lambda.Runtime.PYTHON_3_9,
-            handler="lambda_function.lambda_handler",
-            timeout = Duration.seconds(60),
-            memory_size = 1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/opa-eval/python-subprocess")
+            memory_size = 10240, # todo power-tune
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/opa-eval/python-subprocess/single-threaded")
         )
         
-        self.lambda_opa_eval_python_subprocess.role.add_to_policy(aws_iam.PolicyStatement(
+        self.lambda_opa_eval_python_subprocess_single_threaded.role.add_to_policy(aws_iam.PolicyStatement(
             actions=[
                 "s3:HeadObject",
-                "s3:GetObject"
+                "s3:GetObject",
+                "s3:List*",
             ],
             resources=[
+                self.bucket_opa_policies.bucket_arn,
                 f'{self.bucket_opa_policies.bucket_arn}/*',
-                f'{self.bucket_synthed_templates.bucket_arn}/*'
+                f'{self.bucket_synthed_templates.bucket_arn}/*',
             ]
         ))
         
-        # infractions feedback
+        # s3 select
         
-        self.lambda_infractions_feedback_git_codecommit = aws_lambda.Function(self, "InfractionsFeedbackGitCodeCommit",
+        self.lambda_s3_select = aws_lambda.Function(self, "S3Select",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout = Duration.seconds(60),
             memory_size = 1024,
-            environment = {
-              "AppTeamCdkRepo"       : self.application_team_cdk_app['CodeCommitRepository'],
-              "AppTeamCdkRepoBranch" : self.application_team_cdk_app['Branch']
-            },
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/infractions-feedback/git/codecommit")
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/s3-select")
         )
         
-        self.lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
+        self.lambda_s3_select.role.add_to_policy(aws_iam.PolicyStatement(
             actions=[
                 "s3:HeadObject",
-                "s3:GetObject"
+                "s3:GetObject",
+                "s3:List*",
+                "s3:SelectObjectContent",
             ],
             resources=[
-                f'{self.bucket_synthed_templates.bucket_arn}/*'
+                self.bucket_synthed_templates.bucket_arn,
+                f'{self.bucket_synthed_templates.bucket_arn}/*',
             ]
         ))
-        self.lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
-            actions=[
-                "dynamodb:Query",
-            ],
-            resources=[
-                self.table_eval_results.table_arn,
-                f'{self.table_eval_results.table_arn}*'
-            ]
-        ))
-        self.lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
-            actions = [
-                "codecommit:ListBranches",
-                "codecommit:ListPullRequests",
-                "codecommit:GetBranch",
-                "codecommit:GetCommit",
-                "codecommit:GetPullRequest",
-                "codecommit:CreateBranch",
-                "codecommit:CreateCommit",
-                "codecommit:CreatePullRequest",
-            ],
-            resources=[
-                self.repo_app_team_cdk.repository_arn,
-                f'{self.repo_app_team_cdk.repository_arn}*'
-            ]
-        ))
-        self.lambda_infractions_feedback_git_codecommit.role.add_to_policy(aws_iam.PolicyStatement(
-            actions = [
-                "codecommit:ListRepositories",
-                "codecommit:GetRepository",
-            ],
-            resources=[
-                self.repo_app_team_cdk.repository_arn,
-            ]
-        ))
-    
+        
     def deploy_inner_sfn(self):
         
         log_group_inner_eval_engine_sfn = aws_logs.LogGroup(self,"InnerEvalEngineSfnLogs")
@@ -219,14 +168,14 @@ class ControlBrokerEvalEngineStack(Stack):
                 "lambda:InvokeFunction"
             ],
             resources=[
-                self.lambda_parse_active_services.function_arn,
-                self.lambda_opa_eval_python_subprocess.function_arn,
-                self.lambda_infractions_feedback_git_codecommit.function_arn,
+                self.lambda_opa_eval_python_subprocess_single_threaded.function_arn,
+                self.lambda_s3_select.function_arn
             ]
         ))
         role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
             actions=[
                 "dynamodb:UpdateItem",
+                "dynamodb:Query",
             ],
             resources=[
                 self.table_eval_results.table_arn,
@@ -235,20 +184,11 @@ class ControlBrokerEvalEngineStack(Stack):
         ))
         role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
             actions=[
-                "s3:ListBucket",
-            ],
-            resources=[
-                self.bucket_opa_policies.bucket_arn
-            ]
-        ))
-        role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
-            actions=[
-                "s3:ListObjectsV2",
-                "s3:HeadObject",
                 "s3:GetObject",
             ],
             resources=[
-                f'{self.bucket_opa_policies.bucket_arn}/*'
+                self.bucket_synthed_templates.bucket_arn,
+                f'{self.bucket_synthed_templates.bucket_arn}/*',
             ]
         ))
         
@@ -259,7 +199,6 @@ class ControlBrokerEvalEngineStack(Stack):
             logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
                 destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
                     cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
-                        # log_group_arn = f'{log_group_inner_eval_engine_sfn.log_group_arn}:*'
                         log_group_arn = log_group_inner_eval_engine_sfn.log_group_arn
                     )
                 )],
@@ -268,166 +207,143 @@ class ControlBrokerEvalEngineStack(Stack):
             ),
             
             definition_string=json.dumps({
-                "StartAt" : "CFN",
+                "StartAt" : "ParseInput",
                 "States" : {
-                  "CFN" : {
+                  "ParseInput" : {
                     "Type" : "Pass",
-                    "Next" : "ParseActiveServices",
+                    "Next" : "GetMetadata",
                     "Parameters" : {
-                      "CFN" : {
+                      "JsonInput" : {
                         "Bucket.$" : "$.Template.Bucket",
-                        "Key.$"    : "$.Template.Key",
+                        "Key.$"    : "$.Template.Key"
                       }
                     },
                     "ResultPath" : "$"
                   },
-                  "ParseActiveServices" : {
+                  "GetMetadata" : {
                     "Type" : "Task",
-                    "Next" : "ForEachActiveSerive",
-                    "ResultPath" : "$.ParseActiveServices",
+                    "Next" : "OpaEvalSingleThreaded",
+                    "ResultPath" : "$.GetMetadata",
                     "Resource" : "arn:aws:states:::lambda:invoke",
                     "Parameters" : {
-                      "FunctionName" : self.lambda_parse_active_services.function_name,
-                      "Payload.$" : "$.CFN"
+                      "FunctionName" : self.lambda_s3_select.function_name,
+                      "Payload" : {
+                        "Bucket.$": "$.JsonInput.Bucket",
+                        "Key.$": "$.JsonInput.Key",
+                        "Expression":"SELECT s.Parameters from S3Object s",
+                      }
+                    },
+                    "ResultSelector" : {
+                      "Metadata.$" : "$.Payload.Selected.Parameters"
+                    }
+                  },
+                  "OpaEvalSingleThreaded" : {
+                    "Type" : "Task",
+                    "Next" : "ForEachEvalResult",
+                    "ResultPath" : "$.OpaEvalSingleThreaded",
+                    "Resource" : "arn:aws:states:::lambda:invoke",
+                    "Parameters" : {
+                      "FunctionName" : self.lambda_opa_eval_python_subprocess_single_threaded.function_name,
+                      "Payload" : {
+                        "JsonInput.$" : "$.JsonInput",
+                        "OpaPolicies" : {
+                          "Bucket" : self.bucket_opa_policies.bucket_name
+                        }
+                      }
                     },
                     "ResultSelector" : {
                       "Payload.$" : "$.Payload"
                     }
                   },
-                  "ForEachActiveSerive" : {
+                  "ForEachEvalResult" : {
                     "Type" : "Map",
-                    "Next" : "InfractionsFeedback",
-                    "ResultPath" : "$.ForEachActiveSerive",
-                    "ItemsPath" : "$.ParseActiveServices.Payload.ActiveServices",
+                    "Next" : "QueryEvalResultsTable",
+                    "ResultPath" : None,
+                    "ItemsPath" : "$.OpaEvalSingleThreaded.Payload.OpaEvalResults",
                     "Parameters" : {
-                      "ActiveService.$" : "$$.Map.Item.Value",
-                      "CFN.$" : "$.CFN"
+                      "EvalResult.$" : "$$.Map.Item.Value",
+                      "JsonInput.$" : "$.JsonInput",
+                      "Metadata.$": "$.GetMetadata.Metadata"
                     },
                     "Iterator" : {
-                      "StartAt" : "ListPoliciesByService",
+                      "StartAt" : "ChoiceIsAllowed",
                       "States" : {
-                        "ListPoliciesByService" : {
-                          "Type" : "Task",
-                          "Next" : "ChoicePoliciesExist",
-                          "ResultPath" : "$.ListPoliciesByService",
-                          "Resource" : "arn:aws:states:::aws-sdk:s3:listObjectsV2",
-                          "Parameters" : {
-                            "Bucket" : self.bucket_opa_policies.bucket_name,
-                            "Prefix.$" : "$.ActiveService"
-                          },
-                        },
-                        "ChoicePoliciesExist" : {
+                        "ChoiceIsAllowed" : {
                           "Type" : "Choice",
-                          "Default" : "NoPolicies",
+                          "Default" : "ForEachInfraction",
                           "Choices" : [
                             {
-                              "Variable" : "$.ListPoliciesByService.Contents",
-                              "IsPresent" : True,
-                              "Next" : "ForEachPolicy"
+                              "Variable" : "$.EvalResult.PackagePlaceholder.infraction[0]",
+                              "IsPresent" : False,
+                              "Next" : "Allowed"
                             }
                           ]
                         },
-                        "NoPolicies" : {
+                        "Allowed" : {
                           "Type" : "Pass",
                           "End" : True
                         },
-                        "ForEachPolicy" : {
+                        "ForEachInfraction" : {
                           "Type" : "Map",
                           "End" : True,
-                          "ResultPath" : "$.ForEachPolicy",
-                          "ItemsPath" : "$.ListPoliciesByService.Contents",
+                          "ResultPath" : "$.ForEachInfraction",
+                          "ItemsPath" : "$.EvalResult.PackagePlaceholder.infraction",
                           "Parameters" : {
-                            "Policies" : {
-                              "Bucket" : self.bucket_opa_policies.bucket_name,
-                              "Key.$" : "$$.Map.Item.Value.Key",
-                            },
-                            "CFN.$" : "$.CFN"
+                            "Infraction.$" : "$$.Map.Item.Value",
+                            "JsonInput.$" : "$.JsonInput",
+                            "Metadata.$": "$.Metadata"
                           },
                           "Iterator" : {
-                            "StartAt" : "OPAEvalPythonSubprocess",
+                            "StartAt" : "WriteInfractionToDDB",
                             "States" : {
-                              "OPAEvalPythonSubprocess" : {
+                              "WriteInfractionToDDB" : {
                                 "Type" : "Task",
-                                "Next" : "ChoiceOPAEvalIsAllowed",
-                                "ResultPath" : "$.OPAEvalPythonSubprocess",
-                                "Resource" : "arn:aws:states:::lambda:invoke",
-                                "Parameters" : {
-                                  "FunctionName" : self.lambda_opa_eval_python_subprocess.function_name,
-                                  "Payload" : {
-                                    "Policies.$" : "$.Policies",
-                                    "CFN.$" : "$.CFN",
-                                  }
-                                },
-                                "ResultSelector" : {
-                                  "Payload.$" : "$.Payload"
-                                }
-                              },
-                              "ChoiceOPAEvalIsAllowed" : {
-                                "Type" : "Choice",
-                                "Default" : "Deny",
-                                "Choices" : [
-                                  {
-                                    "Variable" : "$.OPAEvalPythonSubprocess.Payload.OPAEvalDenyResult",
-                                    "StringEquals" : "False",
-                                    "Next" : "Allow"
-                                  }
-                                ]
-                              },
-                              "Allow" : {
-                                "Type" : "Pass",
-                                "End" : True
-                              },
-                              "Deny" : {
-                                "Type" : "Pass",
-                                "Next" : "ForEachInfraction"
-                              },
-                              "ForEachInfraction" : {
-                                "Type" : "Map",
                                 "End" : True,
-                                "ResultPath" : "$.ForEachInfraction",
-                                "ItemsPath" : "$.OPAEvalPythonSubprocess.Payload.Infractions",
-                                "Parameters" : {
-                                  "Infraction.$" : "$$.Map.Item.Value",
-                                  "Policies.$" : "$.Policies",
-                                  "CFN.$" : "$.CFN"
+                                "ResultPath" : "$.WriteEvalResultToDDB",
+                                "Resource" : "arn:aws:states:::dynamodb:updateItem",
+                                "ResultSelector" : {
+                                  "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
                                 },
-                                "Iterator" : {
-                                  "StartAt" : "WriteInfractionToDDB",
-                                  "States" : {
-                                    "WriteInfractionToDDB" : {
-                                      "Type" : "Task",
-                                      "End" : True,
-                                      "ResultPath" : "$.WriteEvalResultToDDB",
-                                      "Resource" : "arn:aws:states:::dynamodb:updateItem",
-                                      "ResultSelector" : {
-                                        "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
-                                      },
-                                      "Parameters" : {
-                                        "TableName" : self.table_eval_results.table_name,
-                                        "Key" : {
-                                          "pk" : {
-                                            "S.$" : "$$.Execution.Id"
-                                          },
-                                          "sk" : {
-                                            "S.$" : "States.Format('{}#{}', $.CFN.Key, $.Policies.Key)"
-                                          }
-                                        },
-                                        "ExpressionAttributeNames" : {
-                                          "#allowed" : "AllowedStringBoolean",
-                                          "#infractions" : "Infractions"
-                                        },
-                                        "ExpressionAttributeValues" : {
-                                          ":allowed" : {
-                                            "S" : "False"
-                                          },
-                                          ":infractions" : {
-                                            "S.$" : "States.JsonToString($.Infraction)"
-                                          },
-                                        },
-                                        "UpdateExpression" : "SET #allowed=:allowed, #infractions=:infractions"
-                                      }
+                                "Parameters" : {
+                                  "TableName" : self.table_eval_results.table_name,
+                                  "Key" : {
+                                    "pk" : {
+                                      "S.$" : "$$.Execution.Id"
+                                    },
+                                    "sk" : {
+                                      "S.$" : "States.Format('{}#{}#{}', $.JsonInput.Key, $.Infraction.resource, $.Infraction.reason)"
+            
                                     }
-                                  }
+                                  },
+                                  "ExpressionAttributeNames" : {
+                                    "#allow" : "allow",
+                                    "#reason" : "reason",
+                                    "#resource" : "resource",
+                                    "#businessunit": "BusinessUnit",
+                                    "#awsregion": "AWSRegion",
+                                    "#awsaccount": "AWSAccount",
+                                  },
+                                  "ExpressionAttributeValues" : {
+                                    ":allow" : {
+                                      "S.$" : "States.JsonToString($.Infraction.allow)"
+                                    },
+                                    ":reason" : {
+                                      "S.$" : "$.Infraction.reason"
+                                    },
+                                    ":resource" : {
+                                      "S.$" : "$.Infraction.resource"
+                                    },
+                                    ":businessunit" : {
+                                      "S.$" : "$.Metadata.BusinessUnit.Default"
+                                    },
+                                    ":awsregion" : {
+                                      "S.$" : "$.Metadata.AWSRegion.Default"
+                                    },
+                                    ":awsaccount" : {
+                                      "S.$" : "$.Metadata.AWSAccount.Default"
+                                    },
+                                  },
+                                  "UpdateExpression" : "SET #allow=:allow, #reason=:reason, #resource=:resource, #businessunit=:businessunit, #awsregion=:awsregion, #awsaccount=:awsaccount"
                                 }
                               }
                             }
@@ -436,50 +352,48 @@ class ControlBrokerEvalEngineStack(Stack):
                       }
                     }
                   },
-                  "InfractionsFeedback" : {
+                  "QueryEvalResultsTable" : {
                     "Type" : "Task",
-                    "Next" : "ChoicePipelineIsHalted",
-                    "ResultPath" : "$.InfractionsFeedback",
-                    "Resource" : "arn:aws:states:::lambda:invoke",
-                    "Parameters" : {
-                      "FunctionName" : self.lambda_infractions_feedback_git_codecommit.function_name,
-                      "Payload" : {
-                        "CFN.$" : "$.CFN",
-                        "DynamoDB" : {
-                          "Table" : self.table_eval_results.table_name,
-                          "Pk.$" : "$$.Execution.Id"
-                        }
-                      }
-                    },
+                    "Next" : "ChoiceInfractionsExist",
+                    "ResultPath" : "$.QueryEvalResultsTable",
+                    "Resource" : "arn:aws:states:::aws-sdk:dynamodb:query",
                     "ResultSelector" : {
-                      "Payload.$" : "$.Payload"
+                      "Items.$" : "$.Items"
+                    },
+                    "Parameters" : {
+                      "TableName" : self.table_eval_results.table_name,
+                      "ExpressionAttributeValues" : {
+                        ":pk" : {
+                          "S.$" : "$$.Execution.Id"
+                        }
+                      },
+                      "KeyConditionExpression" : "pk = :pk"
                     }
                   },
-                  "ChoicePipelineIsHalted" : {
+                  "ChoiceInfractionsExist" : {
                     "Type" : "Choice",
-                    "Default" : "PipelineIsHalted",
+                    "Default" : "InfractionsExist",
                     "Choices" : [
                       {
-                        "Variable" : "$.InfractionsFeedback.Payload.InfractionsExist",
-                        "BooleanEquals" : False,
-                        "Next" : "PipelineProceeds"
+                        "Variable" : "$.QueryEvalResultsTable.Items[0]",
+                        "IsPresent" : False,
+                        "Next" : "NoInfractions"
                       }
                     ]
                   },
-                  "PipelineProceeds" : {
-                    "Type" : "Succeed",
-                  },
-                  "PipelineIsHalted" : {
+                  "InfractionsExist" : {
                     "Type" : "Fail",
                     "Cause" : "InfractionsExist"
                   },
+                  "NoInfractions" : {
+                    "Type" : "Succeed",
+                  },
                 }
-            }),
-            
+              })
         )
-        
+    
         self.sfn_inner_eval_engine.node.add_dependency(role_inner_eval_engine_sfn)
-
+    
     def deploy_outer_sfn(self):
         
         log_group_outer_eval_engine_sfn = aws_logs.LogGroup(self,"OuterEvalEngineSfnLogs")
