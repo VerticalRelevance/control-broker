@@ -1,0 +1,2973 @@
+{
+  "Resources": {
+    "AppTeamCdkControlBrokerEvalEngineCdkStackControlBrokerEvalEngine55D2AEAFEventRule1B45451C": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "EventPattern": {
+          "source": [
+            "aws.codecommit"
+          ],
+          "resources": [
+            {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition"
+                  },
+                  ":codecommit:us-east-1:",
+                  {
+                    "Ref": "AWS::AccountId"
+                  },
+                  ":opa-eval-serverless-cdk-source"
+                ]
+              ]
+            }
+          ],
+          "detail-type": [
+            "CodeCommit Repository State Change"
+          ],
+          "detail": {
+            "event": [
+              "referenceCreated",
+              "referenceUpdated"
+            ],
+            "referenceName": [
+              "master"
+            ]
+          }
+        },
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition"
+                  },
+                  ":codepipeline:us-east-1:",
+                  {
+                    "Ref": "AWS::AccountId"
+                  },
+                  ":",
+                  {
+                    "Ref": "ControlBrokerEvalEngine4421E182"
+                  }
+                ]
+              ]
+            },
+            "Id": "Target0",
+            "RoleArn": {
+              "Fn::GetAtt": [
+                "ControlBrokerEvalEngineEventsRoleA991B92D",
+                "Arn"
+              ]
+            }
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/AppTeamCdk/ControlBrokerEvalEngineCdkStackControlBrokerEvalEngine55D2AEAFEventRule/Resource"
+      }
+    },
+    "EvalResultsF157F7FB": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "KeySchema": [
+          {
+            "AttributeName": "pk",
+            "KeyType": "HASH"
+          },
+          {
+            "AttributeName": "sk",
+            "KeyType": "RANGE"
+          }
+        ],
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "pk",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "sk",
+            "AttributeType": "S"
+          }
+        ],
+        "BillingMode": "PAY_PER_REQUEST"
+      },
+      "UpdateReplacePolicy": "Retain",
+      "DeletionPolicy": "Retain",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/EvalResults/Resource"
+      }
+    },
+    "SynthedTemplates0E9D7F0B": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "Tags": [
+          {
+            "Key": "aws-cdk:auto-delete-objects",
+            "Value": "true"
+          }
+        ]
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/SynthedTemplates/Resource"
+      }
+    },
+    "SynthedTemplatesPolicy37D89523": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "SynthedTemplates0E9D7F0B"
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::GetAtt": [
+                    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+                    "Arn"
+                  ]
+                }
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "SynthedTemplates0E9D7F0B",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "SynthedTemplates0E9D7F0B",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/SynthedTemplates/Policy/Resource"
+      }
+    },
+    "SynthedTemplatesAutoDeleteObjectsCustomResource378CCD0D": {
+      "Type": "Custom::S3AutoDeleteObjects",
+      "Properties": {
+        "ServiceToken": {
+          "Fn::GetAtt": [
+            "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
+            "Arn"
+          ]
+        },
+        "BucketName": {
+          "Ref": "SynthedTemplates0E9D7F0B"
+        }
+      },
+      "DependsOn": [
+        "SynthedTemplatesPolicy37D89523"
+      ],
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/SynthedTemplates/AutoDeleteObjectsCustomResource/Default"
+      }
+    },
+    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role"
+      }
+    },
+    "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+          },
+          "S3Key": "bdb08b9984816ecf43301a0c6d8913e270ee2448940b6b95e430dd222a4d90be.zip"
+        },
+        "Timeout": 900,
+        "MemorySize": 128,
+        "Handler": "__entrypoint__.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+            "Arn"
+          ]
+        },
+        "Runtime": "nodejs12.x",
+        "Description": {
+          "Fn::Join": [
+            "",
+            [
+              "Lambda function for auto-deleting objects in ",
+              {
+                "Ref": "SynthedTemplates0E9D7F0B"
+              },
+              " S3 bucket."
+            ]
+          ]
+        }
+      },
+      "DependsOn": [
+        "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler",
+        "aws:asset:path": "asset.bdb08b9984816ecf43301a0c6d8913e270ee2448940b6b95e430dd222a4d90be",
+        "aws:asset:property": "Code"
+      }
+    },
+    "Buildspec5CD669CF": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "Tags": [
+          {
+            "Key": "aws-cdk:auto-delete-objects",
+            "Value": "true"
+          },
+          {
+            "Key": "aws-cdk:cr-owned:fc022421",
+            "Value": "true"
+          }
+        ]
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/Buildspec/Resource"
+      }
+    },
+    "BuildspecPolicy821EAA04": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "Buildspec5CD669CF"
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::GetAtt": [
+                    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+                    "Arn"
+                  ]
+                }
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "Buildspec5CD669CF",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "Buildspec5CD669CF",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/Buildspec/Policy/Resource"
+      }
+    },
+    "BuildspecAutoDeleteObjectsCustomResource9BA2FAA6": {
+      "Type": "Custom::S3AutoDeleteObjects",
+      "Properties": {
+        "ServiceToken": {
+          "Fn::GetAtt": [
+            "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
+            "Arn"
+          ]
+        },
+        "BucketName": {
+          "Ref": "Buildspec5CD669CF"
+        }
+      },
+      "DependsOn": [
+        "BuildspecPolicy821EAA04"
+      ],
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/Buildspec/AutoDeleteObjectsCustomResource/Default"
+      }
+    },
+    "BuildspecyamlAwsCliLayer9E5D928F": {
+      "Type": "AWS::Lambda::LayerVersion",
+      "Properties": {
+        "Content": {
+          "S3Bucket": {
+            "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+          },
+          "S3Key": "dc4f68f05c4deb9ab720f82f124754acb41ac68a8a136519738df7c22ab316f6.zip"
+        },
+        "Description": "/opt/awscli/aws"
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/Buildspec.yaml/AwsCliLayer/Resource",
+        "aws:asset:path": "asset.dc4f68f05c4deb9ab720f82f124754acb41ac68a8a136519738df7c22ab316f6.zip",
+        "aws:asset:is-bundled": false,
+        "aws:asset:property": "Content"
+      }
+    },
+    "BuildspecyamlCustomResource7E2C8D4C": {
+      "Type": "Custom::CDKBucketDeployment",
+      "Properties": {
+        "ServiceToken": {
+          "Fn::GetAtt": [
+            "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C81C01536",
+            "Arn"
+          ]
+        },
+        "SourceBucketNames": [
+          {
+            "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+          }
+        ],
+        "SourceObjectKeys": [
+          "51e5371e9bc4de1b12353d623ca86cbdf30b2babc4d7dbdd4b61e896d2691647.zip"
+        ],
+        "DestinationBucketName": {
+          "Ref": "Buildspec5CD669CF"
+        },
+        "RetainOnDelete": false,
+        "Prune": true
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/Buildspec.yaml/CustomResource/Default"
+      }
+    },
+    "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+              ]
+            ]
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/ServiceRole/Resource"
+      }
+    },
+    "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:PutObjectLegalHold",
+                "s3:PutObjectRetention",
+                "s3:PutObjectTagging",
+                "s3:PutObjectVersionTagging",
+                "s3:Abort*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "Buildspec5CD669CF",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "Buildspec5CD669CF",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:PutObjectLegalHold",
+                "s3:PutObjectRetention",
+                "s3:PutObjectTagging",
+                "s3:PutObjectVersionTagging",
+                "s3:Abort*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "OpaPoliciesF8957D00",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "OpaPoliciesF8957D00",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF",
+        "Roles": [
+          {
+            "Ref": "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/ServiceRole/DefaultPolicy/Resource"
+      }
+    },
+    "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C81C01536": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+          },
+          "S3Key": "4e09e63403b235ffda9db09367996f2d4c9fe1f7aa19b402908d8221614a282e.zip"
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265",
+            "Arn"
+          ]
+        },
+        "Handler": "index.handler",
+        "Layers": [
+          {
+            "Ref": "BuildspecyamlAwsCliLayer9E5D928F"
+          }
+        ],
+        "Runtime": "python3.7",
+        "Timeout": 900
+      },
+      "DependsOn": [
+        "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF",
+        "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/Resource",
+        "aws:asset:path": "asset.4e09e63403b235ffda9db09367996f2d4c9fe1f7aa19b402908d8221614a282e",
+        "aws:asset:is-bundled": false,
+        "aws:asset:property": "Code"
+      }
+    },
+    "OpaPoliciesF8957D00": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "Tags": [
+          {
+            "Key": "aws-cdk:auto-delete-objects",
+            "Value": "true"
+          },
+          {
+            "Key": "aws-cdk:cr-owned:1e355ddc",
+            "Value": "true"
+          }
+        ]
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OpaPolicies/Resource"
+      }
+    },
+    "OpaPoliciesPolicyEA9B4C79": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "OpaPoliciesF8957D00"
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::GetAtt": [
+                    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+                    "Arn"
+                  ]
+                }
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "OpaPoliciesF8957D00",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "OpaPoliciesF8957D00",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OpaPolicies/Policy/Resource"
+      }
+    },
+    "OpaPoliciesAutoDeleteObjectsCustomResource0AACE468": {
+      "Type": "Custom::S3AutoDeleteObjects",
+      "Properties": {
+        "ServiceToken": {
+          "Fn::GetAtt": [
+            "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
+            "Arn"
+          ]
+        },
+        "BucketName": {
+          "Ref": "OpaPoliciesF8957D00"
+        }
+      },
+      "DependsOn": [
+        "OpaPoliciesPolicyEA9B4C79"
+      ],
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OpaPolicies/AutoDeleteObjectsCustomResource/Default"
+      }
+    },
+    "OpaPoliciesByServiceAwsCliLayerB96C5A36": {
+      "Type": "AWS::Lambda::LayerVersion",
+      "Properties": {
+        "Content": {
+          "S3Bucket": {
+            "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+          },
+          "S3Key": "dc4f68f05c4deb9ab720f82f124754acb41ac68a8a136519738df7c22ab316f6.zip"
+        },
+        "Description": "/opt/awscli/aws"
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OpaPoliciesByService/AwsCliLayer/Resource",
+        "aws:asset:path": "asset.dc4f68f05c4deb9ab720f82f124754acb41ac68a8a136519738df7c22ab316f6.zip",
+        "aws:asset:is-bundled": false,
+        "aws:asset:property": "Content"
+      }
+    },
+    "OpaPoliciesByServiceCustomResourceCE4E5D19": {
+      "Type": "Custom::CDKBucketDeployment",
+      "Properties": {
+        "ServiceToken": {
+          "Fn::GetAtt": [
+            "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C81C01536",
+            "Arn"
+          ]
+        },
+        "SourceBucketNames": [
+          {
+            "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+          }
+        ],
+        "SourceObjectKeys": [
+          "9de0749fea019f36e874f9b0b996c5aae724cc064fab4b1b38d266a2169e2b44.zip"
+        ],
+        "DestinationBucketName": {
+          "Ref": "OpaPoliciesF8957D00"
+        },
+        "RetainOnDelete": false,
+        "Prune": true
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OpaPoliciesByService/CustomResource/Default"
+      }
+    },
+    "ParseActiveServicesServiceRole6BD58EEC": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+              ]
+            ]
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ParseActiveServices/ServiceRole/Resource"
+      }
+    },
+    "ParseActiveServicesServiceRoleDefaultPolicyB1A0C68D": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:HeadObject",
+                "s3:GetObject"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::GetAtt": [
+                        "SynthedTemplates0E9D7F0B",
+                        "Arn"
+                      ]
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "ParseActiveServicesServiceRoleDefaultPolicyB1A0C68D",
+        "Roles": [
+          {
+            "Ref": "ParseActiveServicesServiceRole6BD58EEC"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ParseActiveServices/ServiceRole/DefaultPolicy/Resource"
+      }
+    },
+    "ParseActiveServices1FA5ACA4": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+          },
+          "S3Key": "dc50363215909bb8ac31052fca0c3302b8818fea69feee5ab3e7fa8361fad0f9.zip"
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "ParseActiveServicesServiceRole6BD58EEC",
+            "Arn"
+          ]
+        },
+        "Handler": "lambda_function.lambda_handler",
+        "MemorySize": 1024,
+        "Runtime": "python3.9",
+        "Timeout": 60
+      },
+      "DependsOn": [
+        "ParseActiveServicesServiceRoleDefaultPolicyB1A0C68D",
+        "ParseActiveServicesServiceRole6BD58EEC"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ParseActiveServices/Resource",
+        "aws:asset:path": "asset.dc50363215909bb8ac31052fca0c3302b8818fea69feee5ab3e7fa8361fad0f9",
+        "aws:asset:is-bundled": false,
+        "aws:asset:property": "Code"
+      }
+    },
+    "OpaEvalPythonSubprocessServiceRoleD9D6587D": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+              ]
+            ]
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OpaEvalPythonSubprocess/ServiceRole/Resource"
+      }
+    },
+    "OpaEvalPythonSubprocessServiceRoleDefaultPolicy656F6193": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:HeadObject",
+                "s3:GetObject"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "OpaPoliciesF8957D00",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "SynthedTemplates0E9D7F0B",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "OpaEvalPythonSubprocessServiceRoleDefaultPolicy656F6193",
+        "Roles": [
+          {
+            "Ref": "OpaEvalPythonSubprocessServiceRoleD9D6587D"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OpaEvalPythonSubprocess/ServiceRole/DefaultPolicy/Resource"
+      }
+    },
+    "OpaEvalPythonSubprocess9FC3744E": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+          },
+          "S3Key": "9f7a7b508d090f76f00ac5bc0750f7f02a0454d9ad30f59dacd9cde9ca2f0ba4.zip"
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "OpaEvalPythonSubprocessServiceRoleD9D6587D",
+            "Arn"
+          ]
+        },
+        "Handler": "lambda_function.lambda_handler",
+        "MemorySize": 1024,
+        "Runtime": "python3.9",
+        "Timeout": 60
+      },
+      "DependsOn": [
+        "OpaEvalPythonSubprocessServiceRoleDefaultPolicy656F6193",
+        "OpaEvalPythonSubprocessServiceRoleD9D6587D"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OpaEvalPythonSubprocess/Resource",
+        "aws:asset:path": "asset.9f7a7b508d090f76f00ac5bc0750f7f02a0454d9ad30f59dacd9cde9ca2f0ba4",
+        "aws:asset:is-bundled": false,
+        "aws:asset:property": "Code"
+      }
+    },
+    "InfractionsFeedbackGitCodeCommitServiceRole16C33A10": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+              ]
+            ]
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/InfractionsFeedbackGitCodeCommit/ServiceRole/Resource"
+      }
+    },
+    "InfractionsFeedbackGitCodeCommitServiceRoleDefaultPolicy3CEEC92C": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:HeadObject",
+                "s3:GetObject"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::GetAtt": [
+                        "SynthedTemplates0E9D7F0B",
+                        "Arn"
+                      ]
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            },
+            {
+              "Action": "dynamodb:Query",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "EvalResultsF157F7FB",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "EvalResultsF157F7FB",
+                          "Arn"
+                        ]
+                      },
+                      "*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "codecommit:ListBranches",
+                "codecommit:ListPullRequests",
+                "codecommit:GetBranch",
+                "codecommit:GetCommit",
+                "codecommit:GetPullRequest",
+                "codecommit:CreateBranch",
+                "codecommit:CreateCommit",
+                "codecommit:CreatePullRequest"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":codecommit:us-east-1:",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":opa-eval-serverless-cdk-source"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":codecommit:us-east-1:",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":opa-eval-serverless-cdk-source*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "codecommit:ListRepositories",
+                "codecommit:GetRepository"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":codecommit:us-east-1:",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":opa-eval-serverless-cdk-source"
+                  ]
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "InfractionsFeedbackGitCodeCommitServiceRoleDefaultPolicy3CEEC92C",
+        "Roles": [
+          {
+            "Ref": "InfractionsFeedbackGitCodeCommitServiceRole16C33A10"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/InfractionsFeedbackGitCodeCommit/ServiceRole/DefaultPolicy/Resource"
+      }
+    },
+    "InfractionsFeedbackGitCodeCommitCE401A51": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+          },
+          "S3Key": "4afaddce870287d5025441496210c3117df113e775f48ec401cdc19416077010.zip"
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "InfractionsFeedbackGitCodeCommitServiceRole16C33A10",
+            "Arn"
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "AppTeamCdkRepo": "opa-eval-serverless-cdk-source",
+            "AppTeamCdkRepoBranch": "master"
+          }
+        },
+        "Handler": "lambda_function.lambda_handler",
+        "MemorySize": 1024,
+        "Runtime": "python3.9",
+        "Timeout": 60
+      },
+      "DependsOn": [
+        "InfractionsFeedbackGitCodeCommitServiceRoleDefaultPolicy3CEEC92C",
+        "InfractionsFeedbackGitCodeCommitServiceRole16C33A10"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/InfractionsFeedbackGitCodeCommit/Resource",
+        "aws:asset:path": "asset.4afaddce870287d5025441496210c3117df113e775f48ec401cdc19416077010",
+        "aws:asset:is-bundled": false,
+        "aws:asset:property": "Code"
+      }
+    },
+    "InnerEvalEngineSfnLogs4151C2FD": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "RetentionInDays": 731
+      },
+      "UpdateReplacePolicy": "Retain",
+      "DeletionPolicy": "Retain",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/InnerEvalEngineSfnLogs/Resource"
+      }
+    },
+    "InnerEvalEngineSfnEF6057ED": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "states.us-east-1.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/InnerEvalEngineSfn/Resource"
+      }
+    },
+    "InnerEvalEngineSfnDefaultPolicy22777866": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "logs:*",
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                "*",
+                {
+                  "Fn::GetAtt": [
+                    "InnerEvalEngineSfnLogs4151C2FD",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "InnerEvalEngineSfnLogs4151C2FD",
+                          "Arn"
+                        ]
+                      },
+                      ":*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": "lambda:InvokeFunction",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "ParseActiveServices1FA5ACA4",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::GetAtt": [
+                    "OpaEvalPythonSubprocess9FC3744E",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::GetAtt": [
+                    "InfractionsFeedbackGitCodeCommitCE401A51",
+                    "Arn"
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": "dynamodb:UpdateItem",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "EvalResultsF157F7FB",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "EvalResultsF157F7FB",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": "s3:ListBucket",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "OpaPoliciesF8957D00",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": [
+                "s3:ListObjectsV2",
+                "s3:HeadObject",
+                "s3:GetObject"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::GetAtt": [
+                        "OpaPoliciesF8957D00",
+                        "Arn"
+                      ]
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "InnerEvalEngineSfnDefaultPolicy22777866",
+        "Roles": [
+          {
+            "Ref": "InnerEvalEngineSfnEF6057ED"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/InnerEvalEngineSfn/DefaultPolicy/Resource"
+      }
+    },
+    "InnerEvalEngine": {
+      "Type": "AWS::StepFunctions::StateMachine",
+      "Properties": {
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "InnerEvalEngineSfnEF6057ED",
+            "Arn"
+          ]
+        },
+        "DefinitionString": {
+          "Fn::Join": [
+            "",
+            [
+              "{\"StartAt\": \"CFN\", \"States\": {\"CFN\": {\"Type\": \"Pass\", \"Next\": \"ParseActiveServices\", \"Parameters\": {\"CFN\": {\"Bucket.$\": \"$.Template.Bucket\", \"Key.$\": \"$.Template.Key\"}}, \"ResultPath\": \"$\"}, \"ParseActiveServices\": {\"Type\": \"Task\", \"Next\": \"ForEachActiveSerive\", \"ResultPath\": \"$.ParseActiveServices\", \"Resource\": \"arn:aws:states:::lambda:invoke\", \"Parameters\": {\"FunctionName\": \"",
+              {
+                "Ref": "ParseActiveServices1FA5ACA4"
+              },
+              "\", \"Payload.$\": \"$.CFN\"}, \"ResultSelector\": {\"Payload.$\": \"$.Payload\"}}, \"ForEachActiveSerive\": {\"Type\": \"Map\", \"Next\": \"InfractionsFeedback\", \"ResultPath\": \"$.ForEachActiveSerive\", \"ItemsPath\": \"$.ParseActiveServices.Payload.ActiveServices\", \"Parameters\": {\"ActiveService.$\": \"$$.Map.Item.Value\", \"CFN.$\": \"$.CFN\"}, \"Iterator\": {\"StartAt\": \"ListPoliciesByService\", \"States\": {\"ListPoliciesByService\": {\"Type\": \"Task\", \"Next\": \"ChoicePoliciesExist\", \"ResultPath\": \"$.ListPoliciesByService\", \"Resource\": \"arn:aws:states:::aws-sdk:s3:listObjectsV2\", \"Parameters\": {\"Bucket\": \"",
+              {
+                "Ref": "OpaPoliciesF8957D00"
+              },
+              "\", \"Prefix.$\": \"$.ActiveService\"}}, \"ChoicePoliciesExist\": {\"Type\": \"Choice\", \"Default\": \"NoPolicies\", \"Choices\": [{\"Variable\": \"$.ListPoliciesByService.Contents\", \"IsPresent\": true, \"Next\": \"ForEachPolicy\"}]}, \"NoPolicies\": {\"Type\": \"Pass\", \"End\": true}, \"ForEachPolicy\": {\"Type\": \"Map\", \"End\": true, \"ResultPath\": \"$.ForEachPolicy\", \"ItemsPath\": \"$.ListPoliciesByService.Contents\", \"Parameters\": {\"Policies\": {\"Bucket\": \"",
+              {
+                "Ref": "OpaPoliciesF8957D00"
+              },
+              "\", \"Key.$\": \"$$.Map.Item.Value.Key\"}, \"CFN.$\": \"$.CFN\"}, \"Iterator\": {\"StartAt\": \"OPAEvalPythonSubprocess\", \"States\": {\"OPAEvalPythonSubprocess\": {\"Type\": \"Task\", \"Next\": \"ChoiceOPAEvalIsAllowed\", \"ResultPath\": \"$.OPAEvalPythonSubprocess\", \"Resource\": \"arn:aws:states:::lambda:invoke\", \"Parameters\": {\"FunctionName\": \"",
+              {
+                "Ref": "OpaEvalPythonSubprocess9FC3744E"
+              },
+              "\", \"Payload\": {\"Policies.$\": \"$.Policies\", \"CFN.$\": \"$.CFN\"}}, \"ResultSelector\": {\"Payload.$\": \"$.Payload\"}}, \"ChoiceOPAEvalIsAllowed\": {\"Type\": \"Choice\", \"Default\": \"Deny\", \"Choices\": [{\"Variable\": \"$.OPAEvalPythonSubprocess.Payload.OPAEvalDenyResult\", \"StringEquals\": \"False\", \"Next\": \"Allow\"}]}, \"Allow\": {\"Type\": \"Pass\", \"End\": true}, \"Deny\": {\"Type\": \"Pass\", \"Next\": \"ForEachInfraction\"}, \"ForEachInfraction\": {\"Type\": \"Map\", \"End\": true, \"ResultPath\": \"$.ForEachInfraction\", \"ItemsPath\": \"$.OPAEvalPythonSubprocess.Payload.Infractions\", \"Parameters\": {\"Infraction.$\": \"$$.Map.Item.Value\", \"Policies.$\": \"$.Policies\", \"CFN.$\": \"$.CFN\"}, \"Iterator\": {\"StartAt\": \"WriteInfractionToDDB\", \"States\": {\"WriteInfractionToDDB\": {\"Type\": \"Task\", \"End\": true, \"ResultPath\": \"$.WriteEvalResultToDDB\", \"Resource\": \"arn:aws:states:::dynamodb:updateItem\", \"ResultSelector\": {\"HttpStatusCode.$\": \"$.SdkHttpMetadata.HttpStatusCode\"}, \"Parameters\": {\"TableName\": \"",
+              {
+                "Ref": "EvalResultsF157F7FB"
+              },
+              "\", \"Key\": {\"pk\": {\"S.$\": \"$$.Execution.Id\"}, \"sk\": {\"S.$\": \"States.Format('{}#{}', $.CFN.Key, $.Policies.Key)\"}}, \"ExpressionAttributeNames\": {\"#allowed\": \"AllowedStringBoolean\", \"#infractions\": \"Infractions\"}, \"ExpressionAttributeValues\": {\":allowed\": {\"S\": \"False\"}, \":infractions\": {\"S.$\": \"States.JsonToString($.Infraction)\"}}, \"UpdateExpression\": \"SET #allowed=:allowed, #infractions=:infractions\"}}}}}}}}}}}, \"InfractionsFeedback\": {\"Type\": \"Task\", \"Next\": \"ChoicePipelineIsHalted\", \"ResultPath\": \"$.InfractionsFeedback\", \"Resource\": \"arn:aws:states:::lambda:invoke\", \"Parameters\": {\"FunctionName\": \"",
+              {
+                "Ref": "InfractionsFeedbackGitCodeCommitCE401A51"
+              },
+              "\", \"Payload\": {\"CFN.$\": \"$.CFN\", \"DynamoDB\": {\"Table\": \"",
+              {
+                "Ref": "EvalResultsF157F7FB"
+              },
+              "\", \"Pk.$\": \"$$.Execution.Id\"}}}, \"ResultSelector\": {\"Payload.$\": \"$.Payload\"}}, \"ChoicePipelineIsHalted\": {\"Type\": \"Choice\", \"Default\": \"PipelineIsHalted\", \"Choices\": [{\"Variable\": \"$.InfractionsFeedback.Payload.InfractionsExist\", \"BooleanEquals\": false, \"Next\": \"PipelineProceeds\"}]}, \"PipelineProceeds\": {\"Type\": \"Succeed\"}, \"PipelineIsHalted\": {\"Type\": \"Fail\", \"Cause\": \"InfractionsExist\"}}}"
+            ]
+          ]
+        },
+        "LoggingConfiguration": {
+          "Destinations": [
+            {
+              "CloudWatchLogsLogGroup": {
+                "LogGroupArn": {
+                  "Fn::GetAtt": [
+                    "InnerEvalEngineSfnLogs4151C2FD",
+                    "Arn"
+                  ]
+                }
+              }
+            }
+          ],
+          "IncludeExecutionData": false,
+          "Level": "ERROR"
+        },
+        "StateMachineType": "EXPRESS"
+      },
+      "DependsOn": [
+        "InnerEvalEngineSfnDefaultPolicy22777866",
+        "InnerEvalEngineSfnEF6057ED"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/InnerEvalEngine"
+      }
+    },
+    "OuterEvalEngineSfnLogs25DC008E": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "RetentionInDays": 731
+      },
+      "UpdateReplacePolicy": "Retain",
+      "DeletionPolicy": "Retain",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OuterEvalEngineSfnLogs/Resource"
+      }
+    },
+    "OuterEvalEngineSfn0F943F30": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "states.us-east-1.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OuterEvalEngineSfn/Resource"
+      }
+    },
+    "OuterEvalEngineSfnDefaultPolicyA732D439": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "logs:*",
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                "*",
+                {
+                  "Fn::GetAtt": [
+                    "OuterEvalEngineSfnLogs25DC008E",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "OuterEvalEngineSfnLogs25DC008E",
+                          "Arn"
+                        ]
+                      },
+                      ":*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "states:StartExecution",
+                "states:StartSyncExecution"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "InnerEvalEngine",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": [
+                "states:DescribeExecution",
+                "states:StopExecution"
+              ],
+              "Effect": "Allow",
+              "Resource": "*"
+            },
+            {
+              "Action": [
+                "events:PutTargets",
+                "events:PutRule",
+                "events:DescribeRule"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                "arn:aws:events:us-east-1:None:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule",
+                "*"
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "OuterEvalEngineSfnDefaultPolicyA732D439",
+        "Roles": [
+          {
+            "Ref": "OuterEvalEngineSfn0F943F30"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OuterEvalEngineSfn/DefaultPolicy/Resource"
+      }
+    },
+    "OuterEvalEngine": {
+      "Type": "AWS::StepFunctions::StateMachine",
+      "Properties": {
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "OuterEvalEngineSfn0F943F30",
+            "Arn"
+          ]
+        },
+        "DefinitionString": {
+          "Fn::Join": [
+            "",
+            [
+              "{\"StartAt\": \"ForEachTemplate\", \"States\": {\"ForEachTemplate\": {\"Type\": \"Map\", \"End\": true, \"ResultPath\": \"$.ForEachTemplate\", \"ItemsPath\": \"$.CFN.Keys\", \"Parameters\": {\"Template\": {\"Bucket.$\": \"$.CFN.Bucket\", \"Key.$\": \"$$.Map.Item.Value\"}}, \"Iterator\": {\"StartAt\": \"TemplateToNestedSFN\", \"States\": {\"TemplateToNestedSFN\": {\"Type\": \"Task\", \"End\": true, \"ResultPath\": \"$.TemplateToNestedSFN\", \"Resource\": \"arn:aws:states:::aws-sdk:sfn:startSyncExecution\", \"Parameters\": {\"StateMachineArn\": \"",
+              {
+                "Fn::GetAtt": [
+                  "InnerEvalEngine",
+                  "Arn"
+                ]
+              },
+              "\", \"Input\": {\"Template.$\": \"$.Template\"}}}}}}}}"
+            ]
+          ]
+        },
+        "LoggingConfiguration": {
+          "Destinations": [
+            {
+              "CloudWatchLogsLogGroup": {
+                "LogGroupArn": {
+                  "Fn::GetAtt": [
+                    "OuterEvalEngineSfnLogs25DC008E",
+                    "Arn"
+                  ]
+                }
+              }
+            }
+          ],
+          "IncludeExecutionData": false,
+          "Level": "ERROR"
+        },
+        "StateMachineType": "EXPRESS"
+      },
+      "DependsOn": [
+        "OuterEvalEngineSfnDefaultPolicyA732D439",
+        "OuterEvalEngineSfn0F943F30"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/OuterEvalEngine"
+      }
+    },
+    "AddBuildspecServiceRole182AAECE": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+              ]
+            ]
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/AddBuildspec/ServiceRole/Resource"
+      }
+    },
+    "AddBuildspecServiceRoleDefaultPolicyB7D4C6E1": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:HeadObject",
+                "s3:GetObject"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::GetAtt": [
+                        "Buildspec5CD669CF",
+                        "Arn"
+                      ]
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            },
+            {
+              "Action": [
+                "codepipeline:PutJobSuccessResult",
+                "codepipeline:PutJobFailureResult"
+              ],
+              "Effect": "Allow",
+              "Resource": "*"
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "AddBuildspecServiceRoleDefaultPolicyB7D4C6E1",
+        "Roles": [
+          {
+            "Ref": "AddBuildspecServiceRole182AAECE"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/AddBuildspec/ServiceRole/DefaultPolicy/Resource"
+      }
+    },
+    "AddBuildspec6B58F117": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+          },
+          "S3Key": "a16897c872a283466363c32ee7ad505b70cb1972bf13eda2c40c5da4a2de5e39.zip"
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "AddBuildspecServiceRole182AAECE",
+            "Arn"
+          ]
+        },
+        "Handler": "lambda_function.lambda_handler",
+        "MemorySize": 1024,
+        "Runtime": "python3.9",
+        "Timeout": 60
+      },
+      "DependsOn": [
+        "AddBuildspecServiceRoleDefaultPolicyB7D4C6E1",
+        "AddBuildspecServiceRole182AAECE"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/AddBuildspec/Resource",
+        "aws:asset:path": "asset.a16897c872a283466363c32ee7ad505b70cb1972bf13eda2c40c5da4a2de5e39",
+        "aws:asset:is-bundled": false,
+        "aws:asset:property": "Code"
+      }
+    },
+    "CdkSynthRoleEADD8A33": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "codebuild.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/CdkSynth/Role/Resource"
+      }
+    },
+    "CdkSynthRoleDefaultPolicy21DB1E4F": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":logs:us-east-1:",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":log-group:/aws/codebuild/",
+                      {
+                        "Ref": "CdkSynthBE8179A7"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":logs:us-east-1:",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":log-group:/aws/codebuild/",
+                      {
+                        "Ref": "CdkSynthBE8179A7"
+                      },
+                      ":*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "codebuild:CreateReportGroup",
+                "codebuild:CreateReport",
+                "codebuild:UpdateReport",
+                "codebuild:BatchPutTestCases",
+                "codebuild:BatchPutCodeCoverages"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":codebuild:us-east-1:",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":report-group/",
+                    {
+                      "Ref": "CdkSynthBE8179A7"
+                    },
+                    "-*"
+                  ]
+                ]
+              }
+            },
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:PutObjectLegalHold",
+                "s3:PutObjectRetention",
+                "s3:PutObjectTagging",
+                "s3:PutObjectVersionTagging",
+                "s3:Abort*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "RootPipelineArtifactBucketDE6BC58C",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "RootPipelineArtifactBucketDE6BC58C",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "CdkSynthRoleDefaultPolicy21DB1E4F",
+        "Roles": [
+          {
+            "Ref": "CdkSynthRoleEADD8A33"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/CdkSynth/Role/DefaultPolicy/Resource"
+      }
+    },
+    "CdkSynthBE8179A7": {
+      "Type": "AWS::CodeBuild::Project",
+      "Properties": {
+        "Artifacts": {
+          "Type": "CODEPIPELINE"
+        },
+        "Environment": {
+          "ComputeType": "BUILD_GENERAL1_SMALL",
+          "Image": "aws/codebuild/standard:1.0",
+          "ImagePullCredentialsType": "CODEBUILD",
+          "PrivilegedMode": false,
+          "Type": "LINUX_CONTAINER"
+        },
+        "ServiceRole": {
+          "Fn::GetAtt": [
+            "CdkSynthRoleEADD8A33",
+            "Arn"
+          ]
+        },
+        "Source": {
+          "Type": "CODEPIPELINE"
+        },
+        "Cache": {
+          "Type": "NO_CACHE"
+        },
+        "EncryptionKey": "alias/aws/s3"
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/CdkSynth/Resource"
+      }
+    },
+    "EvalEngineWrapperServiceRole55787441": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+              ]
+            ]
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/EvalEngineWrapper/ServiceRole/Resource"
+      }
+    },
+    "EvalEngineWrapperServiceRoleDefaultPolicyCFF6D4F2": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "s3:PutObject",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::GetAtt": [
+                        "SynthedTemplates0E9D7F0B",
+                        "Arn"
+                      ]
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            },
+            {
+              "Action": "states:StartSyncExecution",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "OuterEvalEngine",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "OuterEvalEngine",
+                          "Arn"
+                        ]
+                      },
+                      "*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "codepipeline:PutJobSuccessResult",
+                "codepipeline:PutJobFailureResult"
+              ],
+              "Effect": "Allow",
+              "Resource": "*"
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "EvalEngineWrapperServiceRoleDefaultPolicyCFF6D4F2",
+        "Roles": [
+          {
+            "Ref": "EvalEngineWrapperServiceRole55787441"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/EvalEngineWrapper/ServiceRole/DefaultPolicy/Resource"
+      }
+    },
+    "EvalEngineWrapper036E7A0C": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+          },
+          "S3Key": "307c104c4576159bcae9a96c3cc64f5a03998da066903a7345ca7ad1392ceb94.zip"
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "EvalEngineWrapperServiceRole55787441",
+            "Arn"
+          ]
+        },
+        "Handler": "lambda_function.lambda_handler",
+        "MemorySize": 1024,
+        "Runtime": "python3.9",
+        "Timeout": 60
+      },
+      "DependsOn": [
+        "EvalEngineWrapperServiceRoleDefaultPolicyCFF6D4F2",
+        "EvalEngineWrapperServiceRole55787441"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/EvalEngineWrapper/Resource",
+        "aws:asset:path": "asset.307c104c4576159bcae9a96c3cc64f5a03998da066903a7345ca7ad1392ceb94",
+        "aws:asset:is-bundled": false,
+        "aws:asset:property": "Code"
+      }
+    },
+    "RootPipelineArtifactBucketDE6BC58C": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "aws-cdk:auto-delete-objects",
+            "Value": "true"
+          }
+        ]
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/RootPipelineArtifactBucket/Resource"
+      }
+    },
+    "RootPipelineArtifactBucketPolicy6118AA2A": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "RootPipelineArtifactBucketDE6BC58C"
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::GetAtt": [
+                    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+                    "Arn"
+                  ]
+                }
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "RootPipelineArtifactBucketDE6BC58C",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "RootPipelineArtifactBucketDE6BC58C",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/RootPipelineArtifactBucket/Policy/Resource"
+      }
+    },
+    "RootPipelineArtifactBucketAutoDeleteObjectsCustomResource0D317DAF": {
+      "Type": "Custom::S3AutoDeleteObjects",
+      "Properties": {
+        "ServiceToken": {
+          "Fn::GetAtt": [
+            "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
+            "Arn"
+          ]
+        },
+        "BucketName": {
+          "Ref": "RootPipelineArtifactBucketDE6BC58C"
+        }
+      },
+      "DependsOn": [
+        "RootPipelineArtifactBucketPolicy6118AA2A"
+      ],
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/RootPipelineArtifactBucket/AutoDeleteObjectsCustomResource/Default"
+      }
+    },
+    "ControlBrokerEvalEngineRole6FC91540": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "codepipeline.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/Role/Resource"
+      }
+    },
+    "ControlBrokerEvalEngineRoleDefaultPolicy32BF8C76": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:PutObjectLegalHold",
+                "s3:PutObjectRetention",
+                "s3:PutObjectTagging",
+                "s3:PutObjectVersionTagging",
+                "s3:Abort*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "RootPipelineArtifactBucketDE6BC58C",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "RootPipelineArtifactBucketDE6BC58C",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "ControlBrokerEvalEngineSourceCodeCommitCodePipelineActionRole0D220F19",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "ControlBrokerEvalEngineAddBuildspecCodePipelineActionRoleCE2AC78A",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "ControlBrokerEvalEngineCdkSynthCodeBuildCodePipelineActionRoleBCC86151",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "ControlBrokerEvalEngineCodePipelineActionRole9599719B",
+                  "Arn"
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "ControlBrokerEvalEngineRoleDefaultPolicy32BF8C76",
+        "Roles": [
+          {
+            "Ref": "ControlBrokerEvalEngineRole6FC91540"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/Role/DefaultPolicy/Resource"
+      }
+    },
+    "ControlBrokerEvalEngine4421E182": {
+      "Type": "AWS::CodePipeline::Pipeline",
+      "Properties": {
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "ControlBrokerEvalEngineRole6FC91540",
+            "Arn"
+          ]
+        },
+        "Stages": [
+          {
+            "Actions": [
+              {
+                "ActionTypeId": {
+                  "Category": "Source",
+                  "Owner": "AWS",
+                  "Provider": "CodeCommit",
+                  "Version": "1"
+                },
+                "Configuration": {
+                  "RepositoryName": "opa-eval-serverless-cdk-source",
+                  "BranchName": "master",
+                  "PollForSourceChanges": false
+                },
+                "Name": "CodeCommit",
+                "OutputArtifacts": [
+                  {
+                    "Name": "Artifact_Source_CodeCommit"
+                  }
+                ],
+                "RoleArn": {
+                  "Fn::GetAtt": [
+                    "ControlBrokerEvalEngineSourceCodeCommitCodePipelineActionRole0D220F19",
+                    "Arn"
+                  ]
+                },
+                "RunOrder": 1
+              }
+            ],
+            "Name": "Source"
+          },
+          {
+            "Actions": [
+              {
+                "ActionTypeId": {
+                  "Category": "Invoke",
+                  "Owner": "AWS",
+                  "Provider": "Lambda",
+                  "Version": "1"
+                },
+                "Configuration": {
+                  "FunctionName": {
+                    "Ref": "AddBuildspec6B58F117"
+                  },
+                  "UserParameters": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "{\"Buildspec\":{\"Bucket\":\"",
+                        {
+                          "Ref": "Buildspec5CD669CF"
+                        },
+                        "\",\"Key\":\"buildspec.yaml\"}}"
+                      ]
+                    ]
+                  }
+                },
+                "InputArtifacts": [
+                  {
+                    "Name": "Artifact_Source_CodeCommit"
+                  }
+                ],
+                "Name": "AddBuildspec",
+                "OutputArtifacts": [
+                  {
+                    "Name": "Artifact_AddBuildspec_AddBuildspec"
+                  }
+                ],
+                "RoleArn": {
+                  "Fn::GetAtt": [
+                    "ControlBrokerEvalEngineAddBuildspecCodePipelineActionRoleCE2AC78A",
+                    "Arn"
+                  ]
+                },
+                "RunOrder": 1
+              }
+            ],
+            "Name": "AddBuildspec"
+          },
+          {
+            "Actions": [
+              {
+                "ActionTypeId": {
+                  "Category": "Build",
+                  "Owner": "AWS",
+                  "Provider": "CodeBuild",
+                  "Version": "1"
+                },
+                "Configuration": {
+                  "ProjectName": {
+                    "Ref": "CdkSynthBE8179A7"
+                  }
+                },
+                "InputArtifacts": [
+                  {
+                    "Name": "Artifact_AddBuildspec_AddBuildspec"
+                  }
+                ],
+                "Name": "CodeBuild",
+                "OutputArtifacts": [
+                  {
+                    "Name": "Artifact_CdkSynth_CodeBuild"
+                  }
+                ],
+                "RoleArn": {
+                  "Fn::GetAtt": [
+                    "ControlBrokerEvalEngineCdkSynthCodeBuildCodePipelineActionRoleBCC86151",
+                    "Arn"
+                  ]
+                },
+                "RunOrder": 1
+              }
+            ],
+            "Name": "CdkSynth"
+          },
+          {
+            "Actions": [
+              {
+                "ActionTypeId": {
+                  "Category": "Invoke",
+                  "Owner": "AWS",
+                  "Provider": "Lambda",
+                  "Version": "1"
+                },
+                "Configuration": {
+                  "FunctionName": {
+                    "Ref": "EvalEngineWrapper036E7A0C"
+                  },
+                  "UserParameters": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "{\"SynthedTemplatesBucket\":\"",
+                        {
+                          "Ref": "SynthedTemplates0E9D7F0B"
+                        },
+                        "\",\"EvalEngineSfnArn\":\"",
+                        {
+                          "Fn::GetAtt": [
+                            "OuterEvalEngine",
+                            "Arn"
+                          ]
+                        },
+                        "\"}"
+                      ]
+                    ]
+                  }
+                },
+                "InputArtifacts": [
+                  {
+                    "Name": "Artifact_CdkSynth_CodeBuild"
+                  }
+                ],
+                "Name": "EvalEngine",
+                "RoleArn": {
+                  "Fn::GetAtt": [
+                    "ControlBrokerEvalEngineCodePipelineActionRole9599719B",
+                    "Arn"
+                  ]
+                },
+                "RunOrder": 1
+              }
+            ],
+            "Name": "EvalEngine"
+          }
+        ],
+        "ArtifactStore": {
+          "Location": {
+            "Ref": "RootPipelineArtifactBucketDE6BC58C"
+          },
+          "Type": "S3"
+        }
+      },
+      "DependsOn": [
+        "ControlBrokerEvalEngineRoleDefaultPolicy32BF8C76",
+        "ControlBrokerEvalEngineRole6FC91540"
+      ],
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/Resource"
+      }
+    },
+    "ControlBrokerEvalEngineSourceCodeCommitCodePipelineActionRole0D220F19": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":root"
+                    ]
+                  ]
+                }
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/Source/CodeCommit/CodePipelineActionRole/Resource"
+      }
+    },
+    "ControlBrokerEvalEngineSourceCodeCommitCodePipelineActionRoleDefaultPolicy0F12FB9E": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:PutObjectLegalHold",
+                "s3:PutObjectRetention",
+                "s3:PutObjectTagging",
+                "s3:PutObjectVersionTagging",
+                "s3:Abort*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "RootPipelineArtifactBucketDE6BC58C",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "RootPipelineArtifactBucketDE6BC58C",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "codecommit:GetBranch",
+                "codecommit:GetCommit",
+                "codecommit:UploadArchive",
+                "codecommit:GetUploadArchiveStatus",
+                "codecommit:CancelUploadArchive"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":codecommit:us-east-1:",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":opa-eval-serverless-cdk-source"
+                  ]
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "ControlBrokerEvalEngineSourceCodeCommitCodePipelineActionRoleDefaultPolicy0F12FB9E",
+        "Roles": [
+          {
+            "Ref": "ControlBrokerEvalEngineSourceCodeCommitCodePipelineActionRole0D220F19"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/Source/CodeCommit/CodePipelineActionRole/DefaultPolicy/Resource"
+      }
+    },
+    "ControlBrokerEvalEngineEventsRoleA991B92D": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "events.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/EventsRole/Resource"
+      }
+    },
+    "ControlBrokerEvalEngineEventsRoleDefaultPolicyB10B7882": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "codepipeline:StartPipelineExecution",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":codepipeline:us-east-1:",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ControlBrokerEvalEngine4421E182"
+                    }
+                  ]
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "ControlBrokerEvalEngineEventsRoleDefaultPolicyB10B7882",
+        "Roles": [
+          {
+            "Ref": "ControlBrokerEvalEngineEventsRoleA991B92D"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/EventsRole/DefaultPolicy/Resource"
+      }
+    },
+    "ControlBrokerEvalEngineAddBuildspecCodePipelineActionRoleCE2AC78A": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":root"
+                    ]
+                  ]
+                }
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/AddBuildspec/AddBuildspec/CodePipelineActionRole/Resource"
+      }
+    },
+    "ControlBrokerEvalEngineAddBuildspecCodePipelineActionRoleDefaultPolicy27C2BF9F": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "lambda:ListFunctions",
+              "Effect": "Allow",
+              "Resource": "*"
+            },
+            {
+              "Action": "lambda:InvokeFunction",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "AddBuildspec6B58F117",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "RootPipelineArtifactBucketDE6BC58C",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "RootPipelineArtifactBucketDE6BC58C",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:PutObjectLegalHold",
+                "s3:PutObjectRetention",
+                "s3:PutObjectTagging",
+                "s3:PutObjectVersionTagging",
+                "s3:Abort*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "RootPipelineArtifactBucketDE6BC58C",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "RootPipelineArtifactBucketDE6BC58C",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "ControlBrokerEvalEngineAddBuildspecCodePipelineActionRoleDefaultPolicy27C2BF9F",
+        "Roles": [
+          {
+            "Ref": "ControlBrokerEvalEngineAddBuildspecCodePipelineActionRoleCE2AC78A"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/AddBuildspec/AddBuildspec/CodePipelineActionRole/DefaultPolicy/Resource"
+      }
+    },
+    "ControlBrokerEvalEngineCdkSynthCodeBuildCodePipelineActionRoleBCC86151": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":root"
+                    ]
+                  ]
+                }
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/CdkSynth/CodeBuild/CodePipelineActionRole/Resource"
+      }
+    },
+    "ControlBrokerEvalEngineCdkSynthCodeBuildCodePipelineActionRoleDefaultPolicy1E956B0A": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "codebuild:BatchGetBuilds",
+                "codebuild:StartBuild",
+                "codebuild:StopBuild"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "CdkSynthBE8179A7",
+                  "Arn"
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "ControlBrokerEvalEngineCdkSynthCodeBuildCodePipelineActionRoleDefaultPolicy1E956B0A",
+        "Roles": [
+          {
+            "Ref": "ControlBrokerEvalEngineCdkSynthCodeBuildCodePipelineActionRoleBCC86151"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/CdkSynth/CodeBuild/CodePipelineActionRole/DefaultPolicy/Resource"
+      }
+    },
+    "ControlBrokerEvalEngineCodePipelineActionRole9599719B": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":root"
+                    ]
+                  ]
+                }
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/EvalEngine/EvalEngine/CodePipelineActionRole/Resource"
+      }
+    },
+    "ControlBrokerEvalEngineCodePipelineActionRoleDefaultPolicy410B2E9C": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "lambda:ListFunctions",
+              "Effect": "Allow",
+              "Resource": "*"
+            },
+            {
+              "Action": "lambda:InvokeFunction",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "EvalEngineWrapper036E7A0C",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "RootPipelineArtifactBucketDE6BC58C",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "RootPipelineArtifactBucketDE6BC58C",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": "ControlBrokerEvalEngineCodePipelineActionRoleDefaultPolicy410B2E9C",
+        "Roles": [
+          {
+            "Ref": "ControlBrokerEvalEngineCodePipelineActionRole9599719B"
+          }
+        ]
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/ControlBrokerEvalEngine/EvalEngine/EvalEngine/CodePipelineActionRole/DefaultPolicy/Resource"
+      }
+    },
+    "CDKMetadata": {
+      "Type": "AWS::CDK::Metadata",
+      "Properties": {
+        "Analytics": "v2:deflate64:H4sIAAAAAAAA/1VRy27DIBD8ltwJzePSa5KqvaSSlVS9Whg2DjEGy0AiC/HvXWziqKcdZpZldtjQ9YauFuxhl1w0SyUrGs6O8YacwBrfcyColQHuoJ2l4eQVkMNFpxqJGDRrjcA7P6yahBFEYrc07D1vwCUyo6kURkk+vOh8ng57ZsfbZRDQKTO0+CydpI+ZIMxaQDe7VCJRrK0EowEnHtkA/S/0VhpNzlLXCpzRn15zl5gZYOsTRyJZi4uZvFiqL4sTwjdMjdsfTf3VG98l5YnRrYPukqdZihIG6OCb8avUQLgRUHmpBA2F7EAhV/TmBnxMJsM4tnVZf3WOLRnHSA7eOtPOP5PszvifhGPvUkBPxojQT41Z5KBKlUIq8Vu5knT3sAclx9wiKQZ3NfptS9/perW4WSmXvddOtkBPU/0D1bfIVTACAAA="
+      },
+      "Metadata": {
+        "aws:cdk:path": "ControlBrokerEvalEngineCdkStack/CDKMetadata/Default"
+      }
+    }
+  },
+  "Parameters": {
+    "BootstrapVersion": {
+      "Type": "AWS::SSM::Parameter::Value<String>",
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+    }
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5"
+                  ],
+                  {
+                    "Ref": "BootstrapVersion"
+                  }
+                ]
+              }
+            ]
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+        }
+      ]
+    }
+  }
+}
