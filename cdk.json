@@ -25,6 +25,7 @@
     "@aws-cdk/core:target-partitions": [
       "aws",
       "aws-cn"
-    ]
+    ],
+    "performance-testing-example-template": "supplementary_files/ExampleStack.template.json"
   }
 }

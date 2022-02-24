@@ -1,7 +1,5 @@
 package sns_subscription_protocol
 
-import input 
-
 type = "AWS::SNS::Subscription"
 
 default allow = false
