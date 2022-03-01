@@ -308,12 +308,14 @@ class ControlBrokerEvalEngineStack(Stack):
                     "Type" : "Map",
                     "Next" : "QueryEvalResultsTable",
                     "ResultPath" : None,
-                    "ItemsPath" : "$.OpaEvalSingleThreaded.Payload.OpaEvalResults",
+                    "ItemsPath" : "$.OpaEval.Payload.OpaEvalResults",
                     "Parameters" : {
                       "EvalResult.$" : "$$.Map.Item.Value",
                       "JsonInput.$" : "$.JsonInput",
-                      "OuterEvalEngineSfnExecutionId": "$.OuterEvalEngineSfnExecutionId",
-                      "Metadata.$": "$.GetMetadata.Metadata"
+                      "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
+                      "Metadata.$": "$.GetMetadata.Metadata",
+                      "EvalResultContextIndex.$": "$$.Map.Item.Index",
+                      "EvalResultContextValue.$": "$$.Map.Item.Value"
                     },
                     "Iterator" : {
                       "StartAt" : "ChoiceIsAllowed",
@@ -342,7 +344,9 @@ class ControlBrokerEvalEngineStack(Stack):
                             "Infraction.$" : "$$.Map.Item.Value",
                             "JsonInput.$" : "$.JsonInput",
                             "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                            "Metadata.$": "$.Metadata"
+                            "Metadata.$": "$.Metadata",
+                            "InfractionContextIndex.$": "$$.Map.Item.Index",
+                            "InfractionContextValue.$": "$$.Map.Item.Value"
                           },
                           "Iterator" : {
                             "StartAt" : "WriteInfractionToDDB",
@@ -359,17 +363,19 @@ class ControlBrokerEvalEngineStack(Stack):
                                   "TableName" : self.table_eval_results.table_name,
                                   "Key" : {
                                     "pk" : {
-                                      "S.$" : "$.OuterEvalEngineSfnExecutionId"
+                                      "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                                    #   "S.$" : "$.OuterEvalEngineSfnExecutionId"
                                     },
                                     "sk" : {
                                       "S.$" : "States.Format('{}#{}#{}', $.JsonInput.Key, $.Infraction.resource, $.Infraction.reason)"
-            
+                                    #   "S.$" : "$$.Execution.Id"
                                     }
                                   },
                                   "ExpressionAttributeNames" : {
                                     "#allow" : "allow",
                                     "#reason" : "reason",
                                     "#resource" : "resource",
+                                    "#cfnkey": "CFNKey",
                                     "#businessunit": "BusinessUnit",
                                     "#billingcode": "BillingCode",
                                     "#targetenv": "TargetProvisioningEnvironment",
@@ -377,6 +383,9 @@ class ControlBrokerEvalEngineStack(Stack):
                                     "#owneremail": "PipelineOwnerEmail",
                                   },
                                   "ExpressionAttributeValues" : {
+                                    ":cfnkey" : {
+                                      "S.$" : "$.JsonInput.Key"
+                                    },
                                     ":allow" : {
                                       "S.$" : "States.JsonToString($.Infraction.allow)"
                                     },
@@ -402,7 +411,7 @@ class ControlBrokerEvalEngineStack(Stack):
                                       "S.$" : "$.Metadata.PipelineOwner.Email"
                                     },
                                   },
-                                  "UpdateExpression" : "SET #allow=:allow, #reason=:reason, #resource=:resource, #businessunit=:businessunit, #billingcode=:billingcode, #targetenv=:targetenv, #ownername=:ownername, #owneremail=:owneremail"
+                                  "UpdateExpression" : "SET #cfnkey=:cfnkey, #allow=:allow, #reason=:reason, #resource=:resource, #businessunit=:businessunit, #billingcode=:billingcode, #targetenv=:targetenv, #ownername=:ownername, #owneremail=:owneremail"
                                 }
                               },
                               "PushInfractionEventToEB" : {
@@ -449,10 +458,15 @@ class ControlBrokerEvalEngineStack(Stack):
                       "TableName" : self.table_eval_results.table_name,
                       "ExpressionAttributeValues" : {
                         ":pk" : {
-                          "S.$" : "$.OuterEvalEngineSfnExecutionId"
-                        }
+                          "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                        #   "S.$" : "$.OuterEvalEngineSfnExecutionId"
+                        },
+                        # ":sk" : {
+                        #   "S.$" : "$$.Execution.Id"
+                        # },
                       },
                       "KeyConditionExpression" : "pk = :pk"
+                    #   "KeyConditionExpression" : "pk = :pk AND sk = :sk"
                     }
                   },
                   "ChoiceInfractionsExist" : {
