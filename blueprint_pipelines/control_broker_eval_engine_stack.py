@@ -264,7 +264,8 @@ class ControlBrokerEvalEngineStack(Stack):
                       "JsonInput" : {
                         "Bucket.$" : "$.Template.Bucket",
                         "Key.$"    : "$.Template.Key"
-                      }
+                      },
+                      "OuterEvalEngineSfnExecutionId.$":"$.OuterEvalEngineSfn.ExecutionId" 
                     },
                     "ResultPath" : "$"
                   },
@@ -311,6 +312,7 @@ class ControlBrokerEvalEngineStack(Stack):
                     "Parameters" : {
                       "EvalResult.$" : "$$.Map.Item.Value",
                       "JsonInput.$" : "$.JsonInput",
+                      "OuterEvalEngineSfnExecutionId": "$.OuterEvalEngineSfnExecutionId",
                       "Metadata.$": "$.GetMetadata.Metadata"
                     },
                     "Iterator" : {
@@ -339,6 +341,7 @@ class ControlBrokerEvalEngineStack(Stack):
                           "Parameters" : {
                             "Infraction.$" : "$$.Map.Item.Value",
                             "JsonInput.$" : "$.JsonInput",
+                            "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
                             "Metadata.$": "$.Metadata"
                           },
                           "Iterator" : {
@@ -356,7 +359,7 @@ class ControlBrokerEvalEngineStack(Stack):
                                   "TableName" : self.table_eval_results.table_name,
                                   "Key" : {
                                     "pk" : {
-                                      "S.$" : "$$.Execution.Id"
+                                      "S.$" : "$.OuterEvalEngineSfnExecutionId"
                                     },
                                     "sk" : {
                                       "S.$" : "States.Format('{}#{}#{}', $.JsonInput.Key, $.Infraction.resource, $.Infraction.reason)"
@@ -418,6 +421,8 @@ class ControlBrokerEvalEngineStack(Stack):
                                             "BillingCode.$": "$.Metadata.BusinessUnit",
                                             "TargetProvisioningEnvironment.$": "$.Metadata.TargetProvisioningEnvironment",
                                             "PipelineOwner.$": "$.Metadata.PipelineOwner",
+                                            "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
+                                            "CFNKey.$": "$.JsonInput.Key"
                                         },
                                         "DetailType": "eval-engine-infraction",
                                         "EventBusName": self.event_bus_infractions.event_bus_name,
@@ -571,7 +576,10 @@ class ControlBrokerEvalEngineStack(Stack):
                             "Parameters" : {
                                 "StateMachineArn" : self.sfn_inner_eval_engine.attr_arn,
                                 "Input" : {
-                                    "Template.$" : "$.Template"
+                                    "Template.$" : "$.Template",
+                                    "OuterEvalEngineSfn": {
+                                        "ExecutionId.$":"$$.Execution.Id"
+                                    }
                                 }
                             }
                         }
