@@ -16,6 +16,7 @@ from aws_cdk import (
     aws_stepfunctions,
     aws_iam,
     aws_logs,
+    aws_events
 )
 
 from constructs import Construct
@@ -32,6 +33,9 @@ class ControlBrokerEvalEngineStack(Stack):
         
         super().__init__(scope, construct_id, **kwargs)
         self.application_team_cdk_app = application_team_cdk_app
+
+        self.pipeline_ownership_metadata =  {}
+        self.pipeline_ownership_metadata['Directory'], self.pipeline_ownership_metadata['Suffix'] = os.path.split(application_team_cdk_app['PipelineOwnershipMetadata'])
 
         self.deploy_utils()
         self.s3_deploy_local_assets()
@@ -58,6 +62,27 @@ class ControlBrokerEvalEngineStack(Stack):
             removal_policy = RemovalPolicy.DESTROY,
             auto_delete_objects = True
         )
+ 
+        # event bridge bus
+        
+        self.event_bus_infractions = aws_events.EventBus(self, "Infractions")
+        
+        # debug event bridge by logging events
+        
+        logs_infraction_events = aws_logs.LogGroup(self, "InfractionEvents")
+        logs_infraction_events.grant_write(aws_iam.ServicePrincipal("events.amazonaws.com"))
+        
+        cfn_rule = aws_events.CfnRule(self, "ListenAllInfractions",
+            state="ENABLED",
+            event_bus_name=self.event_bus_infractions.event_bus_name,
+            event_pattern=aws_events.EventPattern(
+              account= ["899456967600"]
+            ),
+            targets=[aws_events.CfnRule.TargetProperty(
+                arn=logs_infraction_events.log_group_arn,
+                id = "InfractionEvents"
+            )]
+        )
         
     def s3_deploy_local_assets(self):
       
@@ -72,6 +97,20 @@ class ControlBrokerEvalEngineStack(Stack):
         aws_s3_deployment.BucketDeployment(self, "Buildspec.yaml",
             sources=[aws_s3_deployment.Source.asset("./supplementary_files/buildspec")],
             destination_bucket=self.bucket_buildspec,
+            retain_on_delete = False
+        )
+        
+        # pipeline ownership metadata
+        
+        self.bucket_pipeline_ownership_metadata = aws_s3.Bucket(self, "PipelineOwnershipMetadata",
+            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy = RemovalPolicy.DESTROY,
+            auto_delete_objects = True
+        )
+        
+        aws_s3_deployment.BucketDeployment(self, "PipelineOwnershipMetadataDir",
+            sources=[aws_s3_deployment.Source.asset(self.pipeline_ownership_metadata['Directory'])],
+            destination_bucket=self.bucket_pipeline_ownership_metadata,
             retain_on_delete = False
         )
         
@@ -132,8 +171,8 @@ class ControlBrokerEvalEngineStack(Stack):
                 "s3:SelectObjectContent",
             ],
             resources=[
-                self.bucket_synthed_templates.bucket_arn,
-                f'{self.bucket_synthed_templates.bucket_arn}/*',
+                self.bucket_pipeline_ownership_metadata.bucket_arn,
+                f'{self.bucket_pipeline_ownership_metadata.bucket_arn}/*',
             ]
         ))
         
@@ -191,6 +230,15 @@ class ControlBrokerEvalEngineStack(Stack):
                 f'{self.bucket_synthed_templates.bucket_arn}/*',
             ]
         ))
+        role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
+            actions=[
+                "events:PutEvents",
+            ],
+            resources=[
+                self.event_bus_infractions.event_bus_arn,
+                f"{self.event_bus_infractions.event_bus_arn}*",
+            ]
+        ))
         
         self.sfn_inner_eval_engine = aws_stepfunctions.CfnStateMachine(self, "InnerEvalEngine",
             state_machine_type = "EXPRESS",
@@ -216,31 +264,32 @@ class ControlBrokerEvalEngineStack(Stack):
                       "JsonInput" : {
                         "Bucket.$" : "$.Template.Bucket",
                         "Key.$"    : "$.Template.Key"
-                      }
+                      },
+                      "OuterEvalEngineSfnExecutionId.$":"$.OuterEvalEngineSfn.ExecutionId" 
                     },
                     "ResultPath" : "$"
                   },
                   "GetMetadata" : {
                     "Type" : "Task",
-                    "Next" : "OpaEvalSingleThreaded",
+                    "Next" : "OpaEval",
                     "ResultPath" : "$.GetMetadata",
                     "Resource" : "arn:aws:states:::lambda:invoke",
                     "Parameters" : {
                       "FunctionName" : self.lambda_s3_select.function_name,
                       "Payload" : {
-                        "Bucket.$": "$.JsonInput.Bucket",
-                        "Key.$": "$.JsonInput.Key",
-                        "Expression":"SELECT s.Parameters from S3Object s",
+                        "Bucket" : self.bucket_pipeline_ownership_metadata.bucket_name,
+                        "Key" : self.pipeline_ownership_metadata['Suffix'],
+                        "Expression":"SELECT * from S3Object s",
                       }
                     },
                     "ResultSelector" : {
-                      "Metadata.$" : "$.Payload.Selected.Parameters"
+                      "Metadata.$" : "$.Payload.Selected"
                     }
                   },
-                  "OpaEvalSingleThreaded" : {
+                  "OpaEval" : {
                     "Type" : "Task",
                     "Next" : "ForEachEvalResult",
-                    "ResultPath" : "$.OpaEvalSingleThreaded",
+                    "ResultPath" : "$.OpaEval",
                     "Resource" : "arn:aws:states:::lambda:invoke",
                     "Parameters" : {
                       "FunctionName" : self.lambda_opa_eval_python_subprocess_single_threaded.function_name,
@@ -263,6 +312,7 @@ class ControlBrokerEvalEngineStack(Stack):
                     "Parameters" : {
                       "EvalResult.$" : "$$.Map.Item.Value",
                       "JsonInput.$" : "$.JsonInput",
+                      "OuterEvalEngineSfnExecutionId": "$.OuterEvalEngineSfnExecutionId",
                       "Metadata.$": "$.GetMetadata.Metadata"
                     },
                     "Iterator" : {
@@ -291,6 +341,7 @@ class ControlBrokerEvalEngineStack(Stack):
                           "Parameters" : {
                             "Infraction.$" : "$$.Map.Item.Value",
                             "JsonInput.$" : "$.JsonInput",
+                            "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
                             "Metadata.$": "$.Metadata"
                           },
                           "Iterator" : {
@@ -298,7 +349,7 @@ class ControlBrokerEvalEngineStack(Stack):
                             "States" : {
                               "WriteInfractionToDDB" : {
                                 "Type" : "Task",
-                                "End" : True,
+                                "Next" : "PushInfractionEventToEB",
                                 "ResultPath" : "$.WriteEvalResultToDDB",
                                 "Resource" : "arn:aws:states:::dynamodb:updateItem",
                                 "ResultSelector" : {
@@ -308,7 +359,7 @@ class ControlBrokerEvalEngineStack(Stack):
                                   "TableName" : self.table_eval_results.table_name,
                                   "Key" : {
                                     "pk" : {
-                                      "S.$" : "$$.Execution.Id"
+                                      "S.$" : "$.OuterEvalEngineSfnExecutionId"
                                     },
                                     "sk" : {
                                       "S.$" : "States.Format('{}#{}#{}', $.JsonInput.Key, $.Infraction.resource, $.Infraction.reason)"
@@ -320,8 +371,10 @@ class ControlBrokerEvalEngineStack(Stack):
                                     "#reason" : "reason",
                                     "#resource" : "resource",
                                     "#businessunit": "BusinessUnit",
-                                    "#awsregion": "AWSRegion",
-                                    "#awsaccount": "AWSAccount",
+                                    "#billingcode": "BillingCode",
+                                    "#targetenv": "TargetProvisioningEnvironment",
+                                    "#ownername": "PipelineOwnerName",
+                                    "#owneremail": "PipelineOwnerEmail",
                                   },
                                   "ExpressionAttributeValues" : {
                                     ":allow" : {
@@ -334,16 +387,48 @@ class ControlBrokerEvalEngineStack(Stack):
                                       "S.$" : "$.Infraction.resource"
                                     },
                                     ":businessunit" : {
-                                      "S.$" : "$.Metadata.BusinessUnit.Default"
+                                      "S.$" : "$.Metadata.BusinessUnit"
                                     },
-                                    ":awsregion" : {
-                                      "S.$" : "$.Metadata.AWSRegion.Default"
+                                    ":billingcode" : {
+                                      "S.$" : "$.Metadata.BillingCode"
                                     },
-                                    ":awsaccount" : {
-                                      "S.$" : "$.Metadata.AWSAccount.Default"
+                                    ":targetenv" : {
+                                      "S.$" : "$.Metadata.TargetProvisioningEnvironment"
+                                    },
+                                    ":ownername" : {
+                                      "S.$" : "$.Metadata.PipelineOwner.Name"
+                                    },
+                                    ":owneremail" : {
+                                      "S.$" : "$.Metadata.PipelineOwner.Email"
                                     },
                                   },
-                                  "UpdateExpression" : "SET #allow=:allow, #reason=:reason, #resource=:resource, #businessunit=:businessunit, #awsregion=:awsregion, #awsaccount=:awsaccount"
+                                  "UpdateExpression" : "SET #allow=:allow, #reason=:reason, #resource=:resource, #businessunit=:businessunit, #billingcode=:billingcode, #targetenv=:targetenv, #ownername=:ownername, #owneremail=:owneremail"
+                                }
+                              },
+                              "PushInfractionEventToEB" : {
+                                "Type" : "Task",
+                                "End" : True,
+                                "ResultPath" : "$.PushInfractionEventToEB",
+                                "Resource" : "arn:aws:states:::events:putEvents",
+                                "Parameters" : {
+                                    "Entries": [
+                                      {
+                                        "Detail": {
+                                            "allow.$" : "States.JsonToString($.Infraction.allow)",
+                                            "reason.$": "$.Infraction.reason",
+                                            "resource.$": "$.Infraction.resource",
+                                            "BusinessUnit.$": "$.Metadata.BusinessUnit",
+                                            "BillingCode.$": "$.Metadata.BusinessUnit",
+                                            "TargetProvisioningEnvironment.$": "$.Metadata.TargetProvisioningEnvironment",
+                                            "PipelineOwner.$": "$.Metadata.PipelineOwner",
+                                            "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
+                                            "CFNKey.$": "$.JsonInput.Key"
+                                        },
+                                        "DetailType": "eval-engine-infraction",
+                                        "EventBusName": self.event_bus_infractions.event_bus_name,
+                                        "Source.$": "$$.StateMachine.Id"
+                                      }
+                                    ]
                                 }
                               }
                             }
@@ -389,7 +474,7 @@ class ControlBrokerEvalEngineStack(Stack):
                     "Type" : "Succeed",
                   },
                 }
-              })
+            })
         )
     
         self.sfn_inner_eval_engine.node.add_dependency(role_inner_eval_engine_sfn)
@@ -491,7 +576,10 @@ class ControlBrokerEvalEngineStack(Stack):
                             "Parameters" : {
                                 "StateMachineArn" : self.sfn_inner_eval_engine.attr_arn,
                                 "Input" : {
-                                    "Template.$" : "$.Template"
+                                    "Template.$" : "$.Template",
+                                    "OuterEvalEngineSfn": {
+                                        "ExecutionId.$":"$$.Execution.Id"
+                                    }
                                 }
                             }
                         }
