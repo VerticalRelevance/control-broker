@@ -1,9 +1,9 @@
 {
-    "BusinessUnit": "business-unit-a",
-    "BillingCode": "bua-01",
-    "TargetProvisioningEnvironment": "dev-01",
+    "BusinessUnit": "unit-b",
+    "BillingCode": "bua-02",
+    "TargetProvisioningEnvironment": "prod-01",
     "PipelineOwner": {
-        "Name": "John Doe",
-        "Email": "j.doe@example.com"
+        "Name": "Jane Ray",
+        "Email": "j.ray@example.com"
     }
 }
