@@ -63,32 +63,14 @@ class ControlBrokerEvalEngineStack(Stack):
             auto_delete_objects = True
         )
  
-        # event bridge
+        # event bridge bus
         
         self.event_bus_infractions = aws_events.EventBus(self, "Infractions")
         
-        # self.event_bus_infractions.archive("InfractionsArchive",
-        #     event_pattern=aws_events.EventPattern(
-        #         account=[Stack.of(self).account]
-        #     ),
-        #     retention=Duration.days(1)
-        # )
+        # debug event bridge by logging events
         
         logs_infraction_events = aws_logs.LogGroup(self, "InfractionEvents")
         logs_infraction_events.grant_write(aws_iam.ServicePrincipal("events.amazonaws.com"))
-        
-        # rule_listen_all_infractions = aws_events.Rule(self, "ListenAllInfractions",
-        #     enabled = True,
-        #     event_bus = self.event_bus_infractions,
-        #     event_pattern=aws_events.EventPattern(
-        #       account= ["899456967600"]
-        #     )
-        # )
-        
-        # rule_target_config_all_infractions = aws_events.RuleTargetConfig(
-        #     arn= logs_infraction_events.log_group_arn
-        # )
-        
         
         cfn_rule = aws_events.CfnRule(self, "ListenAllInfractions",
             state="ENABLED",
@@ -101,25 +83,6 @@ class ControlBrokerEvalEngineStack(Stack):
                 id = "InfractionEvents"
             )]
         )
-        
-        # eb_can_log = aws_logs.ResourcePolicy(self, "EventBridgeCanLog",
-        #     policy_statements=[
-        #         aws_iam.PolicyStatement(
-        #             actions=[
-        #                 "events:PutEvents",
-        #               "logs:CreateLogStream",
-        #               "logs:PutLogEvents",
-        #               "logs:PutLogEventsBatch",
-        #             ],
-        #             resources = ["arn:aws:logs:*"],
-        #             principals = [
-        #                 aws_iam.ServicePrincipal("events.amazonaws.com")
-        #             ]
-                    
-        #         )
-        #     ],
-        # )
-
         
     def s3_deploy_local_assets(self):
       
@@ -307,7 +270,7 @@ class ControlBrokerEvalEngineStack(Stack):
                   },
                   "GetMetadata" : {
                     "Type" : "Task",
-                    "Next" : "OpaEvalSingleThreaded",
+                    "Next" : "OpaEval",
                     "ResultPath" : "$.GetMetadata",
                     "Resource" : "arn:aws:states:::lambda:invoke",
                     "Parameters" : {
@@ -319,13 +282,13 @@ class ControlBrokerEvalEngineStack(Stack):
                       }
                     },
                     "ResultSelector" : {
-                      "Metadata.$" : "$.Payload.Selected.Parameters"
+                      "Metadata.$" : "$.Payload.Selected"
                     }
                   },
-                  "OpaEvalSingleThreaded" : {
+                  "OpaEval" : {
                     "Type" : "Task",
                     "Next" : "ForEachEvalResult",
-                    "ResultPath" : "$.OpaEvalSingleThreaded",
+                    "ResultPath" : "$.OpaEval",
                     "Resource" : "arn:aws:states:::lambda:invoke",
                     "Parameters" : {
                       "FunctionName" : self.lambda_opa_eval_python_subprocess_single_threaded.function_name,
@@ -462,7 +425,7 @@ class ControlBrokerEvalEngineStack(Stack):
                                       }
                                     ]
                                 }
-                            }
+                              }
                             }
                           }
                         }
