@@ -449,7 +449,7 @@ class ControlBrokerEvalEngineStack(Stack):
                       "TableName" : self.table_eval_results.table_name,
                       "ExpressionAttributeValues" : {
                         ":pk" : {
-                          "S.$" : "$$.Execution.Id"
+                          "S.$" : "$.OuterEvalEngineSfnExecutionId"
                         }
                       },
                       "KeyConditionExpression" : "pk = :pk"
