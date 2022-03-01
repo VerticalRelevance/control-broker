@@ -337,20 +337,18 @@ class ControlBrokerEvalEngineStack(Stack):
                                 "sk" : {
                                   "S": "IndexMax"
                                 }
-                                
                               },
-                            "ExpressionAttributeNames" : {
+                              "ExpressionAttributeNames" : {
                                 "#indexmax" : "IndexMax",
-                            },
-                            "ExpressionAttributeValues" : {
+                              },
+                              "ExpressionAttributeValues" : {
                                 ":currentindex" : {
-                                  "S.$" : "$.EvalResultContextIndex"
+                                  "N.$" : "$.EvalResultContextIndex"
                                 },
-                            },
-                            "UpdateExpression" : "SET #indexmax=:currentindex",
-                             "ConditionExpression": "IndexMax > :currentindex"
+                              },
+                              "UpdateExpression" : "SET #indexmax=:currentindex",
+                              "ConditionExpression": ":currentindex > IndexMax"
                             }
-                          }
                         },
                         "ChoiceIsAllowed" : {
                           "Type" : "Choice",
@@ -375,21 +373,22 @@ class ControlBrokerEvalEngineStack(Stack):
                               "TableName" : self.table_eval_results.table_name,
                               "Key" : {
                                 "pk" : {
-                                  "S.$" : "States.Format('{}#{}#IndexMax', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                                  "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
                                 },
                                 "sk" : {
-                                  "S.$" : "$.EvalResultContextIndex"
+                                  "S" : "AllowedCounter"
                                 }
                               },
-                            "ExpressionAttributeNames" : {
+                              "ExpressionAttributeNames" : {
                                 "#allowedcounter" : "AllowedCounter",
-                            },
-                            "ExpressionAttributeValues" : {
+                              },
+                              "ExpressionAttributeValues" : {
                                 ":increment" : {
                                     "N" : "1"
                                 },
-                            },
-                            "UpdateExpression" : "ADD #allowedcounter=:increment"
+                              },
+                              "UpdateExpression" : "ADD #allowedcounter=:increment"
+                            }
                         },
                         "ForEachInfraction" : {
                           "Type" : "Map",
