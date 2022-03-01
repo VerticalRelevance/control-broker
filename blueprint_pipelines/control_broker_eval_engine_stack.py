@@ -318,8 +318,40 @@ class ControlBrokerEvalEngineStack(Stack):
                       "EvalResultContextValue.$": "$$.Map.Item.Value"
                     },
                     "Iterator" : {
-                      "StartAt" : "ChoiceIsAllowed",
+                      "StartAt" : "CountResults",
                       "States" : {
+                        "CountResults" : {
+                            "Type" : "Task",
+                            "Next" : "ChoiceIsAllowed",
+                            "ResultPath" : "$.CountResults",
+                            "Resource" : "arn:aws:states:::dynamodb:updateItem",
+                            "ResultSelector" : {
+                              "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
+                            },
+                            "Parameters" : {
+                              "TableName" : self.table_eval_results.table_name,
+                              "Key" : {
+                                "pk" : {
+                                  "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                                },
+                                "sk" : {
+                                  "S": "IndexMax"
+                                }
+                                
+                              },
+                            "ExpressionAttributeNames" : {
+                                "#indexmax" : "IndexMax",
+                            },
+                            "ExpressionAttributeValues" : {
+                                ":currentindex" : {
+                                  "S.$" : "$.EvalResultContextIndex"
+                                },
+                            },
+                            "UpdateExpression" : "SET #indexmax=:currentindex",
+                             "ConditionExpression": "IndexMax > :currentindex"
+                            }
+                          }
+                        },
                         "ChoiceIsAllowed" : {
                           "Type" : "Choice",
                           "Default" : "ForEachInfraction",
@@ -327,13 +359,37 @@ class ControlBrokerEvalEngineStack(Stack):
                             {
                               "Variable" : "$.EvalResult.PackagePlaceholder.infraction[0]",
                               "IsPresent" : False,
-                              "Next" : "Allowed"
+                              "Next" : "IncrementAllowed"
                             }
                           ]
                         },
-                        "Allowed" : {
-                          "Type" : "Pass",
-                          "End" : True
+                        "IncrementAllowed" : {
+                            "Type" : "Task",
+                            "End" : True,
+                            "ResultPath" : "$.IncrementAllowed",
+                            "Resource" : "arn:aws:states:::dynamodb:updateItem",
+                            "ResultSelector" : {
+                              "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
+                            },
+                            "Parameters" : {
+                              "TableName" : self.table_eval_results.table_name,
+                              "Key" : {
+                                "pk" : {
+                                  "S.$" : "States.Format('{}#{}#IndexMax', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                                },
+                                "sk" : {
+                                  "S.$" : "$.EvalResultContextIndex"
+                                }
+                              },
+                            "ExpressionAttributeNames" : {
+                                "#allowedcounter" : "AllowedCounter",
+                            },
+                            "ExpressionAttributeValues" : {
+                                ":increment" : {
+                                    "N" : "1"
+                                },
+                            },
+                            "UpdateExpression" : "ADD #allowedcounter=:increment"
                         },
                         "ForEachInfraction" : {
                           "Type" : "Map",
