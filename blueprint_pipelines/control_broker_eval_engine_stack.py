@@ -208,8 +208,8 @@ class ControlBrokerEvalEngineStack(Stack):
                 "s3:SelectObjectContent",
             ],
             resources=[
-                self.bucket_synthed_templates.bucket_arn,
-                f'{self.bucket_synthed_templates.bucket_arn}/*',
+                self.bucket_pipeline_ownership_metadata.bucket_arn,
+                f'{self.bucket_pipeline_ownership_metadata.bucket_arn}/*',
             ]
         ))
         
@@ -313,7 +313,6 @@ class ControlBrokerEvalEngineStack(Stack):
                     "Parameters" : {
                       "FunctionName" : self.lambda_s3_select.function_name,
                       "Payload" : {
-                        "Bucket.$": "$.JsonInput.Bucket",
                         "Bucket" : self.bucket_pipeline_ownership_metadata.bucket_name,
                         "Key" : self.pipeline_ownership_metadata['Suffix'],
                         "Expression":"SELECT * from S3Object s",
@@ -406,8 +405,10 @@ class ControlBrokerEvalEngineStack(Stack):
                                     "#reason" : "reason",
                                     "#resource" : "resource",
                                     "#businessunit": "BusinessUnit",
-                                    "#awsregion": "AWSRegion",
-                                    "#awsaccount": "AWSAccount",
+                                    "#billingcode": "BillingCode",
+                                    "#targetenv": "TargetProvisioningEnvironment",
+                                    "#ownername": "PipelineOwnerName",
+                                    "#owneremail": "PipelineOwnerEmail",
                                   },
                                   "ExpressionAttributeValues" : {
                                     ":allow" : {
@@ -420,16 +421,22 @@ class ControlBrokerEvalEngineStack(Stack):
                                       "S.$" : "$.Infraction.resource"
                                     },
                                     ":businessunit" : {
-                                      "S.$" : "$.Metadata.BusinessUnit.Default"
+                                      "S.$" : "$.Metadata.BusinessUnit"
                                     },
-                                    ":awsregion" : {
-                                      "S.$" : "$.Metadata.AWSRegion.Default"
+                                    ":billingcode" : {
+                                      "S.$" : "$.Metadata.BillingCode"
                                     },
-                                    ":awsaccount" : {
-                                      "S.$" : "$.Metadata.AWSAccount.Default"
+                                    ":targetenv" : {
+                                      "S.$" : "$.Metadata.TargetProvisioningEnvironment"
+                                    },
+                                    ":ownername" : {
+                                      "S.$" : "$.Metadata.PipelineOwner.Name"
+                                    },
+                                    ":owneremail" : {
+                                      "S.$" : "$.Metadata.PipelineOwner.Email"
                                     },
                                   },
-                                  "UpdateExpression" : "SET #allow=:allow, #reason=:reason, #resource=:resource, #businessunit=:businessunit, #awsregion=:awsregion, #awsaccount=:awsaccount"
+                                  "UpdateExpression" : "SET #allow=:allow, #reason=:reason, #resource=:resource, #businessunit=:businessunit, #billingcode=:billingcode, #targetenv=:targetenv, #ownername=:ownername, #owneremail=:owneremail"
                                 }
                               },
                               "PushInfractionEventToEB" : {
@@ -444,9 +451,10 @@ class ControlBrokerEvalEngineStack(Stack):
                                             "allow.$" : "States.JsonToString($.Infraction.allow)",
                                             "reason.$": "$.Infraction.reason",
                                             "resource.$": "$.Infraction.resource",
-                                            "businessunit.$": "$.Metadata.BusinessUnit.Default",
-                                            "awsregion.$": "$.Metadata.AWSRegion.Default",
-                                            "awsaccount.$": "$.Metadata.AWSAccount.Default"
+                                            "BusinessUnit.$": "$.Metadata.BusinessUnit",
+                                            "BillingCode.$": "$.Metadata.BusinessUnit",
+                                            "TargetProvisioningEnvironment.$": "$.Metadata.TargetProvisioningEnvironment",
+                                            "PipelineOwner.$": "$.Metadata.PipelineOwner",
                                         },
                                         "DetailType": "eval-engine-infraction",
                                         "EventBusName": self.event_bus_infractions.event_bus_name,
