@@ -16,6 +16,7 @@ from aws_cdk import (
     aws_stepfunctions,
     aws_iam,
     aws_logs,
+    aws_events
 )
 
 from constructs import Construct
@@ -58,6 +59,9 @@ class ControlBrokerEvalEngineStack(Stack):
             removal_policy = RemovalPolicy.DESTROY,
             auto_delete_objects = True
         )
+        
+        self.event_bus_infractions = aws_events.EventBus(self, "Infractions")
+
         
     def s3_deploy_local_assets(self):
       
@@ -298,7 +302,7 @@ class ControlBrokerEvalEngineStack(Stack):
                             "States" : {
                               "WriteInfractionToDDB" : {
                                 "Type" : "Task",
-                                "End" : True,
+                                "Next" : "PushInfractionEventToEB",
                                 "ResultPath" : "$.WriteEvalResultToDDB",
                                 "Resource" : "arn:aws:states:::dynamodb:updateItem",
                                 "ResultSelector" : {
@@ -345,7 +349,29 @@ class ControlBrokerEvalEngineStack(Stack):
                                   },
                                   "UpdateExpression" : "SET #allow=:allow, #reason=:reason, #resource=:resource, #businessunit=:businessunit, #awsregion=:awsregion, #awsaccount=:awsaccount"
                                 }
-                              }
+                              },
+                              "PushInfractionEventToEB" : {
+                                "Type" : "Task",
+                                "End" : True,
+                                "ResultPath" : "$.PushInfractionEventToEB",
+                                "Resource" : "arn:aws:states:::events:putEvents",
+                                "Parameters" : {
+                                    "Entries": [
+                                      {
+                                        "Detail": {
+                                            "allow.$" : "States.JsonToString($.Infraction.allow)",
+                                            "reason.$": "$.Infraction.reason",
+                                            "resource.$": "$.Infraction.resource",
+                                            "businessunit.$": "$.Metadata.BusinessUnit.Default",
+                                            "awsregion.$": "$.Metadata.AWSRegion.Default",
+                                            "awsaccount.$": "$.Metadata.AWSAccount.Default"
+                                        },
+                                        "DetailType.$": "eval-engine-infraction",
+                                        "EventBusName": self.event_bus_infractions.event_bus_name,
+                                        "Source.$": "$$.StateMachine.Id"
+                                      }
+                                    ]
+                                }
                             }
                           }
                         }
