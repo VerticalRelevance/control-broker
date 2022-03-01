@@ -79,6 +79,20 @@ class ControlBrokerEvalEngineStack(Stack):
             retain_on_delete = False
         )
         
+        # pipeline ownership metadata
+        
+        self.bucket_pipeline_ownership_metadata = aws_s3.Bucket(self, "PipelineOwnershipMetadata",
+            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy = RemovalPolicy.DESTROY,
+            auto_delete_objects = True
+        )
+        
+        aws_s3_deployment.BucketDeployment(self, "PipelineOwnershipMetadataDir",
+            sources=[aws_s3_deployment.Source.asset("./supplementary_files/pipeline-ownership-metadata")],
+            destination_bucket=self.bucket_pipeline_ownership_metadata,
+            retain_on_delete = False
+        )
+        
         # opa policies
         
         self.bucket_opa_policies = aws_s3.Bucket(self,"OpaPolicies",
@@ -415,7 +429,8 @@ class ControlBrokerEvalEngineStack(Stack):
                     "Type" : "Succeed",
                   },
                 }
-              })
+              }
+          })
         )
     
         self.sfn_inner_eval_engine.node.add_dependency(role_inner_eval_engine_sfn)
