@@ -64,12 +64,43 @@ class ControlBrokerEvalEngineStack(Stack):
         
         self.event_bus_infractions = aws_events.EventBus(self, "Infractions")
         
-        self.event_bus_infractions.archive("InfractionsArchive",
-            event_pattern=aws_events.EventPattern(
-                account=[Stack.of(self).account]
-            ),
-            retention=Duration.days(1)
+        # self.event_bus_infractions.archive("InfractionsArchive",
+        #     event_pattern=aws_events.EventPattern(
+        #         account=[Stack.of(self).account]
+        #     ),
+        #     retention=Duration.days(1)
+        # )
+        
+        infraction_events = logs.LogGroup(self, "LogGroup")
+        log_group.grant_write(iam.ServicePrincipal("es.amazonaws.com"))
+        
+        rule_listen_all_infractions = aws_events.Rule(self, "ListenAllInfractions",
+            enabled = True
+            event_bus = self.event_bus_infractions
+            event_pattern=events.EventPattern(
+              "account"= ["899456967600"]
+            )
         )
+        
+        rule_listen_all_infractions.addTarget()
+        
+        # eb_can_log = aws_logs.ResourcePolicy(self, "EventBridgeCanLog",
+        #     policy_statements=[
+        #         aws_iam.PolicyStatement(
+        #             actions=[
+        #                 "events:PutEvents",
+        #               "logs:CreateLogStream",
+        #               "logs:PutLogEvents",
+        #               "logs:PutLogEventsBatch",
+        #             ],
+        #             resources = ["arn:aws:logs:*"],
+        #             principals = [
+        #                 aws_iam.ServicePrincipal("events.amazonaws.com")
+        #             ]
+                    
+        #         )
+        #     ],
+        # )
 
         
     def s3_deploy_local_assets(self):
@@ -216,6 +247,15 @@ class ControlBrokerEvalEngineStack(Stack):
             resources=[
                 self.bucket_synthed_templates.bucket_arn,
                 f'{self.bucket_synthed_templates.bucket_arn}/*',
+            ]
+        ))
+        role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
+            actions=[
+                "events:PutEvents",
+            ],
+            resources=[
+                self.event_bus_infractions.event_bus_arn,
+                f"{self.event_bus_infractions.event_bus_arn}*",
             ]
         ))
         
