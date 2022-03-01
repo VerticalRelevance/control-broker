@@ -15,7 +15,8 @@ env = cdk.Environment(
 # Input parameters
 application_team_cdk_app = {
     'CodeCommitRepository' : 'opa-eval-serverless-cdk-source',
-    'Branch' : 'master'
+    'Branch' : 'master',
+    'PipelineOwnershipMetadata': './supplementary_files/pipeline-ownership-metadata/business-unit-a/eval-engine-metadata.json'
 }
 
 

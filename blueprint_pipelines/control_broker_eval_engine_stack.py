@@ -34,6 +34,9 @@ class ControlBrokerEvalEngineStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
         self.application_team_cdk_app = application_team_cdk_app
 
+        self.pipeline_ownership_metadata =  {}
+        self.pipeline_ownership_metadata['Directory'], self.pipeline_ownership_metadata['Suffix'] = os.path.split(application_team_cdk_app['PipelineOwnershipMetadata'])
+
         self.deploy_utils()
         self.s3_deploy_local_assets()
         self.deploy_inner_sfn_lambdas()
@@ -71,18 +74,33 @@ class ControlBrokerEvalEngineStack(Stack):
         #     retention=Duration.days(1)
         # )
         
-        infraction_events = logs.LogGroup(self, "LogGroup")
-        log_group.grant_write(iam.ServicePrincipal("es.amazonaws.com"))
+        logs_infraction_events = aws_logs.LogGroup(self, "InfractionEvents")
+        logs_infraction_events.grant_write(aws_iam.ServicePrincipal("events.amazonaws.com"))
         
-        rule_listen_all_infractions = aws_events.Rule(self, "ListenAllInfractions",
-            enabled = True
-            event_bus = self.event_bus_infractions
-            event_pattern=events.EventPattern(
-              "account"= ["899456967600"]
-            )
+        # rule_listen_all_infractions = aws_events.Rule(self, "ListenAllInfractions",
+        #     enabled = True,
+        #     event_bus = self.event_bus_infractions,
+        #     event_pattern=aws_events.EventPattern(
+        #       account= ["899456967600"]
+        #     )
+        # )
+        
+        # rule_target_config_all_infractions = aws_events.RuleTargetConfig(
+        #     arn= logs_infraction_events.log_group_arn
+        # )
+        
+        
+        cfn_rule = aws_events.CfnRule(self, "ListenAllInfractions",
+            state="ENABLED",
+            event_bus_name=self.event_bus_infractions.event_bus_name,
+            event_pattern=aws_events.EventPattern(
+              account= ["899456967600"]
+            ),
+            targets=[aws_events.CfnRule.TargetProperty(
+                arn=logs_infraction_events.log_group_arn,
+                id = "InfractionEvents"
+            )]
         )
-        
-        rule_listen_all_infractions.addTarget()
         
         # eb_can_log = aws_logs.ResourcePolicy(self, "EventBridgeCanLog",
         #     policy_statements=[
@@ -128,7 +146,7 @@ class ControlBrokerEvalEngineStack(Stack):
         )
         
         aws_s3_deployment.BucketDeployment(self, "PipelineOwnershipMetadataDir",
-            sources=[aws_s3_deployment.Source.asset("./supplementary_files/pipeline-ownership-metadata")],
+            sources=[aws_s3_deployment.Source.asset(self.pipeline_ownership_metadata['Directory'])],
             destination_bucket=self.bucket_pipeline_ownership_metadata,
             retain_on_delete = False
         )
@@ -296,8 +314,9 @@ class ControlBrokerEvalEngineStack(Stack):
                       "FunctionName" : self.lambda_s3_select.function_name,
                       "Payload" : {
                         "Bucket.$": "$.JsonInput.Bucket",
-                        "Key.$": "$.JsonInput.Key",
-                        "Expression":"SELECT s.Parameters from S3Object s",
+                        "Bucket" : self.bucket_pipeline_ownership_metadata.bucket_name,
+                        "Key" : self.pipeline_ownership_metadata['Suffix'],
+                        "Expression":"SELECT * from S3Object s",
                       }
                     },
                     "ResultSelector" : {
