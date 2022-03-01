@@ -59,8 +59,17 @@ class ControlBrokerEvalEngineStack(Stack):
             removal_policy = RemovalPolicy.DESTROY,
             auto_delete_objects = True
         )
+ 
+        # event bridge
         
         self.event_bus_infractions = aws_events.EventBus(self, "Infractions")
+        
+        self.event_bus_infractions.archive("InfractionsArchive",
+            event_pattern=aws_events.EventPattern(
+                account=[Stack.of(self).account]
+            ),
+            retention=Duration.days(1)
+        )
 
         
     def s3_deploy_local_assets(self):
@@ -380,12 +389,13 @@ class ControlBrokerEvalEngineStack(Stack):
                                             "awsregion.$": "$.Metadata.AWSRegion.Default",
                                             "awsaccount.$": "$.Metadata.AWSAccount.Default"
                                         },
-                                        "DetailType.$": "eval-engine-infraction",
+                                        "DetailType": "eval-engine-infraction",
                                         "EventBusName": self.event_bus_infractions.event_bus_name,
                                         "Source.$": "$$.StateMachine.Id"
                                       }
                                     ]
                                 }
+                            }
                             }
                           }
                         }
@@ -429,8 +439,7 @@ class ControlBrokerEvalEngineStack(Stack):
                     "Type" : "Succeed",
                   },
                 }
-              }
-          })
+            })
         )
     
         self.sfn_inner_eval_engine.node.add_dependency(role_inner_eval_engine_sfn)
