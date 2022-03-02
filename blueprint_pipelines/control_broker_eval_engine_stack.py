@@ -179,7 +179,7 @@ class ControlBrokerEvalEngineStack(Stack):
     def deploy_inner_sfn(self):
         
         log_group_inner_eval_engine_sfn = aws_logs.LogGroup(self,"InnerEvalEngineSfnLogs"
-          # log_group_name = "/aws/vendedlogs/states/InnerEvalEngineSfnLogs"
+          ,log_group_name = "/aws/vendedlogs/states/InnerEvalEngineSfnLogs"
         )
         
         role_inner_eval_engine_sfn = aws_iam.Role(self, "InnerEvalEngineSfn",
@@ -246,15 +246,15 @@ class ControlBrokerEvalEngineStack(Stack):
             state_machine_type = "EXPRESS",
             role_arn = role_inner_eval_engine_sfn.role_arn,
         
-            # logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
-            #     destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
-            #         cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
-            #             log_group_arn = log_group_inner_eval_engine_sfn.log_group_arn
-            #         )
-            #     )],
-            #     include_execution_data=False,
-            #     level="ERROR"
-            # ),
+            logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
+                destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
+                    cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
+                        log_group_arn = log_group_inner_eval_engine_sfn.log_group_arn
+                    )
+                )],
+                include_execution_data=False,
+                level="ERROR"
+            ),
             
             definition_string=json.dumps({
                 "StartAt" : "ParseInput",
@@ -650,7 +650,9 @@ class ControlBrokerEvalEngineStack(Stack):
     
     def deploy_outer_sfn(self):
         
-        log_group_outer_eval_engine_sfn = aws_logs.LogGroup(self,"OuterEvalEngineSfnLogs")
+        log_group_outer_eval_engine_sfn = aws_logs.LogGroup(self,"OuterEvalEngineSfnLogs"
+          ,log_group_name = "/aws/vendedlogs/states/OuterEvalEngineSfnLogs"
+        )
         
         role_outer_eval_engine_sfn = aws_iam.Role(self, "OuterEvalEngineSfn",
             assumed_by=aws_iam.ServicePrincipal("states.amazonaws.com"),
@@ -710,15 +712,15 @@ class ControlBrokerEvalEngineStack(Stack):
             
             role_arn = role_outer_eval_engine_sfn.role_arn,
             
-            # logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
-            #     destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
-            #         cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
-            #             log_group_arn = log_group_outer_eval_engine_sfn.log_group_arn
-            #         )
-            #     )],
-            #     include_execution_data=False,
-            #     level="ERROR"
-            # ),
+            logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
+                destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
+                    cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
+                        log_group_arn = log_group_outer_eval_engine_sfn.log_group_arn
+                    )
+                )],
+                include_execution_data=False,
+                level="ERROR"
+            ),
             
             definition_string=json.dumps({
                 "StartAt" : "ForEachTemplate",
