@@ -178,7 +178,9 @@ class ControlBrokerEvalEngineStack(Stack):
         
     def deploy_inner_sfn(self):
         
-        log_group_inner_eval_engine_sfn = aws_logs.LogGroup(self,"InnerEvalEngineSfnLogs")
+        log_group_inner_eval_engine_sfn = aws_logs.LogGroup(self,"InnerEvalEngineSfnLogs"
+          # log_group_name = "/aws/vendedlogs/states/InnerEvalEngineSfnLogs"
+        )
         
         role_inner_eval_engine_sfn = aws_iam.Role(self, "InnerEvalEngineSfn",
             assumed_by=aws_iam.ServicePrincipal("states.amazonaws.com"),
@@ -187,14 +189,14 @@ class ControlBrokerEvalEngineStack(Stack):
         role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
             actions=[
                 "logs:*",
-                "logs:CreateLogDelivery",
-                "logs:GetLogDelivery",
-                "logs:UpdateLogDelivery",
-                "logs:DeleteLogDelivery",
-                "logs:ListLogDeliveries",
-                "logs:PutResourcePolicy",
-                "logs:DescribeResourcePolicies",
-                "logs:DescribeLogGroups",
+                # "logs:CreateLogDelivery",
+                # "logs:GetLogDelivery",
+                # "logs:UpdateLogDelivery",
+                # "logs:DeleteLogDelivery",
+                # "logs:ListLogDeliveries",
+                # "logs:PutResourcePolicy",
+                # "logs:DescribeResourcePolicies",
+                # "logs:DescribeLogGroups",
             ],
             resources=[
                 "*",
@@ -244,15 +246,15 @@ class ControlBrokerEvalEngineStack(Stack):
             state_machine_type = "EXPRESS",
             role_arn = role_inner_eval_engine_sfn.role_arn,
         
-            logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
-                destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
-                    cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
-                        log_group_arn = log_group_inner_eval_engine_sfn.log_group_arn
-                    )
-                )],
-                include_execution_data=False,
-                level="ERROR"
-            ),
+            # logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
+            #     destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
+            #         cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
+            #             log_group_arn = log_group_inner_eval_engine_sfn.log_group_arn
+            #         )
+            #     )],
+            #     include_execution_data=False,
+            #     level="ERROR"
+            # ),
             
             definition_string=json.dumps({
                 "StartAt" : "ParseInput",
@@ -288,7 +290,7 @@ class ControlBrokerEvalEngineStack(Stack):
                   },
                   "OpaEval" : {
                     "Type" : "Task",
-                    "Next" : "ForEachEvalResult",
+                    "Next" : "SetMaxIndexZero",
                     "ResultPath" : "$.OpaEval",
                     "Resource" : "arn:aws:states:::lambda:invoke",
                     "Parameters" : {
@@ -304,9 +306,38 @@ class ControlBrokerEvalEngineStack(Stack):
                       "Payload.$" : "$.Payload"
                     }
                   },
+                  "SetMaxIndexZero" : {
+                    "Type" : "Task",
+                    "Next" : "ForEachEvalResult",
+                    "ResultPath" : "$.SetMaxIndexZero",
+                    "Resource" : "arn:aws:states:::dynamodb:updateItem",
+                    "ResultSelector" : {
+                      "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
+                    },
+                    "Parameters" : {
+                      "TableName" : self.table_eval_results.table_name,
+                      "Key" : {
+                        "pk" : {
+                          "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                        },
+                        "sk" : {
+                          "S" : "MaxIndex"
+                        }
+                      },
+                      "ExpressionAttributeNames" : {
+                        "#maxindex" : "MaxIndex",
+                      },
+                      "ExpressionAttributeValues" : {
+                        ":zero" : {
+                          "N" : "0"
+                        },
+                      },
+                      "UpdateExpression" : "SET #maxindex=:zero",
+                    }
+                  },
                   "ForEachEvalResult" : {
                     "Type" : "Map",
-                    "Next" : "QueryEvalResultsTable",
+                    "Next" : "IncrementMaxIndex",
                     "ResultPath" : None,
                     "ItemsPath" : "$.OpaEval.Payload.OpaEvalResults",
                     "Parameters" : {
@@ -315,11 +346,49 @@ class ControlBrokerEvalEngineStack(Stack):
                       "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
                       "Metadata.$": "$.GetMetadata.Metadata",
                       "EvalResultContextIndex.$": "$$.Map.Item.Index",
-                      "EvalResultContextValue.$": "$$.Map.Item.Value"
                     },
                     "Iterator" : {
-                      "StartAt" : "ChoiceIsAllowed",
+                      "StartAt" : "SetMaxIndex",
                       "States" : {
+                        "SetMaxIndex" : {
+                            "Type" : "Task",
+                            "Next" : "ChoiceIsAllowed",
+                            "ResultPath" : "$.SetMaxIndex",
+                            "Resource" : "arn:aws:states:::dynamodb:updateItem",
+                            "ResultSelector" : {
+                              "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
+                            },
+                            "Parameters" : {
+                              "TableName" : self.table_eval_results.table_name,
+                              "Key" : {
+                                "pk" : {
+                                  "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                                },
+                                "sk" : {
+                                  "S": "MaxIndex"
+                                }
+                              },
+                              "ExpressionAttributeNames" : {
+                                "#maxindex" : "MaxIndex",
+                              },
+                              "ExpressionAttributeValues" : {
+                                ":currentindex" : {
+                                  "N.$" : "States.JsonToString($.EvalResultContextIndex)"
+                                },
+                              },
+                              "UpdateExpression" : "SET #maxindex=:currentindex",
+                              "ConditionExpression" : ":currentindex > #maxindex"
+                            },
+                              "Catch": [
+                              {
+                                "ErrorEquals": [
+                                  "DynamoDB.ConditionalCheckFailedException"
+                                ],
+                                "Next": "ChoiceIsAllowed",
+                                "ResultPath": "$.ErrorSetMaxIndex"
+                              }
+                            ]
+                        },
                         "ChoiceIsAllowed" : {
                           "Type" : "Choice",
                           "Default" : "ForEachInfraction",
@@ -327,13 +396,38 @@ class ControlBrokerEvalEngineStack(Stack):
                             {
                               "Variable" : "$.EvalResult.PackagePlaceholder.infraction[0]",
                               "IsPresent" : False,
-                              "Next" : "Allowed"
+                              "Next" : "IncrementAllowedCount"
                             }
                           ]
                         },
-                        "Allowed" : {
-                          "Type" : "Pass",
-                          "End" : True
+                        "IncrementAllowedCount" : {
+                            "Type" : "Task",
+                            "End" : True,
+                            "ResultPath" : "$.IncrementAllowed",
+                            "Resource" : "arn:aws:states:::dynamodb:updateItem",
+                            "ResultSelector" : {
+                              "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
+                            },
+                            "Parameters" : {
+                              "TableName" : self.table_eval_results.table_name,
+                              "Key" : {
+                                "pk" : {
+                                  "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                                },
+                                "sk" : {
+                                  "S" : "AllowedCount"
+                                }
+                              },
+                              "ExpressionAttributeNames" : {
+                                "#allowedcount" : "AllowedCount",
+                              },
+                              "ExpressionAttributeValues" : {
+                                ":increment" : {
+                                    "N" : "1"
+                                },
+                              },
+                              "UpdateExpression" : "ADD #allowedcount :increment"
+                            }
                         },
                         "ForEachInfraction" : {
                           "Type" : "Map",
@@ -446,10 +540,41 @@ class ControlBrokerEvalEngineStack(Stack):
                       }
                     }
                   },
-                  "QueryEvalResultsTable" : {
+                  "IncrementMaxIndex" : {
+                    "Comment": "Map index is zero-indexed. Increment is one-indexed. This compensates.",
                     "Type" : "Task",
-                    "Next" : "ChoiceInfractionsExist",
-                    "ResultPath" : "$.QueryEvalResultsTable",
+                    "Next" : "GetMaxIndex",
+                    "ResultPath" : "$.IncrementMaxIndex",
+                    "Resource" : "arn:aws:states:::dynamodb:updateItem",
+                    "ResultSelector" : {
+                      "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
+                    },
+                    "Parameters" : {
+                      "TableName" : self.table_eval_results.table_name,
+                      "Key" : {
+                        "pk" : {
+                          "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+
+                        },
+                        "sk" : {
+                          "S" : "MaxIndex"
+                        }
+                      },
+                      "ExpressionAttributeNames" : {
+                              "#maxindex" : "MaxIndex",
+                            },
+                        "ExpressionAttributeValues" : {
+                          ":increment" : {
+                            "N" : "1"
+                          },
+                        },
+                        "UpdateExpression" : "ADD #maxindex :increment"
+                    }
+                  },
+                  "GetMaxIndex" : {
+                    "Type" : "Task",
+                    "Next" : "GetAllowedCount",
+                    "ResultPath" : "$.GetMaxIndex",
                     "Resource" : "arn:aws:states:::aws-sdk:dynamodb:query",
                     "ResultSelector" : {
                       "Items.$" : "$.Items"
@@ -459,23 +584,53 @@ class ControlBrokerEvalEngineStack(Stack):
                       "ExpressionAttributeValues" : {
                         ":pk" : {
                           "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
-                        #   "S.$" : "$.OuterEvalEngineSfnExecutionId"
                         },
-                        # ":sk" : {
-                        #   "S.$" : "$$.Execution.Id"
-                        # },
+                        ":sk" : {
+                          "S" : "MaxIndex"
+                        },
                       },
-                      "KeyConditionExpression" : "pk = :pk"
-                    #   "KeyConditionExpression" : "pk = :pk AND sk = :sk"
+                      "KeyConditionExpression" : "pk = :pk AND sk = :sk"
                     }
+                  },
+                  "GetAllowedCount" : {
+                    "Type" : "Task",
+                    "Next" : "ChoiceAllowedExists",
+                    "ResultPath" : "$.GetAllowedCount",
+                    "Resource" : "arn:aws:states:::aws-sdk:dynamodb:query",
+                    "ResultSelector" : {
+                      "Items.$" : "$.Items"
+                    },
+                    "Parameters" : {
+                      "TableName" : self.table_eval_results.table_name,
+                      "ExpressionAttributeValues" : {
+                        ":pk" : {
+                          "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                        },
+                        ":sk" : {
+                          "S" : "AllowedCount"
+                        },
+                      },
+                      "KeyConditionExpression" : "pk = :pk AND sk = :sk"
+                    }
+                  },
+                  "ChoiceAllowedExists": {
+                    "Type" : "Choice",
+                    "Default" : "InfractionsExist",
+                    "Choices" : [
+                      {
+                        "Variable" : "$.GetAllowedCount.Items[0]",
+                        "IsPresent" : True,
+                        "Next" : "ChoiceInfractionsExist"
+                      }
+                    ]
                   },
                   "ChoiceInfractionsExist" : {
                     "Type" : "Choice",
                     "Default" : "InfractionsExist",
                     "Choices" : [
                       {
-                        "Variable" : "$.QueryEvalResultsTable.Items[0]",
-                        "IsPresent" : False,
+                        "Variable" : "$.GetMaxIndex.Items[0].MaxIndex.N",
+                        "StringEqualsPath" : "$.GetAllowedCount.Items[0].AllowedCount.N",
                         "Next" : "NoInfractions"
                       }
                     ]
@@ -555,15 +710,15 @@ class ControlBrokerEvalEngineStack(Stack):
             
             role_arn = role_outer_eval_engine_sfn.role_arn,
             
-            logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
-                destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
-                    cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
-                        log_group_arn = log_group_outer_eval_engine_sfn.log_group_arn
-                    )
-                )],
-                include_execution_data=False,
-                level="ERROR"
-            ),
+            # logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
+            #     destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
+            #         cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
+            #             log_group_arn = log_group_outer_eval_engine_sfn.log_group_arn
+            #         )
+            #     )],
+            #     include_execution_data=False,
+            #     level="ERROR"
+            # ),
             
             definition_string=json.dumps({
                 "StartAt" : "ForEachTemplate",
