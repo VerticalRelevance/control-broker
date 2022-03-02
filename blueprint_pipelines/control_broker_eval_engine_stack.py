@@ -308,7 +308,7 @@ class ControlBrokerEvalEngineStack(Stack):
                   },
                   "ForEachEvalResult" : {
                     "Type" : "Map",
-                    "Next" : "QueryEvalResultsTable",
+                    "Next" : "IncrementMaxIndex",
                     "ResultPath" : None,
                     "ItemsPath" : "$.OpaEval.Payload.OpaEvalResults",
                     "Parameters" : {
@@ -543,6 +543,37 @@ class ControlBrokerEvalEngineStack(Stack):
                       }
                     }
                   },
+                  "IncrementMaxIndex" : {
+                    "Comment": "Map index is zero-indexed. Increment is one-indexed. This compensates.",
+                    "Type" : "Task",
+                    "Next" : "GetMaxIndex",
+                    "ResultPath" : "$.IncrementMaxIndex",
+                    "Resource" : "arn:aws:states:::dynamodb:updateItem",
+                    "ResultSelector" : {
+                      "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
+                    },
+                    "Parameters" : {
+                      "TableName" : self.table_eval_results.table_name,
+                      "Key" : {
+                        "pk" : {
+                          "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+
+                        },
+                        "sk" : {
+                          "S" : "MaxIndex"
+                        }
+                      },
+                      "ExpressionAttributeNames" : {
+                              "#maxindex" : "MaxIndex",
+                            },
+                        "ExpressionAttributeValues" : {
+                          ":increment" : {
+                            "N" : "1"
+                          },
+                        },
+                        "UpdateExpression" : "ADD #maxindex :increment"
+                    }
+                  },
                   "GetMaxIndex" : {
                     "Type" : "Task",
                     "Next" : "GetAllowedCount",
@@ -566,8 +597,8 @@ class ControlBrokerEvalEngineStack(Stack):
                   },
                   "GetAllowedCount" : {
                     "Type" : "Task",
-                    "Next" : "GetAllowedCount",
-                    "ResultPath" : "$.GetMaxIndex",
+                    "Next" : "ChoiceInfractionsExist",
+                    "ResultPath" : "$.GetAllowedCount",
                     "Resource" : "arn:aws:states:::aws-sdk:dynamodb:query",
                     "ResultSelector" : {
                       "Items.$" : "$.Items"
@@ -576,7 +607,7 @@ class ControlBrokerEvalEngineStack(Stack):
                       "TableName" : self.table_eval_results.table_name,
                       "ExpressionAttributeValues" : {
                         ":pk" : {
-                          "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                          "S.$" : "$$.Execution.Id"
                         },
                         ":sk" : {
                           "S" : "AllowedCount"
@@ -585,36 +616,13 @@ class ControlBrokerEvalEngineStack(Stack):
                       "KeyConditionExpression" : "pk = :pk AND sk = :sk"
                     }
                   },
-                  # "QueryEvalResultsTable" : {
-                  #   "Type" : "Task",
-                  #   "Next" : "ChoiceInfractionsExist",
-                  #   "ResultPath" : "$.QueryEvalResultsTable",
-                  #   "Resource" : "arn:aws:states:::aws-sdk:dynamodb:query",
-                  #   "ResultSelector" : {
-                  #     "Items.$" : "$.Items"
-                  #   },
-                  #   "Parameters" : {
-                  #     "TableName" : self.table_eval_results.table_name,
-                  #     "ExpressionAttributeValues" : {
-                  #       ":pk" : {
-                  #         "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
-                  #       #   "S.$" : "$.OuterEvalEngineSfnExecutionId"
-                  #       },
-                  #       # ":sk" : {
-                  #       #   "S.$" : "$$.Execution.Id"
-                  #       # },
-                  #     },
-                  #     "KeyConditionExpression" : "pk = :pk"
-                  #   #   "KeyConditionExpression" : "pk = :pk AND sk = :sk"
-                  #   }
-                  # },
                   "ChoiceInfractionsExist" : {
                     "Type" : "Choice",
                     "Default" : "InfractionsExist",
                     "Choices" : [
                       {
-                        "Variable" : "$.GetMaxIndex.Items",
-                        "NumericEquals" : "$.GetAllowedCount.Items",
+                        "Variable" : "$.GetMaxIndex.Items[0].MaxIndex.N",
+                        "StringEqualsPath" : "$.GetAllowedCount.Items[0].AllowedCount.N",
                         "Next" : "NoInfractions"
                       }
                     ]
