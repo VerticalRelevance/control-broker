@@ -391,7 +391,7 @@ class ControlBrokerEvalEngineStack(Stack):
                         "NoUpdateNeeded": {
                             "Type": "Pass",
                             "End": True
-                        }
+                        },
                         "ChoiceIsAllowed" : {
                           "Type" : "Choice",
                           "Default" : "ForEachInfraction",
