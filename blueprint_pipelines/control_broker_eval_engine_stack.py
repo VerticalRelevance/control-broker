@@ -323,7 +323,7 @@ class ControlBrokerEvalEngineStack(Stack):
                       "States" : {
                         "SetIndexZero" : {
                           "Type" : "Task",
-                          "Next" : "CountResults",
+                          "Next" : "maxindex",
                           "ResultPath" : "$.SetIndexZero",
                           "Resource" : "arn:aws:states:::dynamodb:updateItem",
                           "ResultSelector" : {
@@ -350,10 +350,10 @@ class ControlBrokerEvalEngineStack(Stack):
                             "UpdateExpression" : "SET #indexmax=:zero",
                           }
                         },
-                        "CountResults" : {
+                        "SetMaxIndex" : {
                             "Type" : "Task",
                             "Next" : "ChoiceIsAllowed",
-                            "ResultPath" : "$.CountResults",
+                            "ResultPath" : "$.maxindex",
                             "Resource" : "arn:aws:states:::dynamodb:updateItem",
                             "ResultSelector" : {
                               "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
@@ -365,30 +365,30 @@ class ControlBrokerEvalEngineStack(Stack):
                                   "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
                                 },
                                 "sk" : {
-                                  "S": "IndexMax"
+                                  "S": "MaxIndex"
                                 }
                               },
                               "ExpressionAttributeNames" : {
-                                "#indexmax" : "IndexMax",
+                                "#maxindex" : "MaxIndex",
                               },
                               "ExpressionAttributeValues" : {
                                 ":currentindex" : {
                                   "N.$" : "States.JsonToString($.EvalResultContextIndex)"
                                 },
                               },
-                              "UpdateExpression" : "SET #indexmax=:currentindex",
-                              "ConditionExpression" : ":currentindex > #indexmax"
+                              "UpdateExpression" : "SET #maxindex=:currentindex",
+                              "ConditionExpression" : ":currentindex > #maxindex"
                             },
                               "Catch": [
                               {
                                 "ErrorEquals": [
                                   "DynamoDB.ConditionalCheckFailedException"
                                 ],
-                                "Next": "NoUpdateNeeded"
+                                "Next": "NoUpdateToMaxIndexNeeded"
                               }
                             ]
                         },
-                        "NoUpdateNeeded": {
+                        "NoUpdateToMaxIndexNeeded": {
                             "Type": "Pass",
                             "End": True
                         },
@@ -403,7 +403,7 @@ class ControlBrokerEvalEngineStack(Stack):
                             }
                           ]
                         },
-                        "IncrementAllowed" : {
+                        "IncrementAllowedCount" : {
                             "Type" : "Task",
                             "End" : True,
                             "ResultPath" : "$.IncrementAllowed",
@@ -418,18 +418,18 @@ class ControlBrokerEvalEngineStack(Stack):
                                   "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
                                 },
                                 "sk" : {
-                                  "S" : "AllowedCounter"
+                                  "S" : "AllowedCount"
                                 }
                               },
                               "ExpressionAttributeNames" : {
-                                "#allowedcounter" : "AllowedCounter",
+                                "#allowedcount" : "AllowedCount",
                               },
                               "ExpressionAttributeValues" : {
                                 ":increment" : {
                                     "N" : "1"
                                 },
                               },
-                              "UpdateExpression" : "ADD #allowedcounter=:increment"
+                              "UpdateExpression" : "ADD #allowedcount :increment"
                             }
                         },
                         "ForEachInfraction" : {
@@ -543,10 +543,10 @@ class ControlBrokerEvalEngineStack(Stack):
                       }
                     }
                   },
-                  "QueryEvalResultsTable" : {
+                  "GetMaxIndex" : {
                     "Type" : "Task",
-                    "Next" : "ChoiceInfractionsExist",
-                    "ResultPath" : "$.QueryEvalResultsTable",
+                    "Next" : "GetAllowedCount",
+                    "ResultPath" : "$.GetMaxIndex",
                     "Resource" : "arn:aws:states:::aws-sdk:dynamodb:query",
                     "ResultSelector" : {
                       "Items.$" : "$.Items"
@@ -556,23 +556,65 @@ class ControlBrokerEvalEngineStack(Stack):
                       "ExpressionAttributeValues" : {
                         ":pk" : {
                           "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
-                        #   "S.$" : "$.OuterEvalEngineSfnExecutionId"
                         },
-                        # ":sk" : {
-                        #   "S.$" : "$$.Execution.Id"
-                        # },
+                        ":sk" : {
+                          "S" : "MaxIndex"
+                        },
                       },
-                      "KeyConditionExpression" : "pk = :pk"
-                    #   "KeyConditionExpression" : "pk = :pk AND sk = :sk"
+                      "KeyConditionExpression" : "pk = :pk AND sk = :sk"
                     }
                   },
+                  "GetAllowedCount" : {
+                    "Type" : "Task",
+                    "Next" : "GetAllowedCount",
+                    "ResultPath" : "$.GetMaxIndex",
+                    "Resource" : "arn:aws:states:::aws-sdk:dynamodb:query",
+                    "ResultSelector" : {
+                      "Items.$" : "$.Items"
+                    },
+                    "Parameters" : {
+                      "TableName" : self.table_eval_results.table_name,
+                      "ExpressionAttributeValues" : {
+                        ":pk" : {
+                          "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                        },
+                        ":sk" : {
+                          "S" : "AllowedCount"
+                        },
+                      },
+                      "KeyConditionExpression" : "pk = :pk AND sk = :sk"
+                    }
+                  },
+                  # "QueryEvalResultsTable" : {
+                  #   "Type" : "Task",
+                  #   "Next" : "ChoiceInfractionsExist",
+                  #   "ResultPath" : "$.QueryEvalResultsTable",
+                  #   "Resource" : "arn:aws:states:::aws-sdk:dynamodb:query",
+                  #   "ResultSelector" : {
+                  #     "Items.$" : "$.Items"
+                  #   },
+                  #   "Parameters" : {
+                  #     "TableName" : self.table_eval_results.table_name,
+                  #     "ExpressionAttributeValues" : {
+                  #       ":pk" : {
+                  #         "S.$" : "States.Format('{}#{}', $.OuterEvalEngineSfnExecutionId, $$.Execution.Id)"
+                  #       #   "S.$" : "$.OuterEvalEngineSfnExecutionId"
+                  #       },
+                  #       # ":sk" : {
+                  #       #   "S.$" : "$$.Execution.Id"
+                  #       # },
+                  #     },
+                  #     "KeyConditionExpression" : "pk = :pk"
+                  #   #   "KeyConditionExpression" : "pk = :pk AND sk = :sk"
+                  #   }
+                  # },
                   "ChoiceInfractionsExist" : {
                     "Type" : "Choice",
                     "Default" : "InfractionsExist",
                     "Choices" : [
                       {
-                        "Variable" : "$.QueryEvalResultsTable.Items[0]",
-                        "IsPresent" : False,
+                        "Variable" : "$.GetMaxIndex.Items",
+                        "NumericEquals" : "$.GetAllowedCount.Items",
                         "Next" : "NoInfractions"
                       }
                     ]
