@@ -178,7 +178,9 @@ class ControlBrokerEvalEngineStack(Stack):
         
     def deploy_inner_sfn(self):
         
-        log_group_inner_eval_engine_sfn = aws_logs.LogGroup(self,"InnerEvalEngineSfnLogs")
+        log_group_inner_eval_engine_sfn = aws_logs.LogGroup(self,"InnerEvalEngineSfnLogs"
+          # log_group_name = "/aws/vendedlogs/states/InnerEvalEngineSfnLogs"
+        )
         
         role_inner_eval_engine_sfn = aws_iam.Role(self, "InnerEvalEngineSfn",
             assumed_by=aws_iam.ServicePrincipal("states.amazonaws.com"),
@@ -187,14 +189,14 @@ class ControlBrokerEvalEngineStack(Stack):
         role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
             actions=[
                 "logs:*",
-                "logs:CreateLogDelivery",
-                "logs:GetLogDelivery",
-                "logs:UpdateLogDelivery",
-                "logs:DeleteLogDelivery",
-                "logs:ListLogDeliveries",
-                "logs:PutResourcePolicy",
-                "logs:DescribeResourcePolicies",
-                "logs:DescribeLogGroups",
+                # "logs:CreateLogDelivery",
+                # "logs:GetLogDelivery",
+                # "logs:UpdateLogDelivery",
+                # "logs:DeleteLogDelivery",
+                # "logs:ListLogDeliveries",
+                # "logs:PutResourcePolicy",
+                # "logs:DescribeResourcePolicies",
+                # "logs:DescribeLogGroups",
             ],
             resources=[
                 "*",
@@ -244,15 +246,15 @@ class ControlBrokerEvalEngineStack(Stack):
             state_machine_type = "EXPRESS",
             role_arn = role_inner_eval_engine_sfn.role_arn,
         
-            logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
-                destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
-                    cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
-                        log_group_arn = log_group_inner_eval_engine_sfn.log_group_arn
-                    )
-                )],
-                include_execution_data=False,
-                level="ERROR"
-            ),
+            # logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
+            #     destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
+            #         cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
+            #             log_group_arn = log_group_inner_eval_engine_sfn.log_group_arn
+            #         )
+            #     )],
+            #     include_execution_data=False,
+            #     level="ERROR"
+            # ),
             
             definition_string=json.dumps({
                 "StartAt" : "ParseInput",
@@ -315,11 +317,39 @@ class ControlBrokerEvalEngineStack(Stack):
                       "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
                       "Metadata.$": "$.GetMetadata.Metadata",
                       "EvalResultContextIndex.$": "$$.Map.Item.Index",
-                      "EvalResultContextValue.$": "$$.Map.Item.Value"
                     },
                     "Iterator" : {
-                      "StartAt" : "CountResults",
+                      "StartAt" : "SetIndexZero",
                       "States" : {
+                        "SetIndexZero" : {
+                          "Type" : "Task",
+                          "Next" : "CountResults",
+                          "ResultPath" : "$.SetIndexZero",
+                          "Resource" : "arn:aws:states:::dynamodb:updateItem",
+                          "ResultSelector" : {
+                            "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
+                          },
+                          "Parameters" : {
+                            "TableName" : self.table_eval_results.table_name,
+                            "Key" : {
+                              "pk" : {
+                                "S.$" : "$$.Execution.Id"
+                              },
+                              "sk" : {
+                                "S.$" : "$$.Execution.Id"
+                              }
+                            },
+                            "ExpressionAttributeNames" : {
+                              "#indexmax" : "IndexMax",
+                            },
+                            "ExpressionAttributeValues" : {
+                              ":zero" : {
+                                "N" : "0"
+                              },
+                            },
+                            "UpdateExpression" : "SET #indexmax=:zero",
+                          }
+                        },
                         "CountResults" : {
                             "Type" : "Task",
                             "Next" : "ChoiceIsAllowed",
@@ -343,13 +373,25 @@ class ControlBrokerEvalEngineStack(Stack):
                               },
                               "ExpressionAttributeValues" : {
                                 ":currentindex" : {
-                                  "N.$" : "$.EvalResultContextIndex"
+                                  "N.$" : "States.JsonToString($.EvalResultContextIndex)"
                                 },
                               },
                               "UpdateExpression" : "SET #indexmax=:currentindex",
-                              "ConditionExpression": ":currentindex > IndexMax"
-                            }
+                              "ConditionExpression" : ":currentindex > #indexmax"
+                            },
+                              "Catch": [
+                              {
+                                "ErrorEquals": [
+                                  "DynamoDB.ConditionalCheckFailedException"
+                                ],
+                                "Next": "NoUpdateNeeded"
+                              }
+                            ]
                         },
+                        "NoUpdateNeeded": {
+                            "Type": "Pass",
+                            "End": True
+                        }
                         "ChoiceIsAllowed" : {
                           "Type" : "Choice",
                           "Default" : "ForEachInfraction",
@@ -610,15 +652,15 @@ class ControlBrokerEvalEngineStack(Stack):
             
             role_arn = role_outer_eval_engine_sfn.role_arn,
             
-            logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
-                destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
-                    cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
-                        log_group_arn = log_group_outer_eval_engine_sfn.log_group_arn
-                    )
-                )],
-                include_execution_data=False,
-                level="ERROR"
-            ),
+            # logging_configuration = aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
+            #     destinations = [aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
+            #         cloud_watch_logs_log_group = aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
+            #             log_group_arn = log_group_outer_eval_engine_sfn.log_group_arn
+            #         )
+            #     )],
+            #     include_execution_data=False,
+            #     level="ERROR"
+            # ),
             
             definition_string=json.dumps({
                 "StartAt" : "ForEachTemplate",
