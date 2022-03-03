@@ -1,6 +1,6 @@
 {
     "BusinessUnit": "unit-b",
-    "BillingCode": "bua-02",
+    "BillingCode": "b-01",
     "TargetProvisioningEnvironment": "prod-01",
     "PipelineOwner": {
         "Name": "Jane Ray",

@@ -188,20 +188,20 @@ class ControlBrokerEvalEngineStack(Stack):
         
         role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
             actions=[
-                "logs:*",
-                # "logs:CreateLogDelivery",
-                # "logs:GetLogDelivery",
-                # "logs:UpdateLogDelivery",
-                # "logs:DeleteLogDelivery",
-                # "logs:ListLogDeliveries",
-                # "logs:PutResourcePolicy",
-                # "logs:DescribeResourcePolicies",
-                # "logs:DescribeLogGroups",
+                # "logs:*",
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups",
             ],
             resources=[
                 "*",
                 log_group_inner_eval_engine_sfn.log_group_arn,
-                f'{log_group_inner_eval_engine_sfn.log_group_arn}:*'
+                f'{log_group_inner_eval_engine_sfn.log_group_arn}*'
             ]
         ))
         role_inner_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
@@ -660,7 +660,7 @@ class ControlBrokerEvalEngineStack(Stack):
         
         role_outer_eval_engine_sfn.add_to_policy(aws_iam.PolicyStatement(
             actions=[
-                "logs:*",
+                # "logs:*",
                 "logs:CreateLogDelivery",
                 "logs:GetLogDelivery",
                 "logs:UpdateLogDelivery",
@@ -673,7 +673,7 @@ class ControlBrokerEvalEngineStack(Stack):
             resources=[
                 "*",
                 log_group_outer_eval_engine_sfn.log_group_arn,
-                f'{log_group_outer_eval_engine_sfn.log_group_arn}:*'
+                f'{log_group_outer_eval_engine_sfn.log_group_arn}*'
 
             ]
         ))
