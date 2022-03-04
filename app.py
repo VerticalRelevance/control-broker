@@ -14,16 +14,17 @@ env = cdk.Environment(
 
 # Input parameters
 application_team_cdk_app = {
-    'CodeCommitRepository' : 'opa-eval-serverless-cdk-source',
-    'Branch' : 'master',
-    'PipelineOwnershipMetadata': './supplementary_files/pipeline-ownership-metadata/business-unit-a/eval-engine-metadata.json'
+    # 'CodeCommitRepository' : 'opa-eval-serverless-cdk-source',
+    # 'Branch' : 'master',
+    # 'PathToExampleApp': './supplementary_files/application_team_example_app',
+    'PipelineOwnershipMetadata': './supplementary_files/pipeline_ownership_metadata/business_unit_a/eval-engine-metadata.json'
 }
 
 
 
 ControlBrokerEvalEngineStack(
     app,
-    "ControlBrokerEvalEngineCdkStackV4x4",
+    "ControlBrokerEvalEngineCdkStackV4x5",
     application_team_cdk_app = application_team_cdk_app,
     env = env
     )

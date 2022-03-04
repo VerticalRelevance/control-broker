@@ -46,10 +46,6 @@ class ControlBrokerEvalEngineStack(Stack):
         
     def deploy_utils(self):
 
-        self.repo_app_team_cdk = aws_codecommit.Repository.from_repository_name(self,"AppTeamCdk",
-            repository_name = self.application_team_cdk_app['CodeCommitRepository']
-        )
-        
         self.table_eval_results = aws_dynamodb.Table(self,"EvalResults",
             partition_key = aws_dynamodb.Attribute(name="pk", type=aws_dynamodb.AttributeType.STRING),
             sort_key = aws_dynamodb.Attribute(name="sk", type=aws_dynamodb.AttributeType.STRING),
@@ -87,6 +83,23 @@ class ControlBrokerEvalEngineStack(Stack):
         )
         
     def s3_deploy_local_assets(self):
+      
+        # ApplicationTeam ExampleApp -- Step 1: Initialize from Local Dir - one-time operation - won't pickup local changes
+        
+        # self.repo_app_team_cdk = aws_codecommit.Repository(self, "ApplicationTeamExampleAppRepository",
+        #     repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp",
+        #     code = aws_codecommit.Code.from_directory(
+        #       './supplementary_files/application_team_example_app',
+        #       "main"
+        #     )
+        # )
+        # self.repo_app_team_cdk.apply_removal_policy(RemovalPolicy.DESTROY)
+      
+        # ApplicationTeam ExampleApp -- Step 2: Uncomment to reference Existing repo. Commit to it to make changes.
+        
+        self.repo_app_team_cdk = aws_codecommit.Repository.from_repository_name(self,"ApplicationTeamExampleAppRepository",
+            repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp"
+        )
       
         # buildspec
         
@@ -777,6 +790,7 @@ class ControlBrokerEvalEngineStack(Stack):
         
         action_source = aws_codepipeline_actions.CodeCommitSourceAction(
             action_name="CodeCommit",
+            branch = "main",
             repository=self.repo_app_team_cdk,
             output=artifact_source
         )
