@@ -5,6 +5,7 @@ from aws_cdk import (
     Duration,
     Stack,
     RemovalPolicy,
+    CfnCondition,
     aws_codecommit,
     aws_dynamodb,
     aws_s3,
@@ -86,20 +87,76 @@ class ControlBrokerEvalEngineStack(Stack):
       
         # ApplicationTeam ExampleApp -- Step 1: Initialize from Local Dir - one-time operation - won't pickup local changes
         
-        # self.repo_app_team_cdk = aws_codecommit.Repository(self, "ApplicationTeamExampleAppRepository",
-        #     repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp",
-        #     code = aws_codecommit.Code.from_directory(
-        #       './supplementary_files/application_team_example_app',
-        #       "main"
-        #     )
-        # )
-        # self.repo_app_team_cdk.apply_removal_policy(RemovalPolicy.DESTROY)
+        self.repo_app_team_cdk = aws_codecommit.Repository(self, "ApplicationTeamExampleAppRepository",
+            repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp",
+            code = aws_codecommit.Code.from_directory(
+              './supplementary_files/application_team_example_app',
+              "main"
+            )
+        )
+        self.repo_app_team_cdk.apply_removal_policy(RemovalPolicy.DESTROY)
       
         # ApplicationTeam ExampleApp -- Step 2: Uncomment to reference Existing repo. Commit to it to make changes.
         
-        self.repo_app_team_cdk = aws_codecommit.Repository.from_repository_name(self,"ApplicationTeamExampleAppRepository",
-            repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp"
+        # self.repo_app_team_cdk = aws_codecommit.Repository.from_repository_name(self,"ApplicationTeamExampleAppRepository",
+        #     repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp"
+        # )
+        
+        ################ WIP
+        
+        
+        
+        application_team_example_app_repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp"
+        # application_team_example_app_repository_name = "opa-eval-serverless-cdk-source"
+        
+        check_if_repo_exists = custom_resources.AwsCustomResource(self, "CheckIfRepositoryExists",
+            on_create=custom_resources.AwsSdkCall(
+                service="CodeCommit",
+                action="getRepository",
+                parameters={
+                    "repositoryName": application_team_example_app_repository_name
+                },
+                physical_resource_id=custom_resources.PhysicalResourceId.of("CheckIfRepositoryExistsZ")
+            ),
+            # on_update=custom_resources.AwsSdkCall(
+            #     service="...",
+            #     action="...",
+            #     parameters={
+            #         "text": "...",
+            #         "resource_id": cr.PhysicalResourceIdReference()
+            #     }
+            # ),
+            policy=custom_resources.AwsCustomResourcePolicy.from_sdk_calls(
+                resources=custom_resources.AwsCustomResourcePolicy.ANY_RESOURCE
+            )
         )
+        
+        
+        cfn_repository_example_app = aws_codecommit.CfnRepository(self, "ExampleAppRepository",
+            repository_name = application_team_example_app_repository_name,
+        
+            code=aws_codecommit.CfnRepository.CodeProperty(
+                s3=aws_codecommit.CfnRepository.S3Property(
+                    bucket=asset_example_app.s3_bucket_name,
+                    key=asset_example_app.s3_object_key,
+                ),
+                branch_name="main"
+            )
+        )
+        
+        cfn_repository_example_app.node.add_dependency(asset_example_app)
+        
+        cfn_repository_example_app.cfn_options.condition = CfnCondition(self, "RepositoryExists",
+            # expression = Fn.condition_equals(True,True)
+            expression = Fn.condition_equals(check_if_repo_exists.get_response_field('repositories.0.repositoryName'),False)
+        )
+        
+        
+        
+        
+        
+        
+        ################ WIP
       
         # buildspec
         
