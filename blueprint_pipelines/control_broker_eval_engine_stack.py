@@ -69,7 +69,9 @@ class ControlBrokerEvalEngineStack(Stack):
         
         # debug event bridge by logging events
         
-        logs_infraction_events = aws_logs.LogGroup(self, "InfractionEvents")
+        logs_infraction_events = aws_logs.LogGroup(self, "InfractionEvents",
+          removal_policy= RemovalPolicy.DESTROY
+        )
         logs_infraction_events.grant_write(aws_iam.ServicePrincipal("events.amazonaws.com"))
         
         cfn_rule = aws_events.CfnRule(self, "ListenAllInfractions",
@@ -178,8 +180,9 @@ class ControlBrokerEvalEngineStack(Stack):
         
     def deploy_inner_sfn(self):
         
-        log_group_inner_eval_engine_sfn = aws_logs.LogGroup(self,"InnerEvalEngineSfnLogs"
-          ,log_group_name = "/aws/vendedlogs/states/InnerEvalEngineSfnLogs"
+        log_group_inner_eval_engine_sfn = aws_logs.LogGroup(self,"InnerEvalEngineSfnLogs",
+          log_group_name = "/aws/vendedlogs/states/InnerEvalEngineSfnLogs",
+          removal_policy= RemovalPolicy.DESTROY
         )
         
         role_inner_eval_engine_sfn = aws_iam.Role(self, "InnerEvalEngineSfn",
@@ -650,8 +653,9 @@ class ControlBrokerEvalEngineStack(Stack):
     
     def deploy_outer_sfn(self):
         
-        log_group_outer_eval_engine_sfn = aws_logs.LogGroup(self,"OuterEvalEngineSfnLogs"
-          ,log_group_name = "/aws/vendedlogs/states/OuterEvalEngineSfnLogs"
+        log_group_outer_eval_engine_sfn = aws_logs.LogGroup(self,"OuterEvalEngineSfnLogs",
+          log_group_name = "/aws/vendedlogs/states/OuterEvalEngineSfnLogs",
+          removal_policy= RemovalPolicy.DESTROY
         )
         
         role_outer_eval_engine_sfn = aws_iam.Role(self, "OuterEvalEngineSfn",
