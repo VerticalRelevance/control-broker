@@ -6,6 +6,8 @@ from aws_cdk import (
     Stack,
     RemovalPolicy,
     CfnCondition,
+    CustomResource,
+    custom_resources,
     aws_codecommit,
     aws_dynamodb,
     aws_s3,
@@ -102,61 +104,137 @@ class ControlBrokerEvalEngineStack(Stack):
         #     repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp"
         # )
         
-        ################ WIP
+        ################ WIP - to avoid any manual steps
         
+        
+        
+        """
+        Objective:
+        - if repo does not exist, initialize it from s3 from local dir
+        - repo does exist, reference it as a data source
+        
+        What this can do:
+        - initialize codecommit repo from s3
+        - conditionally create repo from s3 using dummy Fn.condition_equals(True,True)
+        - use AwsCustomResource to GetRepository to get info on existing repo
+        - use ignore_error_codes_matching='RepositoryDoesNotExistException' to catch error (and do nothing) when repo that does not exist
+        
+        What this cannot do:
+        - catch RepositoryDoesNotExistException and return Falsey value to be used by Fn.condition_equals(), due to inability to use ignore_error_codes_matching and get_response_field in the same stack. As mentioned in this issue (https://github.com/aws/aws-cdk/issues/5873)
+        - get all repositories (ListRepositories), then parse response to see if repo in question is listed due to error 'Response object is too long'
+        
+        NB:
+        -AwsCustomResource does not return API responses as you might expect from boto3 in nested objects {"a":{"b":1} where accessing path "a" yields a valid response. Instead need to access "a.b" directly. It's all flattened.
+        -Got 'Access denied' errors when using from_sdk_calls, ANY_RESOURCE, even though resulting policy looks correct. Perhaps related to this issue (https://github.com/aws/aws-cdk/issues/4533). Using from_statements works.
+        
+        the above refers to AwsCustomResource only
+        
+        Untried:
+        - CustomResource itself, provider, providing a lambda manually and return response.
+        
+        """
+
+        # self.bucket_example_app = aws_s3.Bucket(self, "ExampleAppBucket",
+        #     block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
+        #     removal_policy = RemovalPolicy.DESTROY,
+        #     auto_delete_objects = True
+        # )
+        
+        example_app = './supplementary_files/example_app'
+        
+        # asset_example_app = aws_s3_assets.Asset(self, "ExampleAppAsset",
+        #     path=example_app,
+        # )
         
         
         application_team_example_app_repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp"
         # application_team_example_app_repository_name = "opa-eval-serverless-cdk-source"
         
+        
         check_if_repo_exists = custom_resources.AwsCustomResource(self, "CheckIfRepositoryExists",
+            install_latest_aws_sdk = False,
             on_create=custom_resources.AwsSdkCall(
+                # service="S3",
+                # action="listBuckets",
                 service="CodeCommit",
-                action="getRepository",
-                parameters={
-                    "repositoryName": application_team_example_app_repository_name
-                },
-                physical_resource_id=custom_resources.PhysicalResourceId.of("CheckIfRepositoryExistsZ")
+                action="listRepositories",
+                # action="getRepository",
+                # parameters={
+                #     "repositoryName": application_team_example_app_repository_name
+                # },
+                # ignore_error_codes_matching = 'RepositoryDoesNotExistException',
+                physical_resource_id=custom_resources.PhysicalResourceId.of("CustomResourceCheckIfRepositoryExists")
             ),
-            # on_update=custom_resources.AwsSdkCall(
-            #     service="...",
-            #     action="...",
-            #     parameters={
-            #         "text": "...",
-            #         "resource_id": cr.PhysicalResourceIdReference()
-            #     }
-            # ),
-            policy=custom_resources.AwsCustomResourcePolicy.from_sdk_calls(
-                resources=custom_resources.AwsCustomResourcePolicy.ANY_RESOURCE
+            on_update=custom_resources.AwsSdkCall(
+                # service="S3",
+                # action="listBuckets",
+                service="CodeCommit",
+                action="listRepositories",
+                # action="getRepository",
+                # parameters={
+                #     "repositoryName": application_team_example_app_repository_name
+                # },
+                # ignore_error_codes_matching = 'RepositoryDoesNotExistException',
+                physical_resource_id=custom_resources.PhysicalResourceId.of("CustomResourceCheckIfRepositoryExists")
+            ),
+            on_delete=custom_resources.AwsSdkCall(
+                # service="S3",
+                # action="listBuckets",
+                service="CodeCommit",
+                action="listRepositories",
+                # action="getRepository",
+                # parameters={
+                #     "repositoryName": application_team_example_app_repository_name
+                # },
+                # ignore_error_codes_matching = 'RepositoryDoesNotExistException',
+                physical_resource_id=custom_resources.PhysicalResourceId.of("CustomResourceCheckIfRepositoryExists")
+            ),
+            # policy=custom_resources.AwsCustomResourcePolicy.from_sdk_calls(
+            #     resources=custom_resources.AwsCustomResourcePolicy.ANY_RESOURCE
+            # )
+            policy=custom_resources.AwsCustomResourcePolicy.from_statements(
+                statements=[aws_iam.PolicyStatement(
+                    actions=["codecommit:ListRepositories"],
+                    # actions=["codecommit:GetRepository"],
+                    resources=["*"]
+                )]
             )
         )
         
+        # cfn_repository_example_app = aws_codecommit.CfnRepository(self, "ExampleAppRepository",
+        #     repository_name = application_team_example_app_repository_name,
         
-        cfn_repository_example_app = aws_codecommit.CfnRepository(self, "ExampleAppRepository",
-            repository_name = application_team_example_app_repository_name,
+        #     code=aws_codecommit.CfnRepository.CodeProperty(
+        #         s3=aws_codecommit.CfnRepository.S3Property(
+        #             bucket=asset_example_app.s3_bucket_name,
+        #             key=asset_example_app.s3_object_key,
+        #         ),
+        #         branch_name="main"
+        #     )
+        # )
         
-            code=aws_codecommit.CfnRepository.CodeProperty(
-                s3=aws_codecommit.CfnRepository.S3Property(
-                    bucket=asset_example_app.s3_bucket_name,
-                    key=asset_example_app.s3_object_key,
-                ),
-                branch_name="main"
-            )
+        # cfn_repository_example_app.node.add_dependency(asset_example_app)
+        
+        # cfn_repository_example_app.cfn_options.condition = CfnCondition(self, "RepositoryExists",
+        #     # expression = Fn.condition_equals(True,True)
+        #     expression = Fn.condition_equals(check_if_repo_exists.get_response_field('repositories.0.repositoryName'),False)
+        # )
+        
+        # custom resource outfile
+        
+        CfnOutput(self, "Exists",
+            value = check_if_repo_exists.get_response_field('repositories')
+            # value = check_if_repo_exists.get_response_field('repositoryMetadata.repositoryName')
         )
-        
-        cfn_repository_example_app.node.add_dependency(asset_example_app)
-        
-        cfn_repository_example_app.cfn_options.condition = CfnCondition(self, "RepositoryExists",
-            # expression = Fn.condition_equals(True,True)
-            expression = Fn.condition_equals(check_if_repo_exists.get_response_field('repositories.0.repositoryName'),False)
-        )
-        
-        
-        
+
         
         
         
         ################ WIP
+        
+        
+        
+        
       
         # buildspec
         
