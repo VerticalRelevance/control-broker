@@ -127,11 +127,8 @@ class ControlBrokerEvalEngineStack(Stack):
         -AwsCustomResource does not return API responses as you might expect from boto3 in nested objects {"a":{"b":1} where accessing path "a" yields a valid response. Instead need to access "a.b" directly. It's all flattened.
         -Got 'Access denied' errors when using from_sdk_calls, ANY_RESOURCE, even though resulting policy looks correct. Perhaps related to this issue (https://github.com/aws/aws-cdk/issues/4533). Using from_statements works.
         
+        
         the above refers to AwsCustomResource only
-        
-        Untried:
-        - CustomResource itself, provider, providing a lambda manually and return response.
-        
         """
 
         # self.bucket_example_app = aws_s3.Bucket(self, "ExampleAppBucket",
@@ -228,6 +225,66 @@ class ControlBrokerEvalEngineStack(Stack):
         )
 
         
+        """ 
+        CustomResource itself, provider, providing a lambda manually and return response.
+        using crhelper (https://github.com/aws-cloudformation/custom-resource-helper) via externally built layer
+        getting access denied events:PutRule
+        
+        as above, object is for cfn to check if repo exists, pass this boolean to conditional create
+        
+        """
+       
+       self.bucket_example_app = aws_s3.Bucket(self, "BucketLambdaLayers",
+            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy = RemovalPolicy.DESTROY,
+            auto_delete_objects = True
+        )
+        
+        role_check_if_repo_exists = aws_iam.Role(self, "RoleCheckIfRepoExists",
+            assumed_by=aws_iam.ServicePrincipal("lambda.amazonaws.com")
+        )
+        
+        role_check_if_repo_exists.add_to_policy(aws_iam.PolicyStatement(
+            actions=["logs:*"],
+            resources=["*"]
+        ))
+        role_check_if_repo_exists.add_to_policy(aws_iam.PolicyStatement(
+            actions=["codecommit:GetRepository"],
+            resources=["*"]
+        ))
+        
+        layer_cr = aws_lambda.LayerVersion.from_layer_version_arn(self,"LayerCR",
+            "arn:aws:lambda:us-east-1:899456967600:layer:crhelper:1" # built externally using bash script, see https://gist.github.com/cschneider-vertical-relevance/85afd30ff80b10202c5ae7aed6b59eb6
+        )
+        
+        lambda_check_if_repo_exists = aws_lambda.Function(self, "LambdaCheckIfRepoExists",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.handler",
+            timeout = Duration.seconds(60),
+            memory_size = 1024,
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/check_if_repo_exists"),
+            role = role_check_if_repo_exists,
+            layers = [
+                layer_cr
+            ]
+        )
+        
+        provider_check_if_repo_exists = custom_resources.Provider(self, "ProviderCheckIfRepoExists",
+            log_retention=aws_logs.RetentionDays.ONE_DAY,
+            on_event_handler=lambda_check_if_repo_exists,
+            # role=role_check_if_repo_exists # getting circular deps error
+        )
+        
+        CustomResource(self, "CRCheckIfRepoExists",
+            service_token=provider_check_if_repo_exists.service_token,
+        )
+        # CustomResource.apply_removal_policy RemovalPolicy.DESTROY)
+        
+        # CfnOutput(self, "RepoExistance",
+        #     value = CustomResource.get_att(
+        #         attribute_name = 'RepoExistance'
+        #     )
+        # )
         
         
         ################ WIP
