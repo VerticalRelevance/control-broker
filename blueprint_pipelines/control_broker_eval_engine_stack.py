@@ -5,6 +5,7 @@ from aws_cdk import (
     Duration,
     Stack,
     RemovalPolicy,
+    CfnOutput,
     aws_codecommit,
     aws_dynamodb,
     aws_s3,
@@ -46,10 +47,6 @@ class ControlBrokerEvalEngineStack(Stack):
         
     def deploy_utils(self):
 
-        self.repo_app_team_cdk = aws_codecommit.Repository.from_repository_name(self,"AppTeamCdk",
-            repository_name = self.application_team_cdk_app['CodeCommitRepository']
-        )
-        
         self.table_eval_results = aws_dynamodb.Table(self,"EvalResults",
             partition_key = aws_dynamodb.Attribute(name="pk", type=aws_dynamodb.AttributeType.STRING),
             sort_key = aws_dynamodb.Attribute(name="sk", type=aws_dynamodb.AttributeType.STRING),
@@ -87,6 +84,22 @@ class ControlBrokerEvalEngineStack(Stack):
         )
         
     def s3_deploy_local_assets(self):
+      
+        self.repo_app_team_cdk = aws_codecommit.Repository(self, "ApplicationTeamExampleAppRepository",
+            repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp",
+            code = aws_codecommit.Code.from_directory(
+              './supplementary_files/application_team_example_app',
+              "main"
+            )
+        )
+        self.repo_app_team_cdk.apply_removal_policy(RemovalPolicy.DESTROY)
+
+        CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneSSH",
+            value = self.repo_app_team_cdk.repository_clone_url_ssh
+        )
+        CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneHTTP",
+            value = self.repo_app_team_cdk.repository_clone_url_http
+        )
       
         # buildspec
         
