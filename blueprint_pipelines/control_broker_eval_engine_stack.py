@@ -7,6 +7,7 @@ from aws_cdk import (
     RemovalPolicy,
     CfnCondition,
     CustomResource,
+    CfnOutput,
     custom_resources,
     aws_codecommit,
     aws_dynamodb,
@@ -97,6 +98,15 @@ class ControlBrokerEvalEngineStack(Stack):
             )
         )
         self.repo_app_team_cdk.apply_removal_policy(RemovalPolicy.DESTROY)
+
+        CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneSSH",
+            value = self.repo_app_team_cdk.repository_clone_url_ssh
+        )
+        CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneHTTP",
+            value = self.repo_app_team_cdk.repository_clone_url_http
+        )
+            
+
       
         # ApplicationTeam ExampleApp -- Step 2: Uncomment to reference Existing repo. Commit to it to make changes.
         
@@ -137,66 +147,66 @@ class ControlBrokerEvalEngineStack(Stack):
         #     auto_delete_objects = True
         # )
         
-        example_app = './supplementary_files/example_app'
+        # example_app = './supplementary_files/example_app'
         
-        # asset_example_app = aws_s3_assets.Asset(self, "ExampleAppAsset",
-        #     path=example_app,
+        # # asset_example_app = aws_s3_assets.Asset(self, "ExampleAppAsset",
+        # #     path=example_app,
+        # # )
+        
+        
+        # application_team_example_app_repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp"
+        # # application_team_example_app_repository_name = "opa-eval-serverless-cdk-source"
+        
+        
+        # check_if_repo_exists = custom_resources.AwsCustomResource(self, "CheckIfRepositoryExists",
+        #     install_latest_aws_sdk = False,
+        #     on_create=custom_resources.AwsSdkCall(
+        #         # service="S3",
+        #         # action="listBuckets",
+        #         service="CodeCommit",
+        #         action="listRepositories",
+        #         # action="getRepository",
+        #         # parameters={
+        #         #     "repositoryName": application_team_example_app_repository_name
+        #         # },
+        #         # ignore_error_codes_matching = 'RepositoryDoesNotExistException',
+        #         physical_resource_id=custom_resources.PhysicalResourceId.of("CustomResourceCheckIfRepositoryExists")
+        #     ),
+        #     on_update=custom_resources.AwsSdkCall(
+        #         # service="S3",
+        #         # action="listBuckets",
+        #         service="CodeCommit",
+        #         action="listRepositories",
+        #         # action="getRepository",
+        #         # parameters={
+        #         #     "repositoryName": application_team_example_app_repository_name
+        #         # },
+        #         # ignore_error_codes_matching = 'RepositoryDoesNotExistException',
+        #         physical_resource_id=custom_resources.PhysicalResourceId.of("CustomResourceCheckIfRepositoryExists")
+        #     ),
+        #     on_delete=custom_resources.AwsSdkCall(
+        #         # service="S3",
+        #         # action="listBuckets",
+        #         service="CodeCommit",
+        #         action="listRepositories",
+        #         # action="getRepository",
+        #         # parameters={
+        #         #     "repositoryName": application_team_example_app_repository_name
+        #         # },
+        #         # ignore_error_codes_matching = 'RepositoryDoesNotExistException',
+        #         physical_resource_id=custom_resources.PhysicalResourceId.of("CustomResourceCheckIfRepositoryExists")
+        #     ),
+        #     # policy=custom_resources.AwsCustomResourcePolicy.from_sdk_calls(
+        #     #     resources=custom_resources.AwsCustomResourcePolicy.ANY_RESOURCE
+        #     # )
+        #     policy=custom_resources.AwsCustomResourcePolicy.from_statements(
+        #         statements=[aws_iam.PolicyStatement(
+        #             actions=["codecommit:ListRepositories"],
+        #             # actions=["codecommit:GetRepository"],
+        #             resources=["*"]
+        #         )]
+        #     )
         # )
-        
-        
-        application_team_example_app_repository_name = "ControlBrokerEvalEngine-ApplicationTeam-ExampleApp"
-        # application_team_example_app_repository_name = "opa-eval-serverless-cdk-source"
-        
-        
-        check_if_repo_exists = custom_resources.AwsCustomResource(self, "CheckIfRepositoryExists",
-            install_latest_aws_sdk = False,
-            on_create=custom_resources.AwsSdkCall(
-                # service="S3",
-                # action="listBuckets",
-                service="CodeCommit",
-                action="listRepositories",
-                # action="getRepository",
-                # parameters={
-                #     "repositoryName": application_team_example_app_repository_name
-                # },
-                # ignore_error_codes_matching = 'RepositoryDoesNotExistException',
-                physical_resource_id=custom_resources.PhysicalResourceId.of("CustomResourceCheckIfRepositoryExists")
-            ),
-            on_update=custom_resources.AwsSdkCall(
-                # service="S3",
-                # action="listBuckets",
-                service="CodeCommit",
-                action="listRepositories",
-                # action="getRepository",
-                # parameters={
-                #     "repositoryName": application_team_example_app_repository_name
-                # },
-                # ignore_error_codes_matching = 'RepositoryDoesNotExistException',
-                physical_resource_id=custom_resources.PhysicalResourceId.of("CustomResourceCheckIfRepositoryExists")
-            ),
-            on_delete=custom_resources.AwsSdkCall(
-                # service="S3",
-                # action="listBuckets",
-                service="CodeCommit",
-                action="listRepositories",
-                # action="getRepository",
-                # parameters={
-                #     "repositoryName": application_team_example_app_repository_name
-                # },
-                # ignore_error_codes_matching = 'RepositoryDoesNotExistException',
-                physical_resource_id=custom_resources.PhysicalResourceId.of("CustomResourceCheckIfRepositoryExists")
-            ),
-            # policy=custom_resources.AwsCustomResourcePolicy.from_sdk_calls(
-            #     resources=custom_resources.AwsCustomResourcePolicy.ANY_RESOURCE
-            # )
-            policy=custom_resources.AwsCustomResourcePolicy.from_statements(
-                statements=[aws_iam.PolicyStatement(
-                    actions=["codecommit:ListRepositories"],
-                    # actions=["codecommit:GetRepository"],
-                    resources=["*"]
-                )]
-            )
-        )
         
         # cfn_repository_example_app = aws_codecommit.CfnRepository(self, "ExampleAppRepository",
         #     repository_name = application_team_example_app_repository_name,
@@ -219,10 +229,10 @@ class ControlBrokerEvalEngineStack(Stack):
         
         # custom resource outfile
         
-        CfnOutput(self, "Exists",
-            value = check_if_repo_exists.get_response_field('repositories')
-            # value = check_if_repo_exists.get_response_field('repositoryMetadata.repositoryName')
-        )
+        # CfnOutput(self, "Exists",
+        #     value = check_if_repo_exists.get_response_field('repositories')
+        #     # value = check_if_repo_exists.get_response_field('repositoryMetadata.repositoryName')
+        # )
 
         
         """ 
@@ -245,50 +255,50 @@ class ControlBrokerEvalEngineStack(Stack):
         
         """
        
-       self.bucket_lambda_layers = aws_s3.Bucket(self, "BucketLambdaLayers",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
-            removal_policy = RemovalPolicy.DESTROY,
-            auto_delete_objects = True
-        )
+      # self.bucket_lambda_layers = aws_s3.Bucket(self, "BucketLambdaLayers",
+      #       block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
+      #       removal_policy = RemovalPolicy.DESTROY,
+      #       auto_delete_objects = True
+      #   )
         
-        role_check_if_repo_exists = aws_iam.Role(self, "RoleCheckIfRepoExists",
-            assumed_by=aws_iam.ServicePrincipal("lambda.amazonaws.com")
-        )
+      #   role_check_if_repo_exists = aws_iam.Role(self, "RoleCheckIfRepoExists",
+      #       assumed_by=aws_iam.ServicePrincipal("lambda.amazonaws.com")
+      #   )
         
-        role_check_if_repo_exists.add_to_policy(aws_iam.PolicyStatement(
-            actions=["logs:*"],
-            resources=["*"]
-        ))
-        role_check_if_repo_exists.add_to_policy(aws_iam.PolicyStatement(
-            actions=["codecommit:GetRepository"],
-            resources=["*"]
-        ))
+      #   role_check_if_repo_exists.add_to_policy(aws_iam.PolicyStatement(
+      #       actions=["logs:*"],
+      #       resources=["*"]
+      #   ))
+      #   role_check_if_repo_exists.add_to_policy(aws_iam.PolicyStatement(
+      #       actions=["codecommit:GetRepository"],
+      #       resources=["*"]
+      #   ))
         
-        layer_cr = aws_lambda.LayerVersion.from_layer_version_arn(self,"LayerCR",
-            "arn:aws:lambda:us-east-1:899456967600:layer:crhelper:1" # built externally using bash script, see https://gist.github.com/cschneider-vertical-relevance/85afd30ff80b10202c5ae7aed6b59eb6
-        )
+      #   layer_cr = aws_lambda.LayerVersion.from_layer_version_arn(self,"LayerCR",
+      #       "arn:aws:lambda:us-east-1:899456967600:layer:crhelper:1" # built externally using bash script, see https://gist.github.com/cschneider-vertical-relevance/85afd30ff80b10202c5ae7aed6b59eb6
+      #   )
         
-        lambda_check_if_repo_exists = aws_lambda.Function(self, "LambdaCheckIfRepoExists",
-            runtime=aws_lambda.Runtime.PYTHON_3_9,
-            handler="lambda_function.handler",
-            timeout = Duration.seconds(60),
-            memory_size = 1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/check_if_repo_exists"),
-            role = role_check_if_repo_exists,
-            layers = [
-                layer_cr
-            ]
-        )
+      #   lambda_check_if_repo_exists = aws_lambda.Function(self, "LambdaCheckIfRepoExists",
+      #       runtime=aws_lambda.Runtime.PYTHON_3_9,
+      #       handler="lambda_function.handler",
+      #       timeout = Duration.seconds(60),
+      #       memory_size = 1024,
+      #       code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/check_if_repo_exists"),
+      #       role = role_check_if_repo_exists,
+      #       layers = [
+      #           layer_cr
+      #       ]
+      #   )
         
-        provider_check_if_repo_exists = custom_resources.Provider(self, "ProviderCheckIfRepoExists",
-            log_retention=aws_logs.RetentionDays.ONE_DAY,
-            on_event_handler=lambda_check_if_repo_exists,
-            # role=role_check_if_repo_exists # getting circular deps error
-        )
+      #   provider_check_if_repo_exists = custom_resources.Provider(self, "ProviderCheckIfRepoExists",
+      #       log_retention=aws_logs.RetentionDays.ONE_DAY,
+      #       on_event_handler=lambda_check_if_repo_exists,
+      #       # role=role_check_if_repo_exists # getting circular deps error
+      #   )
         
-        CustomResource(self, "CRCheckIfRepoExists",
-            service_token=provider_check_if_repo_exists.service_token,
-        )
+      #   CustomResource(self, "CRCheckIfRepoExists",
+      #       service_token=provider_check_if_repo_exists.service_token,
+      #   )
         # CustomResource.apply_removal_policy RemovalPolicy.DESTROY)
         
         # CfnOutput(self, "RepoExistance",
