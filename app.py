@@ -21,7 +21,7 @@ application_team_cdk_app = {
 
 ControlBrokerEvalEngineStack(
     app,
-    "ControlBrokerEvalEngineCdkStackV4x4",
+    "ControlBrokerEvalEngineCdkStackV4x6",
     application_team_cdk_app = application_team_cdk_app,
     env = env
     )

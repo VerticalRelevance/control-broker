@@ -791,6 +791,7 @@ class ControlBrokerEvalEngineStack(Stack):
         action_source = aws_codepipeline_actions.CodeCommitSourceAction(
             action_name="CodeCommit",
             repository=self.repo_app_team_cdk,
+            branch = "main",
             output=artifact_source
         )
         
