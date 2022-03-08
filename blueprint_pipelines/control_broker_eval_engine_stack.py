@@ -226,15 +226,26 @@ class ControlBrokerEvalEngineStack(Stack):
 
         
         """ 
+        Method:
         CustomResource itself, provider, providing a lambda manually and return response.
         using crhelper (https://github.com/aws-cloudformation/custom-resource-helper) via externally built layer
-        getting access denied events:PutRule
         
-        as above, object is for cfn to check if repo exists, pass this boolean to conditional create
+        Objective:
+        is for cfn to check if repo exists, pass this boolean to conditional create
+        
+        Working:
+        lambda has status 'SUCCESS' and contains dummy value RepositoryExists: True in the 'data' portion of cwl
+        
+        Not working:
+        unable to  get_att() or get_att_string() of CustomResource. See errors below.
+        Perhaps related to open issues:
+        https://github.com/aws-samples/aws-cdk-examples/issues/561
+        https://github.com/aws/aws-cdk/issues/18856
+      
         
         """
        
-       self.bucket_example_app = aws_s3.Bucket(self, "BucketLambdaLayers",
+       self.bucket_lambda_layers = aws_s3.Bucket(self, "BucketLambdaLayers",
             block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
             removal_policy = RemovalPolicy.DESTROY,
             auto_delete_objects = True
@@ -281,9 +292,21 @@ class ControlBrokerEvalEngineStack(Stack):
         # CustomResource.apply_removal_policy RemovalPolicy.DESTROY)
         
         # CfnOutput(self, "RepoExistance",
-        #     value = CustomResource.get_att(
-        #         attribute_name = 'RepoExistance'
-        #     )
+            # value = CustomResource.get_att(
+            #     attribute_name = 'RepositoryExists'
+            # ) # TypeError: get_att_string() missing 1 required positional argument: 'self'
+            
+            # value = CustomResource.get_att(self,
+            #     attribute_name = 'RepositoryExists'
+            # ) # jsii.errors.JSIIError: Class aws-cdk-lib.Stack doesn't have a method 'getAttString'
+            
+            # value = CustomResource.get_att_string(
+            #     attribute_name = 'RepositoryExists'
+            # ) # TypeError: get_att_string() missing 1 required positional argument: 'self'
+            
+            # value = CustomResource.get_att_string(self,
+            #     attribute_name = 'RepositoryExists'
+            # ) # jsii.errors.JSIIError: Class aws-cdk-lib.Stack doesn't have a method 'getAttString'
         # )
         
         
