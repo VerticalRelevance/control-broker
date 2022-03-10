@@ -37,18 +37,6 @@ Once the virtualenv is activated, you can install the required dependencies.
 $ pip install -r requirements.txt
 ```
 
-Now that the environment is configured, the last step before deploying is you
-need to enter your desired git owner and git repos in the parameters section of
-the app.py file.
-
-```
-# Input parameters. Update according to your github owner and repo.
-application_team_cdk_app = {
-    'CodeCommitRepository' : <application-team-cdk-repo-name>,
-    'Branch' : <application-team-cdk-repo-branch>
-}
-```
-
 Bootstrap the cdk app.
 
 ```
@@ -61,29 +49,43 @@ At this point you can deploy the CDK app for this blueprint.
 $ cdk deploy
 ```
 
-After running cdk deploy, the pipeline will be set up.
+After running `cdk deploy`, the pipeline will be set up.
 
-## Development/Contribution
+In the AWS Console, navigate to `CodePipeline` / `Pipelines` and find the pipeline whose name starts with `ControlBrokerEvalEngineCdkStack`. This is our Evaluation Pipeline.
 
-To add additional dependencies, for example other CDK libraries, just add
-them to your `requirements.txt` file and rerun the `pip install -r requirements.txt`
-command. It is preferable to use `pip freeze -r requirements.txt > requirements.txt`
-to generate `requirements.txt` with every required package and the required
-version of each rather than adding the package to requirements.txt without a
-version specfifier. Just make sure to edit the `-e <github URL>` line to be `-e .`
-before committing, since `pip freeze` freezes the exact GitHub commit hash URL for
-installation, which could break your setup in the future.
+The initial commit occurs when CDK initializes the repository with compliant IaC defined in this directory [Application Team Example App](./supplementary_files/application_team_example_app) of the Root Evaluation Pipeline CDK application. These files serve only to initialize the CodeCommit repository.
 
-## Useful commands
+See the screenshot below for the expected state of the Evaluation Pipeline upon the initial deployment.
 
- * `cdk ls`          list all stacks in the app
- * `cdk synth`       emits the synthesized CloudFormation template
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk docs`        open CDK documentation
+![Screenshot of CodePipeline](./supplementary_files/readme/pipeline-screenshots/initial-commit/initial.png)
 
-## Screenshots
+The compliant IaC, labeled (1) in the stack, should pass the Evaluation Pipeline.
 
-Once you have deployed the solution, you should see a pipeline like the following:
+Now let's modify the Example App to see what happens if we propose noncompliant IaC. 
 
-![Screenshot of CodePipeline](./supplementary_files/readme/pipeline-screenshot-01.png)
+Check the deployment output for links to clone the Example App CodeCommit repository. See [CodeCommit ssh conection setup](https://docs.aws.amazon.com/codecommit/latest/userguide/setting-up-ssh-unixes.html).
+
+Once you have cloned the repository, uncomment the `failMe` resource labeled (2) in the SQS stack at path:
+
+```
+./supplementary_files/application_team_example_app/lib/control_broker_eval_engine-example_app-stack-sqs.ts 
+```
+
+Save the file, then commit to the CodeCommit repository with a commit message like:
+
+```
+add failMe resource to SQS stack
+```
+
+Return to the CodePipeline console to track the `failMe` commit through the Evaluation Pipeline. It should fail at the EvalEngine stage as seen in the below screenshot.
+
+![Screenshot of CodePipeline](./supplementary_files/readme/pipeline-screenshots/fail-me/fail.png)
+
+Let's see the result of the Evaluation. In the AWS Console, navigate to `DynamoDB` / `Tables` and find the table whose name starts with `ControlBrokerEvalEngineCdkStack-EvalResults`. These are results of the Evaluation Pipeline.
+Select `ExploreTableItems`. The evaluation results of the `failMe` commit should appear here, including the `reason` the IaC was denied and the metadata defined in the [pipeline-ownership-metadata](/ControlBrokerEvalEngine-Blueprint/supplementary_files/pipeline-ownership-metadata/business-unit-a/eval-engine-metadata.json) file.
+
+The `reason` should match the one specified in the relevant OPA Policy. Check out the [policies governing SQS](./supplementary_files/opa-policies/SQS) to compare the configuration of the `failMe` resource we just proposed with the allowed values defined by the OPA Policy.
+
+So far we've seen the initial commit with compliant IaC (1) pass and noncompliant IaC (2) fail using the provided OPA Policies.
+
+Finally, let's uncomment the IaC labeled (3). Here we've renamed the SQS Queue that just failed in (2) to `fifoQueueMakeMePass`. Let's edit the OPA relevant Policies so that the Evaluation Pipeline passes this resource instead.
