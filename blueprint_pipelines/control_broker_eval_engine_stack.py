@@ -491,6 +491,7 @@ class ControlBrokerEvalEngineStack(Stack):
                                     "#targetenv": "TargetProvisioningEnvironment",
                                     "#ownername": "PipelineOwnerName",
                                     "#owneremail": "PipelineOwnerEmail",
+                                    "#executionstart": "ExecutionStart",
                                   },
                                   "ExpressionAttributeValues" : {
                                     ":cfnkey" : {
@@ -520,8 +521,11 @@ class ControlBrokerEvalEngineStack(Stack):
                                     ":owneremail" : {
                                       "S.$" : "$.Metadata.PipelineOwner.Email"
                                     },
+                                    ":executionstart" : {
+                                      "S.$" : "$$.Execution.StartTime"
+                                    },
                                   },
-                                  "UpdateExpression" : "SET #cfnkey=:cfnkey, #allow=:allow, #reason=:reason, #resource=:resource, #businessunit=:businessunit, #billingcode=:billingcode, #targetenv=:targetenv, #ownername=:ownername, #owneremail=:owneremail"
+                                  "UpdateExpression" : "SET #cfnkey=:cfnkey, #allow=:allow, #reason=:reason, #resource=:resource, #businessunit=:businessunit, #billingcode=:billingcode, #targetenv=:targetenv, #ownername=:ownername, #owneremail=:owneremail, #executionstart=:executionstart"
                                 }
                               },
                               "PushInfractionEventToEB" : {
@@ -541,7 +545,8 @@ class ControlBrokerEvalEngineStack(Stack):
                                             "TargetProvisioningEnvironment.$": "$.Metadata.TargetProvisioningEnvironment",
                                             "PipelineOwner.$": "$.Metadata.PipelineOwner",
                                             "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                            "CFNKey.$": "$.JsonInput.Key"
+                                            "CFNKey.$": "$.JsonInput.Key",
+                                            "ExecutionStart.$": "$$.Execution.StartTime"
                                         },
                                         "DetailType": "eval-engine-infraction",
                                         "EventBusName": self.event_bus_infractions.event_bus_name,
@@ -923,4 +928,8 @@ class ControlBrokerEvalEngineStack(Stack):
                     ]
                 )
             ]
+        )
+        
+        CfnOutput(self, "L",
+            value = f'aws codepipeline get-pipeline-state --name "{root_pipeline.pipeline_name}" --output text --query "stageStates[1].latestExecution.pipelineExecutionId'
         )
