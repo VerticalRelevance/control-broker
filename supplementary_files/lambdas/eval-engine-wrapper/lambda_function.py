@@ -135,7 +135,6 @@ def lambda_handler(event, context):
     }
     
     s3_lambda_iam_role_creds = boto3.client('s3')
-
             
     for root, dirs, files in os.walk(extracted_artifact_path):
         for filename in files:
@@ -163,19 +162,21 @@ def lambda_handler(event, context):
         print(f'ClientError:\n{e}')
         fail_pipeline(JobId=job_id,Message='failed to start_sync_execution')
     else:
-        print(r)
         if r['status'] in ['FAILED','TIMED_OUT']:
             fail_pipeline(JobId=job_id,Message='eval engine root sfn failed or timeout')
         else:
-            output = json.loads(r['output'])
             
+            outer_sfn_exec_id = r['executionArn']
+            
+            output = json.loads(r['output'])
             print(f'output:\n{output}\n{type(output)}')
             
             nested_results = output['ForEachTemplate']
             
             results = [ {
                 'Status' : i.get('TemplateToNestedSFN').get('Status'),
-                'Cause': i.get('TemplateToNestedSFN').get('Cause')
+                'Cause': i.get('TemplateToNestedSFN').get('Cause'),
+                'EvalResultsTablePk': f"{outer_sfn_exec_id}#{i.get('TemplateToNestedSFN').get('ExecutionArn')}"
             } for i in nested_results]
             
             print(results)
