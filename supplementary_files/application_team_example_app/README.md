@@ -5,7 +5,7 @@ Serves as an example CDK application whose IaC is evaluated by the [Evaluation E
 Contains two simple stacks, one for SNS and one for SQS, 
 each with resources labeled either `Pass` or `Fail`,
 according to the expected outcome of the evaluation performed by the Evaluation Engine
-per the [example OPA Policies provided in that repo](https://github.com/VerticalRelevance/ControlBrokerEvalEngine-Blueprint/tree/main/supplementary_files/opa-policies).
+per the [example OPA Policies provided in that repo](https://github.com/VerticalRelevance/ControlBrokerEvalEngine-Blueprint/tree/00de002a20f23291b0ecced6f5fec6f3365791bc/supplementary_files/opa-policies).
 
 
 ## Useful commands
