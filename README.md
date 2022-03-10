@@ -7,6 +7,8 @@ This repository deploys a pipeline used by Security team
 to evaluate the IaC proposed by an Application team’s CDK application
 using a serverless Evaluation Engine.
 
+See the full write-up [here](TODO)
+
 
 ## Setup
 
@@ -73,7 +75,9 @@ Check the deployment output for links to clone the Example App CodeCommit reposi
 
 ### (2)
 
-Once you have cloned the repository, uncomment the `failMe` resource labeled (2) in the SQS stack at path:
+Once you have cloned the repository, run `npm install`. As we edit the resources in this TypeScript CDK application, we can run `cdk synth` to confirm our resources compile to CloudFormatio successfully. But we will not `cdk deploy` this Example App directly, because the IaC must first be approved by the Evaluation Pipeline.
+
+Next, uncomment the `failMe` resource labeled (2) in the SQS stack at path:
 
 ```
 ./supplementary_files/application_team_example_app/lib/control_broker_eval_engine-example_app-stack-sqs.ts 
@@ -94,13 +98,15 @@ Select `ExploreTableItems`. The evaluation results of the `failMe` commit should
 
 The `reason` should match the one specified in the relevant OPA Policy. Check out the [policies governing SQS](./supplementary_files/opa-policies/SQS) to compare the configuration of the `failMe` resource we just proposed with the allowed values defined by the OPA Policy.
 
+This table can be queried programatically.
+
 So far we've seen the initial commit with compliant IaC (1) pass and noncompliant IaC (2) fail using the provided OPA Policies.
 
 ### (3)
 
 In the final portion of the walkthrough, we'll edit the OPA Policy governing the evaluation. Let's take the noncompliant SQS Queue from (2) and edit the relevant OPA Policy so that it now compliant, then we'll send it back through the Evaluation Pipeline and compare the result.
 
-In our Example App repo, let's comment out the IaC labeled (2) and uncomment section (3).Notice that we've simple renamed the SQS Queue that just failed in (2) to `fifoFalseQueueMakeMePass` and left the configuration the same. Commit this with a commit message such as:
+In our Example App repo, let's comment out the IaC labeled (1) and (2) and uncomment section (3).Notice that we've simple renamed the SQS Queue that just failed in (2) to `fifoFalseQueueMakeMePass` and left the configuration the same. Commit this with a commit message such as:
 
 ```
 fifoFalseQueueMakeMePass
@@ -114,16 +120,14 @@ Within the Root CDK Application, in let's edit the [sqs\_queue\_fifo.rego](./sup
 properties.FifoQueue == false
 ```
 
-We also need to edit [sqs\_queue\_dedup.rego](./supplementary_files/opa-policies/SQS/sqs_queue_dedup.rego) to: 
-
-```
-properties.ContentBasedDeduplication == false
-
-```
 
 To recap, while in sections (1) and (2) we used OPA Policies that required a SQS Queue to be Fifo and used ContentBasedDeduplication, in section (3) we've edited the Policies to require those same parameters to be `false`.
 
-Let's redepoy: `cdk deploy`.
+Save both files and redepoy: `cdk deploy`.
 
-Then, navigate back to the Evaluation Pipeline in the AWS Console, and select the `Release change` button to re-run the pipeline with that same `fifoFalseQueueMakeMePass` commit.
+Then, navigate back to the Evaluation Pipeline in the AWS Console.
+Remember that when we first commited `fifoFalseQueueMakeMePass`, the original OPA Policies were in place. We expect that to be rejected.
+Now that we have redeployed and the changes to the OPA Policies have made their way to S3, let's run it again. Select the `Release change` button to re-run the pipeline with that same `fifoFalseQueueMakeMePass` commit. That same non-Fifo queue should now be compliant, per the changes we made to the policy. We expect the Evaluation Pipeline to succeed.
+
+### Conclusion.
 
