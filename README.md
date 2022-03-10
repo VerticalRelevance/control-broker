@@ -123,3 +123,7 @@ properties.ContentBasedDeduplication == false
 
 To recap, while in sections (1) and (2) we used OPA Policies that required a SQS Queue to be Fifo and used ContentBasedDeduplication, in section (3) we've edited the Policies to require those same parameters to be `false`.
 
+Let's redepoy: `cdk deploy`.
+
+Then, navigate back to the Evaluation Pipeline in the AWS Console, and select the `Release change` button to re-run the pipeline with that same `fifoFalseQueueMakeMePass` commit.
+
