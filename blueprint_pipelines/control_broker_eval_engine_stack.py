@@ -930,6 +930,6 @@ class ControlBrokerEvalEngineStack(Stack):
             ]
         )
         
-        CfnOutput(self, "L",
+        CfnOutput(self, "RootPipelineLastExecutionId",
             value = f'aws codepipeline get-pipeline-state --name "{root_pipeline.pipeline_name}" --output text --query "stageStates[1].latestExecution.pipelineExecutionId'
         )
