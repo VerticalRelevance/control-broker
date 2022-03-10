@@ -8,9 +8,11 @@ to evaluate the IaC proposed by an Application team’s CDK application
 using a serverless Evaluation Engine.
 
 
-## Prior to starting the setup of the CDK environment, ensure that you have cloned this repo.
+## Setup
 
-## Follow the setup steps below to properly configure the environment and first deployment of the infrastructure.
+Prior to starting the setup of the CDK environment, ensure that you have cloned this repo.
+
+Follow the setup steps below to properly configure the environment and first deployment of the infrastructure.
 
 To manually create a virtualenv on MacOS and Linux:
 
@@ -51,19 +53,25 @@ $ cdk deploy
 
 After running `cdk deploy`, the pipeline will be set up.
 
+## Walkthrough
+
+### (1)
+
 In the AWS Console, navigate to `CodePipeline` / `Pipelines` and find the pipeline whose name starts with `ControlBrokerEvalEngineCdkStack`. This is our Evaluation Pipeline.
 
-The initial commit occurs when CDK initializes the repository with compliant IaC defined in this directory [Application Team Example App](./supplementary_files/application_team_example_app) of the Root Evaluation Pipeline CDK application. These files serve only to initialize the CodeCommit repository.
+The 'Initial commit by AWS CodeCommit' commit occurs when CDK initializes the repository with IaC defined in this directory [Application Team Example App](./supplementary_files/application_team_example_app) of the Root Evaluation Pipeline CDK application. These files serve only to initialize the CodeCommit repository.
 
 See the screenshot below for the expected state of the Evaluation Pipeline upon the initial deployment.
 
 ![Screenshot of CodePipeline](./supplementary_files/readme/pipeline-screenshots/initial-commit/initial.png)
 
-The compliant IaC, labeled (1) in the stack, should pass the Evaluation Pipeline.
+This `passMe` IaC, labeled (1) in the stack is compliant, so it should pass the Evaluation Pipeline.
 
 Now let's modify the Example App to see what happens if we propose noncompliant IaC. 
 
 Check the deployment output for links to clone the Example App CodeCommit repository. See [CodeCommit ssh conection setup](https://docs.aws.amazon.com/codecommit/latest/userguide/setting-up-ssh-unixes.html).
+
+### (2)
 
 Once you have cloned the repository, uncomment the `failMe` resource labeled (2) in the SQS stack at path:
 
@@ -81,11 +89,37 @@ Return to the CodePipeline console to track the `failMe` commit through the Eval
 
 ![Screenshot of CodePipeline](./supplementary_files/readme/pipeline-screenshots/fail-me/fail.png)
 
-Let's see the result of the Evaluation. In the AWS Console, navigate to `DynamoDB` / `Tables` and find the table whose name starts with `ControlBrokerEvalEngineCdkStack-EvalResults`. These are results of the Evaluation Pipeline.
-Select `ExploreTableItems`. The evaluation results of the `failMe` commit should appear here, including the `reason` the IaC was denied and the metadata defined in the [pipeline-ownership-metadata](/ControlBrokerEvalEngine-Blueprint/supplementary_files/pipeline-ownership-metadata/business-unit-a/eval-engine-metadata.json) file.
+Let's see the result of the evaluation. In the AWS Console, navigate to `DynamoDB` / `Tables` and find the table whose name starts with `ControlBrokerEvalEngineCdkStack-EvalResults`. These are results of the Evaluation Pipeline.
+Select `ExploreTableItems`. The evaluation results of the `failMe` commit should appear here, including the `reason` the IaC was denied along with the metadata defined in the [pipeline-ownership-metadata](/ControlBrokerEvalEngine-Blueprint/supplementary_files/pipeline-ownership-metadata/business-unit-a/eval-engine-metadata.json) file.
 
 The `reason` should match the one specified in the relevant OPA Policy. Check out the [policies governing SQS](./supplementary_files/opa-policies/SQS) to compare the configuration of the `failMe` resource we just proposed with the allowed values defined by the OPA Policy.
 
 So far we've seen the initial commit with compliant IaC (1) pass and noncompliant IaC (2) fail using the provided OPA Policies.
 
-Finally, let's uncomment the IaC labeled (3). Here we've renamed the SQS Queue that just failed in (2) to `fifoQueueMakeMePass`. Let's edit the OPA relevant Policies so that the Evaluation Pipeline passes this resource instead.
+### (3)
+
+In the final portion of the walkthrough, we'll edit the OPA Policy governing the evaluation. Let's take the noncompliant SQS Queue from (2) and edit the relevant OPA Policy so that it now compliant, then we'll send it back through the Evaluation Pipeline and compare the result.
+
+In our Example App repo, let's comment out the IaC labeled (2) and uncomment section (3).Notice that we've simple renamed the SQS Queue that just failed in (2) to `fifoFalseQueueMakeMePass` and left the configuration the same. Commit this with a commit message such as:
+
+```
+fifoFalseQueueMakeMePass
+```
+
+Now let's edit the OPA relevant Policies to make this non-Fifo Queue compliant.
+
+Within the Root CDK Application, in let's edit the [sqs\_queue\_fifo.rego](./supplementary_files/opa-policies/SQS/sqs_queue_fifo.rego) file. In the `obedient_resources` section, edit allowed Fifo parameter value to:
+
+```
+properties.FifoQueue == false
+```
+
+We also need to edit [sqs\_queue\_dedup.rego](./supplementary_files/opa-policies/SQS/sqs_queue_dedup.rego) to: 
+
+```
+properties.ContentBasedDeduplication == false
+
+```
+
+To recap, while in sections (1) and (2) we used OPA Policies that required a SQS Queue to be Fifo and used ContentBasedDeduplication, in section (3) we've edited the Policies to require those same parameters to be `false`.
+
