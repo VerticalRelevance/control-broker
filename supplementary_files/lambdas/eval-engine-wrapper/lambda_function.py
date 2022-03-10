@@ -169,7 +169,7 @@ def lambda_handler(event, context):
             outer_sfn_exec_id = r['executionArn']
             
             output = json.loads(r['output'])
-            print(f'output:\n{output}\n{type(output)}')
+            print(f'output:\n{output}')
             
             nested_results = output['ForEachTemplate']
             
@@ -179,8 +179,7 @@ def lambda_handler(event, context):
                 'EvalResultsTablePk': f"{outer_sfn_exec_id}#{i.get('TemplateToNestedSFN').get('ExecutionArn')}"
             } for i in nested_results]
             
-            print(results)
-            
+            print(f'results:\n{results}')
             
             if all(i['Status'] == 'SUCCEEDED' for i in results):
                 

@@ -13,7 +13,6 @@ export class ControlBrokerEvalEngineExampleAppStackSQS extends Stack {
   
   const passMeQueue = new sqs.Queue(this, 'passMeQueue', {
     fifo: true,
-    contentBasedDeduplication: true,
   });
   
   // (2) FAIL
