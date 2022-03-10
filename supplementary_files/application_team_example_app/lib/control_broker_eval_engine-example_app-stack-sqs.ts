@@ -24,7 +24,7 @@ export class ControlBrokerEvalEngineExampleAppStackSQS extends Stack {
   
   // (3) EDIT OPA POLICIES TO PASS
   
-  // const failMeQueue = new sqs.Queue(this, 'failMeQueue', {
+  // const fifoFalseQueueMakeMePass = new sqs.Queue(this, 'fifoFalseQueueMakeMePass', {
   //   fifo: false,
   // });
   
