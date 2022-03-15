@@ -25,8 +25,7 @@ offending_resources = { r | resources[r]} - obedient_resources
 obedient_resources[resource] {
     some resource
     properties := resources[resource]
-    #properties.FifoQueue == true
-    properties.FifoQueue == false
+    properties.FifoQueue == true
 }
 
 resources[resource] = def {
