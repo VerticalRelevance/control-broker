@@ -148,6 +148,7 @@ to the CodeCommit repository with a command like the following (you can change
 the commit message if you want):
 
 ```
+git add .
 git commit -m "add failMe resource to SQS stack"
 ```
 
@@ -201,12 +202,16 @@ OPA Policy so that it now compliant, then we'll send it back through the
 Evaluation Pipeline and compare the result.
 
 In our Example App repo, comment out the IaC labeled (1) and (2) and uncomment
-section (3). Notice that we've simple renamed the SQS Queue that just failed in
-(2) to `fifoFalseQueueMakeMePass` and left the configuration the same. Commit
-this with a commit message such as:
+section (3).
+
+Notice that we've simple renamed the SQS Queue that just failed in
+(2) to `fifoFalseQueueMakeMePass` and left the configuration the same.
+
+Commit this change:
 
 ```
-fifoFalseQueueMakeMePass
+git add .
+git commit -m "fifoFalseQueueMakeMePass"
 ```
 
 Now let's edit the OPA relevant Policy to make this non-Fifo Queue compliant.
