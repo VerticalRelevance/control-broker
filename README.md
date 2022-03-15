@@ -113,23 +113,57 @@ resources compile to CloudFormation successfully. But we will not `cdk deploy`
 this Example App directly, because the IaC must first be approved by the
 Evaluation Pipeline.
 
-Next, we'll add a noncompliant resource to the SQS stack. Open the Example App
-repo and navigate to this path:
+After running `npm install`, run `cdk synth` to confirm the CDK app synthesizes
+without errors. You should see some output like the following:
 
 ```
-./supplementary_files/application_team_example_app/lib/control_broker_eval_engine-example_app-stack-sqs.ts 
+[ControlBrokerEvalEngine-ApplicationTeam-ExampleApp] on  main [?]
+ 🦖❯ cdk synth
+Successfully synthesized to ControlBrokerEvalEngine-ApplicationTeam-ExampleApp/cdk.out
+Supply a stack id (ControlBrokerEvalEngineExampleAppStackSNS, ControlBrokerEvalEngineExampleAppStackSQS) to display its template.
+```
+
+You can inspect the CloudFormation templates in the `cdk.out` directory (they
+end with `.template.json`) if you want.
+These are what our OPA policies evaluate for compliance.
+
+Next, inside the example app directory, we'll add a noncompliant resource to the
+SQS stack. Open the Example App repo and navigate to this path:
+
+```
+lib/control_broker_eval_engine-example_app-stack-sqs.ts 
+```
+
+Remove or comment out the following bit of code:
+
+```
+  const passMeQueue = new sqs.Queue(this, 'passMeQueue', {
+    fifo: true,
+  });
+ 
 ```
 
 Then uncomment the `failMeQueue` in section (2). Save the file, then commit it
-to the CodeCommit repository with a commit message like:
+to the CodeCommit repository with a command like the following (you can change
+the commit message if you want):
 
 ```
-add failMe resource to SQS stack
+git commit -m "add failMe resource to SQS stack"
+```
+
+Push your change to the CodeCommit remote:
+
+```
+git push
 ```
 
 Return to the CodePipeline console to track the `failMe` commit through the
-Evaluation Pipeline. It should fail at the EvalEngine stage as seen in the below
-screenshot.
+Evaluation Pipeline. It should start running shortly after you've pushed your
+commit. If it doesn't, make sure you're working in the repo you cloned from
+CodeCommit, not this repo.
+
+Since we added a non-compliant resource, it should fail at the EvalEngine stage
+as seen in the below screenshot:
 
 ![Screenshot of CodePipeline](./supplementary_files/readme/pipeline-screenshots/fail-me/fail.png)
 
@@ -152,7 +186,9 @@ values defined by the OPA Policy.
 
 Note that this table can be queried programatically. Check the logs of the
 Lambda function prefixed `ControlBrokerEvalEngineCd-EvalEngineWrapper` for the
-`EvalResultsTablePk` to query the Eval Results table with.
+`EvalResultsTablePk` to query the Eval Results table with. This PK corresponds
+to a Step Function execution - each execution creates DynamoDB results table
+entries.
 
 So far we've seen compliant IaC (1) pass and noncompliant IaC (2) fail using the
 provided OPA Policies.
@@ -175,10 +211,11 @@ fifoFalseQueueMakeMePass
 
 Now let's edit the OPA relevant Policy to make this non-Fifo Queue compliant.
 
-Within the Root CDK Application, in let's edit the
-[sqs\_queue\_fifo.rego](./supplementary_files/opa-policies/SQS/sqs_queue_fifo.rego)
-file. In the `obedient_resources` section, edit the allowed Fifo parameter value
-to:
+Within the Root CDK Application (not the example app cloned from CodeCommit!),
+let's edit the [sqs\_queue\_fifo.rego](./supplementary_files/opa-policies/SQS/sqs_queue_fifo.rego)
+file.
+
+In the `obedient_resources` section, change the allowed Fifo parameter value to:
 
 ``` properties.FifoQueue == false ```
 
