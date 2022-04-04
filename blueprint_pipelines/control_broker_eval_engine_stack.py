@@ -102,20 +102,6 @@ class ControlBrokerEvalEngineStack(Stack):
             value = self.repo_app_team_cdk.repository_clone_url_http
         )
       
-        # buildspec
-        
-        self.bucket_buildspec = aws_s3.Bucket(self, "Buildspec",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
-            removal_policy = RemovalPolicy.DESTROY,
-            auto_delete_objects = True
-        )
-        
-        aws_s3_deployment.BucketDeployment(self, "Buildspec.yaml",
-            sources=[aws_s3_deployment.Source.asset("./supplementary_files/buildspec")],
-            destination_bucket=self.bucket_buildspec,
-            retain_on_delete = False
-        )
-        
         # pipeline ownership metadata
         
         self.bucket_pipeline_ownership_metadata = aws_s3.Bucket(self, "PipelineOwnershipMetadata",
