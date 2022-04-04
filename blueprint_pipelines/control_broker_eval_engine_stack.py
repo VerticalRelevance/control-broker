@@ -801,45 +801,6 @@ class ControlBrokerEvalEngineStack(Stack):
             output=artifact_source
         )
         
-        # add buildspec
-        
-        # lambda_add_buildspec = aws_lambda.Function(self, "AddBuildspec",
-        #     runtime=aws_lambda.Runtime.PYTHON_3_9,
-        #     handler="lambda_function.lambda_handler",
-        #     timeout = Duration.seconds(60),
-        #     memory_size = 1024,
-        #     code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/add-buildspec")
-        # )
-        
-        # lambda_add_buildspec.role.add_to_policy(aws_iam.PolicyStatement(
-        #     actions=[
-        #         "s3:HeadObject",
-        #         "s3:GetObject"
-        #     ],
-        #     resources=[
-        #         f'{self.bucket_buildspec.bucket_arn}/*'
-        #     ]
-        # ))
-        
-        # artifact_repo_and_buildspec = aws_codepipeline.Artifact()
-        
-        # action_add_buildspec = aws_codepipeline_actions.LambdaInvokeAction(
-        #     action_name="AddBuildspec",
-        #     inputs=[
-        #         artifact_source
-        #     ],
-        #     outputs=[
-        #         artifact_repo_and_buildspec
-        #     ],
-        #     lambda_ = lambda_add_buildspec,
-        #     user_parameters={
-        #         "Buildspec" : {
-        #             "Bucket" : self.bucket_buildspec.bucket_name,
-        #             "Key" : "buildspec.yaml"
-        #         }
-        #     },
-        # )
-        
         # cdk synth
         
         build_project_cdk_synth = aws_codebuild.PipelineProject(self, "CdkSynth",
@@ -849,6 +810,7 @@ class ControlBrokerEvalEngineStack(Stack):
                 "install": {
                     "on-failure": "ABORT",
                     "commands": [
+                      # TODO upgrade node, v10 deprecated
                       "npm install -g typescript",
                       "npm install -g ts-node",
                       "npm install -g aws-cdk",
@@ -862,6 +824,7 @@ class ControlBrokerEvalEngineStack(Stack):
                     "commands": [
                       "ls",
                       "cdk synth",
+                      "ls",
                     ]
                 }
             },
@@ -937,7 +900,7 @@ class ControlBrokerEvalEngineStack(Stack):
             stack_name=stack_name,
             change_set_name=change_set_name,
             admin_permissions=True,
-            template_path=artifact_synthed.at_path("ControlBrokerEvalEngineExampleAppStackSQS.template.json"), # FIXME
+            template_path=artifact_synthed.at_path("cdk.out/ControlBrokerEvalEngineExampleAppStackSQS.template.json"), # FIXME
             run_order=1
         )
         
@@ -962,12 +925,6 @@ class ControlBrokerEvalEngineStack(Stack):
                         action_source
                     ]
                 ),
-                # aws_codepipeline.StageProps(
-                #     stage_name = "AddBuildspec",
-                #     actions = [
-                #         action_add_buildspec
-                #     ]
-                # ),
                 aws_codepipeline.StageProps(
                     stage_name = "CdkSynth",
                     actions = [
