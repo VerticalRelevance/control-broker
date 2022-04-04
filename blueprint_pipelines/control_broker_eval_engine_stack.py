@@ -803,46 +803,81 @@ class ControlBrokerEvalEngineStack(Stack):
         
         # add buildspec
         
-        lambda_add_buildspec = aws_lambda.Function(self, "AddBuildspec",
-            runtime=aws_lambda.Runtime.PYTHON_3_9,
-            handler="lambda_function.lambda_handler",
-            timeout = Duration.seconds(60),
-            memory_size = 1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/add-buildspec")
-        )
+        # lambda_add_buildspec = aws_lambda.Function(self, "AddBuildspec",
+        #     runtime=aws_lambda.Runtime.PYTHON_3_9,
+        #     handler="lambda_function.lambda_handler",
+        #     timeout = Duration.seconds(60),
+        #     memory_size = 1024,
+        #     code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/add-buildspec")
+        # )
         
-        lambda_add_buildspec.role.add_to_policy(aws_iam.PolicyStatement(
-            actions=[
-                "s3:HeadObject",
-                "s3:GetObject"
-            ],
-            resources=[
-                f'{self.bucket_buildspec.bucket_arn}/*'
-            ]
-        ))
+        # lambda_add_buildspec.role.add_to_policy(aws_iam.PolicyStatement(
+        #     actions=[
+        #         "s3:HeadObject",
+        #         "s3:GetObject"
+        #     ],
+        #     resources=[
+        #         f'{self.bucket_buildspec.bucket_arn}/*'
+        #     ]
+        # ))
         
-        artifact_repo_and_buildspec = aws_codepipeline.Artifact()
+        # artifact_repo_and_buildspec = aws_codepipeline.Artifact()
         
-        action_add_buildspec = aws_codepipeline_actions.LambdaInvokeAction(
-            action_name="AddBuildspec",
-            inputs=[
-                artifact_source
-            ],
-            outputs=[
-                artifact_repo_and_buildspec
-            ],
-            lambda_ = lambda_add_buildspec,
-            user_parameters={
-                "Buildspec" : {
-                    "Bucket" : self.bucket_buildspec.bucket_name,
-                    "Key" : "buildspec.yaml"
-                }
-            },
-        )
+        # action_add_buildspec = aws_codepipeline_actions.LambdaInvokeAction(
+        #     action_name="AddBuildspec",
+        #     inputs=[
+        #         artifact_source
+        #     ],
+        #     outputs=[
+        #         artifact_repo_and_buildspec
+        #     ],
+        #     lambda_ = lambda_add_buildspec,
+        #     user_parameters={
+        #         "Buildspec" : {
+        #             "Bucket" : self.bucket_buildspec.bucket_name,
+        #             "Key" : "buildspec.yaml"
+        #         }
+        #     },
+        # )
         
         # cdk synth
         
-        build_project_cdk_synth = aws_codebuild.PipelineProject(self, "CdkSynth")
+        build_project_cdk_synth = aws_codebuild.PipelineProject(self, "CdkSynth",
+          buildspec = aws_codebuild.Buildspec.from_object({
+            "version": "0.2",
+            "env": {
+                "exported-variables": ["MY_VAR"
+                ]
+            },
+            "phases": {
+                "install": {
+                    "on-failure": "ABORT",
+                    "commands": [
+                      "npm install -g typescript",
+                      "npm install -g ts-node",
+                      "npm install -g aws-cdk",
+                      "npm install",
+                      "cdk --version"
+                      
+                    ]
+                },
+                "build": {
+                    "on-failure": "ABORT",
+                    "commands": [
+                      "ls",
+                      "cdk synth",
+                    ]
+                }
+            },
+            "artifacts": {
+              "files": [
+                "cdk.out/*"
+              ],
+              "discard-paths":"no",
+              "enable-symlinks":"yes"
+            }
+          })
+        )
 
         artifact_synthed = aws_codepipeline.Artifact()
 
@@ -898,7 +933,23 @@ class ControlBrokerEvalEngineStack(Stack):
         
         # provision
         
-        #TODO
+        stack_name = "control-broker-simple-provision"
+        change_set_name = stack_name
+        
+        action_create_changeset = aws_codepipeline_actions.CloudFormationCreateReplaceChangeSetAction(
+            action_name="PrepareChanges",
+            stack_name=stack_name,
+            change_set_name=change_set_name,
+            admin_permissions=True,
+            template_path=artifact_synthed.at_path("template.yaml"),
+            run_order=1
+        ),
+        action_execute_changeset = aws_codepipeline_actions.CloudFormationExecuteChangeSetAction(
+            action_name="ExecuteChanges",
+            stack_name=stack_name,
+            change_set_name=change_set_name,
+            run_order=3
+        )
         
         # pipeline
 
@@ -914,12 +965,12 @@ class ControlBrokerEvalEngineStack(Stack):
                         action_source
                     ]
                 ),
-                aws_codepipeline.StageProps(
-                    stage_name = "AddBuildspec",
-                    actions = [
-                        action_add_buildspec
-                    ]
-                ),
+                # aws_codepipeline.StageProps(
+                #     stage_name = "AddBuildspec",
+                #     actions = [
+                #         action_add_buildspec
+                #     ]
+                # ),
                 aws_codepipeline.StageProps(
                     stage_name = "CdkSynth",
                     actions = [
