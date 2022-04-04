@@ -843,12 +843,8 @@ class ControlBrokerEvalEngineStack(Stack):
         # cdk synth
         
         build_project_cdk_synth = aws_codebuild.PipelineProject(self, "CdkSynth",
-          buildspec = aws_codebuild.Buildspec.from_object({
+          build_spec = aws_codebuild.BuildSpec.from_object({
             "version": "0.2",
-            "env": {
-                "exported-variables": ["MY_VAR"
-                ]
-            },
             "phases": {
                 "install": {
                     "on-failure": "ABORT",
@@ -884,7 +880,7 @@ class ControlBrokerEvalEngineStack(Stack):
         action_build = aws_codepipeline_actions.CodeBuildAction(
             action_name = "CodeBuild",
             project = build_project_cdk_synth,
-            input = artifact_repo_and_buildspec,
+            input = artifact_source,
             outputs = [
                 artifact_synthed
             ],
@@ -941,9 +937,10 @@ class ControlBrokerEvalEngineStack(Stack):
             stack_name=stack_name,
             change_set_name=change_set_name,
             admin_permissions=True,
-            template_path=artifact_synthed.at_path("template.yaml"),
+            template_path=artifact_synthed.at_path("ControlBrokerEvalEngineExampleAppStackSQS.template.json"), # FIXME
             run_order=1
-        ),
+        )
+        
         action_execute_changeset = aws_codepipeline_actions.CloudFormationExecuteChangeSetAction(
             action_name="ExecuteChanges",
             stack_name=stack_name,
@@ -981,6 +978,13 @@ class ControlBrokerEvalEngineStack(Stack):
                     stage_name = "EvalEngine",
                     actions = [
                         action_eval_engine
+                    ]
+                ),
+                aws_codepipeline.StageProps(
+                    stage_name = "Provision",
+                    actions = [
+                        action_create_changeset,
+                        action_execute_changeset
                     ]
                 )
             ]
