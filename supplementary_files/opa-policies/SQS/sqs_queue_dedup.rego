@@ -1,4 +1,4 @@
-package sqs_queue_fifo
+package sqs_queue_dedup
 
 import input 
 
@@ -16,7 +16,7 @@ infraction[r] {
     r := {
         "resource": offending_resource,
         "allow": false,
-        "reason": "Queue must be Fifo"
+        "reason": "ContentBasedDeduplication property is misconfigured"
     }
 }
 
@@ -25,7 +25,8 @@ offending_resources = { r | resources[r]} - obedient_resources
 obedient_resources[resource] {
     some resource
     properties := resources[resource]
-    properties.FifoQueue == true
+    properties.ContentBasedDeduplication == true
+    #properties.ContentBasedDeduplication == false
 }
 
 resources[resource] = def {
