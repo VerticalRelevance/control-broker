@@ -47,7 +47,9 @@ class ControlBrokerEvalEngineStack(Stack):
         self.deploy_root_pipeline()
         
     def deploy_utils(self):
-
+        
+        # eval results
+        
         self.table_eval_results = aws_dynamodb.Table(self,"EvalResults",
             partition_key = aws_dynamodb.Attribute(name="pk", type=aws_dynamodb.AttributeType.STRING),
             sort_key = aws_dynamodb.Attribute(name="sk", type=aws_dynamodb.AttributeType.STRING),
@@ -55,10 +57,16 @@ class ControlBrokerEvalEngineStack(Stack):
             removal_policy = RemovalPolicy.DESTROY,
         )
         
+        # synthed templates
+        
         self.bucket_synthed_templates = aws_s3.Bucket(self, "SynthedTemplates",
             block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
             removal_policy = RemovalPolicy.DESTROY,
             auto_delete_objects = True
+        )
+        
+        CfnOutput(self, "SynthedTemplatesBucket",
+            value = self.bucket_synthed_templates.bucket_name
         )
  
         # event bridge bus
@@ -95,12 +103,13 @@ class ControlBrokerEvalEngineStack(Stack):
         )
         self.repo_app_team_cdk.apply_removal_policy(RemovalPolicy.DESTROY)
 
-        CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneSSH",
-            value = self.repo_app_team_cdk.repository_clone_url_ssh
-        )
-        CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneHTTP",
-            value = self.repo_app_team_cdk.repository_clone_url_http
-        )
+        # CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneSSH",
+        #     value = self.repo_app_team_cdk.repository_clone_url_ssh
+        # )
+        
+        # CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneHTTP",
+        #     value = self.repo_app_team_cdk.repository_clone_url_http
+        # )
       
         # pipeline ownership metadata
         
@@ -655,7 +664,11 @@ class ControlBrokerEvalEngineStack(Stack):
         )
     
         self.sfn_inner_eval_engine.node.add_dependency(role_inner_eval_engine_sfn)
-    
+        
+        CfnOutput(self, "InnerSfnArn",
+            value = self.sfn_inner_eval_engine.attr_arn
+        )
+      
     def deploy_outer_sfn(self):
         
         log_group_outer_eval_engine_sfn = aws_logs.LogGroup(self,"OuterEvalEngineSfnLogs",
