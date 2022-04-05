@@ -816,12 +816,12 @@ class ControlBrokerEvalEngineStack(Stack):
             },
             "artifacts": {
               "files": [
-                "cdk.out/*",
-                "cdk.json",
-                "package.json",
-                "bin/*",
-                "lib/*",
-                # "**/*"
+                # "cdk.out/*",
+                # "cdk.json",
+                # "package.json",
+                # "bin/*",
+                # "lib/*",
+                "**/*"
               ],
               # "exclude-paths": [
               #   "node_modules/**", # not working
