@@ -878,24 +878,9 @@ class ControlBrokerEvalEngineStack(Stack):
         
         # provision
         
-        stack_name = "control-broker-simple-provision"
-        change_set_name = stack_name
+        # use `cdk deploy` within Codebuild instead
         
-        action_create_changeset = aws_codepipeline_actions.CloudFormationCreateReplaceChangeSetAction(
-            action_name="PrepareChanges",
-            stack_name=stack_name,
-            change_set_name=change_set_name,
-            admin_permissions=True,
-            template_path=artifact_synthed.at_path("cdk.out/ControlBrokerEvalEngineExampleAppStackSQS.template.json"), # FIXME
-            run_order=1
-        )
-        
-        action_execute_changeset = aws_codepipeline_actions.CloudFormationExecuteChangeSetAction(
-            action_name="ExecuteChanges",
-            stack_name=stack_name,
-            change_set_name=change_set_name,
-            run_order=3
-        )
+        # TODO
         
         # pipeline
 
@@ -926,8 +911,7 @@ class ControlBrokerEvalEngineStack(Stack):
                 aws_codepipeline.StageProps(
                     stage_name = "Provision",
                     actions = [
-                        action_create_changeset,
-                        action_execute_changeset
+                      # FIXME
                     ]
                 )
             ]
