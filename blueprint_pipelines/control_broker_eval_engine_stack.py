@@ -816,7 +816,9 @@ class ControlBrokerEvalEngineStack(Stack):
             },
             "artifacts": {
               "files": [
-                "cdk.out/*"
+                # "cdk.out/*",
+                # "cdk.json"
+                "**/*"
               ],
               "discard-paths":"no",
               "enable-symlinks":"yes"
@@ -878,8 +880,20 @@ class ControlBrokerEvalEngineStack(Stack):
         
         # provision
         
-        # use `cdk deploy` within Codebuild instead
+        role_cdk_deploy = aws_iam.Role(self, "RoleCdkDeploy",
+            assumed_by=aws_iam.ServicePrincipal("codebuild.amazonaws.com"),
+        )
+        role_cdk_deploy.add_to_policy(aws_iam.PolicyStatement(
+            not_actions=[
+                "cloudformation:Delete*",
+            ],
+            resources=[
+                "*",
+            ]
+        ))
+        
         build_project_cdk_deploy = aws_codebuild.PipelineProject(self, "CdkDeploy",
+          role = role_cdk_deploy,
           build_spec = aws_codebuild.BuildSpec.from_object({
             "version": "0.2",
             "phases": {
@@ -902,18 +916,9 @@ class ControlBrokerEvalEngineStack(Stack):
                       "cdk deploy --all --require-approval never",
                     ]
                 }
-            },
-            "artifacts": {
-              "files": [
-                "cdk.out/*"
-              ],
-              "discard-paths":"no",
-              "enable-symlinks":"yes"
             }
           })
         )
-
-        artifact_synthed = aws_codepipeline.Artifact()
 
         action_build_cdk_deploy = aws_codepipeline_actions.CodeBuildAction(
             action_name = "CodeBuildCdkDeploy",
@@ -948,7 +953,7 @@ class ControlBrokerEvalEngineStack(Stack):
                     ]
                 ),
                 aws_codepipeline.StageProps(
-                    stage_name = "Provision",
+                    stage_name = "CdkDeploy",
                     actions = [
                       action_build_cdk_deploy
                     ]
