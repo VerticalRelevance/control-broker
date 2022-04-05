@@ -826,8 +826,8 @@ class ControlBrokerEvalEngineStack(Stack):
 
         artifact_synthed = aws_codepipeline.Artifact()
 
-        action_build = aws_codepipeline_actions.CodeBuildAction(
-            action_name = "CodeBuild",
+        action_build_cdk_synth = aws_codepipeline_actions.CodeBuildAction(
+            action_name = "CodeBuildCdkSynth",
             project = build_project_cdk_synth,
             input = artifact_source,
             outputs = [
@@ -879,8 +879,47 @@ class ControlBrokerEvalEngineStack(Stack):
         # provision
         
         # use `cdk deploy` within Codebuild instead
-        
-        # TODO
+        build_project_cdk_deploy = aws_codebuild.PipelineProject(self, "CdkDeploy",
+          build_spec = aws_codebuild.BuildSpec.from_object({
+            "version": "0.2",
+            "phases": {
+                "install": {
+                    "on-failure": "ABORT",
+                    "commands": [
+                      # TODO upgrade node, v10 deprecated
+                      "npm install -g typescript",
+                      "npm install -g ts-node",
+                      "npm install -g aws-cdk",
+                      "npm install",
+                      "cdk --version"
+                      
+                    ]
+                },
+                "build": {
+                    "on-failure": "ABORT",
+                    "commands": [
+                      "ls",
+                      "cdk deploy --all --require-approval never",
+                    ]
+                }
+            },
+            "artifacts": {
+              "files": [
+                "cdk.out/*"
+              ],
+              "discard-paths":"no",
+              "enable-symlinks":"yes"
+            }
+          })
+        )
+
+        artifact_synthed = aws_codepipeline.Artifact()
+
+        action_build_cdk_deploy = aws_codepipeline_actions.CodeBuildAction(
+            action_name = "CodeBuildCdkDeploy",
+            project = build_project_cdk_deploy,
+            input = artifact_synthed,
+        )
         
         # pipeline
 
@@ -899,7 +938,7 @@ class ControlBrokerEvalEngineStack(Stack):
                 aws_codepipeline.StageProps(
                     stage_name = "CdkSynth",
                     actions = [
-                        action_build
+                        action_build_cdk_synth
                     ]
                 ),
                 aws_codepipeline.StageProps(
@@ -911,7 +950,7 @@ class ControlBrokerEvalEngineStack(Stack):
                 aws_codepipeline.StageProps(
                     stage_name = "Provision",
                     actions = [
-                      # FIXME
+                      action_build_cdk_deploy
                     ]
                 )
             ]
