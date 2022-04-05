@@ -4,6 +4,7 @@ from botocore.exceptions import ClientError
 from botocore.client import Config
 from boto3.session import Session
 import os
+import re
 from pathlib import Path
 import zipfile
 
@@ -122,7 +123,9 @@ def lambda_handler(event, context):
     artifact_object = zipfile.ZipFile(path_to_input_artifact)
     
     for file in artifact_object.namelist():
-        if file.endswith('.template.json'):
+        m = re.search('cdk.out/.*\.template\.json',file)
+        if m:
+        # if file.endswith('.template.json'):
             print(file)
             artifact_object.extract(file,extracted_artifact_path)
     
