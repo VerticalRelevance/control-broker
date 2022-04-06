@@ -1,6 +1,8 @@
-package s3_bucket_block_public_acls
+package step_functions_state_machine_tyoe_
 
-type = "AWS::S3::Bucket"
+import input 
+
+type = "AWS::StepFunctions::StateMachine"
 
 default allow = false
 
@@ -14,7 +16,7 @@ infraction[r] {
     r := {
         "resource": offending_resource,
         "allow": false,
-        "reason": "BlockPublicAccessConfiguration.BlockPublicAcls is misconfigured"
+        "reason": "Type is misconfigured"
     }
 }
 
@@ -23,8 +25,8 @@ offending_resources = { r | resources[r]} - obedient_resources
 obedient_resources[resource] {
     some resource
     properties := resources[resource]
-    properties.PublicAccessBlockConfiguration.BlockPublicAcls  == true
-    #properties.PublicAccessBlockConfiguration.BlockPublicAcls  == false
+    properties.StateMachineType == "STANDARD"
+    #properties.StateMachineType == "EXPRESS"
 }
 
 resources[resource] = def {

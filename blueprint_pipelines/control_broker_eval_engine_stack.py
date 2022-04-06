@@ -264,7 +264,9 @@ class ControlBrokerEvalEngineStack(Stack):
                         log_group_arn = log_group_inner_eval_engine_sfn.log_group_arn
                     )
                 )],
-                include_execution_data=False,
+                # include_execution_data=False,
+                # level="ALL"
+                include_execution_data=True,
                 level="ERROR"
             ),
             
