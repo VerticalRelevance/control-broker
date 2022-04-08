@@ -1,4 +1,21 @@
-# Control Broker Eval Engine
+# The Vertical Relevance Control Broker
+
+*Empower anyone in your organization to get subsecond security and compliance decisions based on the latest organizational requirements*
+
+## Features
+
+* Can be invoked from anywhere in your environment that can invoke a Step Function State Machine (i.e. anywhere that can assume a properly permissioned role), including on-premise and various cloud locations.
+* Supports policies written for Open Policy Agent or Cloudformation Guard.
+* Also helps with notifications, auditing, and analysis of discovered compliance issues.
+
+## Example use cases
+
+* [Using the Control Broker from a CodePipeline application pipeline to block deployment of non-compliant CDK resources]()
+* [Using the Control Broker to detect non-compliant changes to deployed resources with AWS Config]()
+* [Using the Control Broker from a development machine to evaluate IaC against the organization's latest security policies as it is being written]()
+
+
+(I expect to take the rest out and move it into the CodePipeline-specific repo/example directory).
 
 This is a deep dive on one specific component within Vertical Relevance's 
 broader [AWS Control Foundation
