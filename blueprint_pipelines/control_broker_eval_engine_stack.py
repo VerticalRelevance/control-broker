@@ -760,8 +760,8 @@ class ControlBrokerEvalEngineStack(Stack):
         self.sfn_outer_eval_engine = aws_stepfunctions.CfnStateMachine(
             self,
             "OuterEvalEngine",
-            # state_machine_type="EXPRESS",
-            state_machine_type="STANDARD",
+            state_machine_type="EXPRESS",
+            # state_machine_type="STANDARD",
             role_arn=role_outer_eval_engine_sfn.role_arn,
             logging_configuration=aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
                 destinations=[
