@@ -98,6 +98,23 @@ class ControlBrokerEvalEngineStack(Stack):
                 )
             ],
         )
+        
+        # internal state
+        
+        self.table_eval_internal_state = aws_dynamodb.Table(
+            self,
+            "EvalInternalState",
+            partition_key=aws_dynamodb.Attribute(
+                name="pk", type=aws_dynamodb.AttributeType.STRING
+            ),
+            sort_key=aws_dynamodb.Attribute(
+                name="sk", type=aws_dynamodb.AttributeType.STRING
+                # name="sk", type=aws_dynamodb.AttributeType.STRING
+            ),
+            billing_mode=aws_dynamodb.BillingMode.PAY_PER_REQUEST,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+        
 
     def s3_deploy_local_assets(self):
 
@@ -727,6 +744,18 @@ class ControlBrokerEvalEngineStack(Stack):
                 ],
             )
         )
+        role_outer_eval_engine_sfn.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "dynamodb:UpdateItem",
+                    "dynamodb:Query",
+                ],
+                resources=[
+                    self.table_eval_internal_state.table_arn,
+                    f"{self.table_eval_internal_state.table_arn}/*",
+                ],
+            )
+        )
 
         self.sfn_outer_eval_engine = aws_stepfunctions.CfnStateMachine(
             self,
@@ -750,7 +779,7 @@ class ControlBrokerEvalEngineStack(Stack):
                     "States": {
                         "ForEachTemplate": {
                             "Type": "Map",
-                            "End": True,
+                            "Next": "LoadOutput",
                             "ResultPath": "$.ForEachTemplate",
                             "ItemsPath": "$.CFN.Keys",
                             "Parameters": {
@@ -779,7 +808,81 @@ class ControlBrokerEvalEngineStack(Stack):
                                     }
                                 },
                             },
-                        }
+                        },
+                        "LoadOutput": {
+                            "Type":"Pass",
+                            "Next":"ListComprehensionScatter",
+                            "ResultPath":"$.LoadOutput",
+                            "Parameters": {
+                                "Output.$":"States.StringToJson($.ForEachTemplate).ForEachTemplate"
+                            }
+                        },
+                        "ListComprehensionScatter": {
+                            "Type": "Map",
+                            "Next":"ListComprehensionGather",
+                            "ResultPath": "$.ListComprehensionScatter",
+                            "ItemsPath": "$.LoadOutput.Output",
+                            "Parameters": {
+                                "Item.$": "$$.Map.Item.Value.Key",
+                            },
+                            "Iterator": {
+                                "StartAt": "TemplateKeyToList",
+                                "States": {
+                                    "TemplateKeyToList": {
+                                        "Type":"Pass",
+                                        "Next":"WriteTemplateToDDB",
+                                        "ResultPath": "$.TemplateKeyToList",
+                                        "Parameters": {
+                                            "TemplateKeyAsList.$": "States.Array($.TemplateKey)"
+                                        },
+                                    },
+                                    "WriteTemplateToDDB": {
+                                        "Type":"Task",
+                                        "End":True,
+                                        "ResultPath": "$.WriteTemplateToDDB",
+                                        "Resource": "arn:aws:states:::dynamodb:updateItem",
+                                        "ResultSelector": {
+                                            "HttpStatusCode.$": "$.SdkHttpMetadata.HttpStatusCode"
+                                        },
+                                        "Parameters": {
+                                            "TableName": self.table_eval_internal_state.table_name,
+                                            "Key": {
+                                                "pk": {
+                                                    "S.$": "$$.Execution.Id"
+                                                },
+                                                "sk": {
+                                                    "S": "Templates"
+                                                },
+                                            },
+                                            "ExpressionAttributeValues": {
+                                                ":item": {
+                                                    "SS.$": "$.Item.Status"
+                                                },
+                                            },
+                                            "UpdateExpression": "add Items :item"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "GatherTemplates": {
+                            "Type":"Task",
+                            "Next": "FormatEvalEngineInput",
+                            "ResultPath": "$.GatherTemplates",
+                            "Resource": "arn:aws:states:::aws-sdk:dynamodb:query",
+                            "ResultSelector": {
+                                "Templates.$": "$.Items[0].TemplateKeys.Ss"
+                            },
+                            "Parameters": {
+                                "TableName": self.table_eval_internal_state.table_name,
+                                "ExpressionAttributeValues" : {
+                                    ":pk" : {
+                                        "S.$": "$$.Execution.Id"
+                                    }
+                                },
+                                "KeyConditionExpression" : "pk = :pk"
+                            }
+                        },
                     },
                 }
             ),
