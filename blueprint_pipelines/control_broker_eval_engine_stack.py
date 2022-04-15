@@ -760,7 +760,8 @@ class ControlBrokerEvalEngineStack(Stack):
         self.sfn_outer_eval_engine = aws_stepfunctions.CfnStateMachine(
             self,
             "OuterEvalEngine",
-            state_machine_type="EXPRESS",
+            # state_machine_type="EXPRESS",
+            state_machine_type="STANDARD",
             role_arn=role_outer_eval_engine_sfn.role_arn,
             logging_configuration=aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
                 destinations=[
@@ -779,7 +780,7 @@ class ControlBrokerEvalEngineStack(Stack):
                     "States": {
                         "ForEachTemplate": {
                             "Type": "Map",
-                            "Next": "LoadOutput",
+                            "End": True,
                             "ResultPath": "$.ForEachTemplate",
                             "ItemsPath": "$.CFN.Keys",
                             "Parameters": {
@@ -789,12 +790,12 @@ class ControlBrokerEvalEngineStack(Stack):
                                 }
                             },
                             "Iterator": {
-                                "StartAt": "TemplateToNestedSFN",
+                                "StartAt": "InvokeInnerEvalEngineSfn",
                                 "States": {
-                                    "TemplateToNestedSFN": {
+                                    "InvokeInnerEvalEngineSfn": {
                                         "Type": "Task",
-                                        "End": True,
-                                        "ResultPath": "$.TemplateToNestedSFN",
+                                        "Next": "ChoiceEvalEngineStatus",
+                                        "ResultPath": "$.InvokeInnerEvalEngineSfn",
                                         "Resource": "arn:aws:states:::aws-sdk:sfn:startSyncExecution",
                                         "Parameters": {
                                             "StateMachineArn": self.sfn_inner_eval_engine.attr_arn,
@@ -805,83 +806,26 @@ class ControlBrokerEvalEngineStack(Stack):
                                                 },
                                             },
                                         },
-                                    }
-                                },
-                            },
-                        },
-                        "LoadOutput": {
-                            "Type":"Pass",
-                            "Next":"ListComprehensionScatter",
-                            "ResultPath":"$.LoadOutput",
-                            "Parameters": {
-                                "Output.$":"States.StringToJson($.ForEachTemplate).ForEachTemplate"
-                            }
-                        },
-                        "ListComprehensionScatter": {
-                            "Type": "Map",
-                            "Next":"ListComprehensionGather",
-                            "ResultPath": "$.ListComprehensionScatter",
-                            "ItemsPath": "$.LoadOutput.Output",
-                            "Parameters": {
-                                "Item.$": "$$.Map.Item.Value.Key",
-                            },
-                            "Iterator": {
-                                "StartAt": "TemplateKeyToList",
-                                "States": {
-                                    "TemplateKeyToList": {
-                                        "Type":"Pass",
-                                        "Next":"WriteTemplateToDDB",
-                                        "ResultPath": "$.TemplateKeyToList",
-                                        "Parameters": {
-                                            "TemplateKeyAsList.$": "States.Array($.TemplateKey)"
-                                        },
                                     },
-                                    "WriteTemplateToDDB": {
-                                        "Type":"Task",
-                                        "End":True,
-                                        "ResultPath": "$.WriteTemplateToDDB",
-                                        "Resource": "arn:aws:states:::dynamodb:updateItem",
-                                        "ResultSelector": {
-                                            "HttpStatusCode.$": "$.SdkHttpMetadata.HttpStatusCode"
-                                        },
-                                        "Parameters": {
-                                            "TableName": self.table_eval_internal_state.table_name,
-                                            "Key": {
-                                                "pk": {
-                                                    "S.$": "$$.Execution.Id"
-                                                },
-                                                "sk": {
-                                                    "S": "Templates"
-                                                },
-                                            },
-                                            "ExpressionAttributeValues": {
-                                                ":item": {
-                                                    "SS.$": "$.Item.Status"
-                                                },
-                                            },
-                                            "UpdateExpression": "add Items :item"
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "GatherTemplates": {
-                            "Type":"Task",
-                            "Next": "FormatEvalEngineInput",
-                            "ResultPath": "$.GatherTemplates",
-                            "Resource": "arn:aws:states:::aws-sdk:dynamodb:query",
-                            "ResultSelector": {
-                                "Templates.$": "$.Items[0].TemplateKeys.Ss"
-                            },
-                            "Parameters": {
-                                "TableName": self.table_eval_internal_state.table_name,
-                                "ExpressionAttributeValues" : {
-                                    ":pk" : {
-                                        "S.$": "$$.Execution.Id"
+                                    "ChoiceEvalEngineStatus" : {
+                                        "Type" : "Choice",
+                                        "Default" : "Fail",
+                                        "Choices" : [
+                                          {
+                                            "Variable" : "$.InvokeInnerEvalEngineSfn.Status",
+                                            "StringEquals" : "SUCCEEDED",
+                                            "Next" : "Succeed"
+                                          }
+                                        ]
+                                    },
+                                    "Fail" : {
+                                        "Type" : "Fail",
+                                    },
+                                    "Succeed" : {
+                                        "Type" : "Succeed",
                                     }
                                 },
-                                "KeyConditionExpression" : "pk = :pk"
-                            }
+                            },
                         },
                     },
                 }
