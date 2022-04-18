@@ -1,13 +1,13 @@
 # Control Broker
 
-*Empower anyone in your organization to get subsecond security and compliance decisions based on the organization's latest policies.*
+*Give everyone in your organization subsecond security and compliance decisions based on the organization's latest policies.*
 
 ## Features
 
-* Runs a Policy as Code service as a serverless AWS application - you bring the policies, and Control Broker helps you store, organize, use, and monitor them.
-* Defined in the AWS Python CDK for ease-of-use and repeatable deployment.
+* Runs a Policy as Code service as a serverless AWS application - you bring the policies, and Control Broker helps you store, organize, and use them - plus it helps you monitor, and analyze their usage.
+* Defined in the AWS Python CDK for push-button, repeatable deployment.
 * Can be invoked from anywhere in your environment that can invoke a Step Function State Machine (i.e. anywhere that can assume a properly permissioned role), including on-premise and various cloud locations.
-* Supports policies written for Open Policy Agent or Cloudformation Guard.
+* Supports policies written for Open Policy Agent (CloudFormation Guard planned).
 * Also helps with notifications, auditing, and analysis of discovered compliance issues.
 
 ## Example use cases
