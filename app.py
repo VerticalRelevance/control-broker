@@ -5,7 +5,7 @@ from typing import List
 
 import aws_cdk as cdk
 
-from blueprint_pipelines.control_broker_eval_engine_stack import (
+from stacks.control_broker_eval_engine_stack import (
     ControlBrokerEvalEngineStack,
 )
 
