@@ -1,12 +1,13 @@
 import os
 import json
-from typing import List
+from typing import List, Sequence
 
 from aws_cdk import (
     Duration,
     Stack,
     RemovalPolicy,
     CfnOutput,
+    aws_config,
     aws_dynamodb,
     aws_s3,
     aws_s3_deployment,
@@ -16,20 +17,24 @@ from aws_cdk import (
     aws_logs,
     aws_events,
 )
-
 from constructs import Construct
 
+from components.config_rules import ControlBrokerConfigRule
 
-class ControlBrokerEvalEngineStack(Stack):
+
+class ControlBrokerStack(Stack):
     def __init__(
         self,
         scope: Construct,
         construct_id: str,
         application_team_cdk_app: dict,
+        config_rule_enabled: bool = False,
+        config_rule_scope: aws_config.RuleScope = None,
         **kwargs,
     ) -> None:
 
         super().__init__(scope, construct_id, **kwargs)
+
         self.application_team_cdk_app = application_team_cdk_app
 
         self.pipeline_ownership_metadata = {}
@@ -43,6 +48,23 @@ class ControlBrokerEvalEngineStack(Stack):
         self.deploy_inner_sfn_lambdas()
         self.deploy_inner_sfn()
         self.deploy_outer_sfn()
+
+        self.config_rule = None
+        if config_rule_enabled:
+            if not config_rule_scope:
+                raise ValueError(
+                    "Expected config_rule_scope to be set since config rule is enabled"
+                )
+            self.config_rule = ControlBrokerConfigRule(
+                self,
+                "ControlBrokerConfigRule",
+                rule_scope=config_rule_scope,
+                control_broker_statemachine=aws_stepfunctions.StateMachine.from_state_machine_arn(
+                    self,
+                    "ControlBrokerStateMachine",
+                    self.sfn_outer_eval_engine.attr_arn
+                ),
+            )
 
         CfnOutput(
             self,
@@ -98,9 +120,9 @@ class ControlBrokerEvalEngineStack(Stack):
                 )
             ],
         )
-        
+
         # internal state
-        
+
         self.table_eval_internal_state = aws_dynamodb.Table(
             self,
             "EvalInternalState",
@@ -108,13 +130,13 @@ class ControlBrokerEvalEngineStack(Stack):
                 name="pk", type=aws_dynamodb.AttributeType.STRING
             ),
             sort_key=aws_dynamodb.Attribute(
-                name="sk", type=aws_dynamodb.AttributeType.STRING
+                name="sk",
+                type=aws_dynamodb.AttributeType.STRING
                 # name="sk", type=aws_dynamodb.AttributeType.STRING
             ),
             billing_mode=aws_dynamodb.BillingMode.PAY_PER_REQUEST,
             removal_policy=RemovalPolicy.DESTROY,
         )
-        
 
     def s3_deploy_local_assets(self):
 
@@ -807,23 +829,23 @@ class ControlBrokerEvalEngineStack(Stack):
                                             },
                                         },
                                     },
-                                    "ChoiceEvalEngineStatus" : {
-                                        "Type" : "Choice",
-                                        "Default" : "Fail",
-                                        "Choices" : [
-                                          {
-                                            "Variable" : "$.InvokeInnerEvalEngineSfn.Status",
-                                            "StringEquals" : "SUCCEEDED",
-                                            "Next" : "Succeed"
-                                          }
-                                        ]
+                                    "ChoiceEvalEngineStatus": {
+                                        "Type": "Choice",
+                                        "Default": "Fail",
+                                        "Choices": [
+                                            {
+                                                "Variable": "$.InvokeInnerEvalEngineSfn.Status",
+                                                "StringEquals": "SUCCEEDED",
+                                                "Next": "Succeed",
+                                            }
+                                        ],
                                     },
-                                    "Fail" : {
-                                        "Type" : "Fail",
+                                    "Fail": {
+                                        "Type": "Fail",
                                     },
-                                    "Succeed" : {
-                                        "Type" : "Succeed",
-                                    }
+                                    "Succeed": {
+                                        "Type": "Succeed",
+                                    },
                                 },
                             },
                         },

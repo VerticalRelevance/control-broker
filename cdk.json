@@ -26,6 +26,7 @@
       "aws",
       "aws-cn"
     ],
-    "performance-testing-example-template": "supplementary_files/ExampleStack.template.json"
+    "performance-testing-example-template": "supplementary_files/ExampleStack.template.json",
+    "control-broker/config-rule/enabled": true
   }
 }
