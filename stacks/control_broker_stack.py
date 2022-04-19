@@ -737,7 +737,6 @@ class ControlBrokerStack(Stack):
         log_group_outer_eval_engine_sfn = aws_logs.LogGroup(
             self,
             "OuterEvalEngineSfnLogs",
-            log_group_name="/aws/vendedlogs/states/OuterEvalEngineSfnLogs",
             removal_policy=RemovalPolicy.DESTROY,
         )
 
