@@ -9,11 +9,12 @@ import pytest
 logging.basicConfig()
 logger = logging.getLogger()
 
-from stacks.control_broker_eval_engine_stack import ControlBrokerEvalEngineStack
+from app import app
+from stacks.control_broker_stack import ControlBrokerStack
 
 
 @pytest.fixture
-def outer_state_machine_arn(stack: ControlBrokerEvalEngineStack):
+def outer_state_machine_arn(stack: ControlBrokerStack):
     return stack.sfn_outer_eval_engine.attr_arn
 
 
