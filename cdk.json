@@ -32,7 +32,7 @@
     "control-broker/continuous-deployment/github-config": {
       "github_repo_name": "ControlBrokerEvalEngine-Blueprint",
       "github_repo_owner": "VerticalRelevance",
-      "github_repo_branch": "simple-provision"
+      "github_repo_branch": "config-integration"
     }
   }
 }
