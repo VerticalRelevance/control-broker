@@ -20,8 +20,6 @@ from aws_cdk import (
 from constructs import Construct
 
 from components.config_rules import ControlBrokerConfigRule
-
-
 class ControlBrokerStack(Stack):
     def __init__(
         self,
@@ -30,9 +28,36 @@ class ControlBrokerStack(Stack):
         application_team_cdk_app: dict,
         config_rule_enabled: bool = False,
         config_rule_scope: aws_config.RuleScope = None,
+        continously_deployed: bool = True,
+        github_repo_name: str = None,
+        github_repo_owner: str = None,
+        github_repo_branch: str = None,
         **kwargs,
     ) -> None:
+        """A full Control Broker installation.
 
+        :param scope:
+        :type scope: Construct
+        :param construct_id:
+        :type construct_id: str
+        :param application_team_cdk_app: (_DEPRECATED_)
+        :type application_team_cdk_app: dict
+        :param config_rule_enabled: Whether to create a custom config rule that sends config events to the control broker to obtain Config compliance status, defaults to False
+        :type config_rule_enabled: bool, optional
+        :param config_rule_scope: What Config scope to use with the config rule, if enabled., defaults to None
+        :type config_rule_scope: aws_config.RuleScope, optional
+        :param continously_deployed: Whether to launch the Control Broker via a CDK Pipeline and deploy on code changes, defaults to True
+        :type continously_deployed: bool, optional
+        :param github_repo_name: Required if continously_deployed is True
+        :type github_repo_name: str, optional
+        :param github_repo_owner: Required if continously_deployed is True
+        :type github_repo_owner: str, optional
+        :param github_repo_branch: Required if continously_deployed is True
+        :type github_repo_branch: str, optional
+
+        :raises ValueError: When config_rule_enabled is True and config_rule_scope is None
+        :raises ValueError: When continously_deployed is True and any of the github variables is not set
+        """
         super().__init__(scope, construct_id, **kwargs)
 
         self.application_team_cdk_app = application_team_cdk_app
@@ -62,7 +87,7 @@ class ControlBrokerStack(Stack):
                 control_broker_statemachine=aws_stepfunctions.StateMachine.from_state_machine_arn(
                     self,
                     "ControlBrokerStateMachine",
-                    self.sfn_outer_eval_engine.attr_arn
+                    self.sfn_outer_eval_engine.attr_arn,
                 ),
             )
 
