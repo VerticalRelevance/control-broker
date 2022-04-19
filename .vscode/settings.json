@@ -5,5 +5,6 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "python.testing.pytestPath": ".venv/bin/pytest"
+    "python.testing.pytestPath": ".venv/bin/pytest",
+    "autoDocstring.docstringFormat": "sphinx"
 }
