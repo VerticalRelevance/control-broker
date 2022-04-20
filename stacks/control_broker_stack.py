@@ -814,8 +814,10 @@ class ControlBrokerStack(Stack):
                         )
                     )
                 ],
-                include_execution_data=False,
-                level="ERROR",
+                # include_execution_data=False,
+                # level="ERROR",
+                include_execution_data=True,
+                level="ALL",
             ),
             definition_string=json.dumps(
                 {
