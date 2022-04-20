@@ -395,8 +395,8 @@ class ControlBrokerStack(Stack):
         self.sfn_inner_eval_engine = aws_stepfunctions.CfnStateMachine(
             self,
             "InnerEvalEngine",
-            # state_machine_type="EXPRESS",
-            state_machine_type="STANDARD",
+            state_machine_type="EXPRESS",
+            # state_machine_type="STANDARD",
             role_arn=role_inner_eval_engine_sfn.role_arn,
             logging_configuration=aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
                 destinations=[
