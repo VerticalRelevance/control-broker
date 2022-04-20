@@ -267,6 +267,18 @@ class ControlBrokerStack(Stack):
                 ],
             )
         )
+        # is infraction
+
+        self.lambda_is_infraction = aws_lambda.Function(
+            self,
+            "IsInfraction",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/is-infraction"),
+        )
+
 
     def deploy_inner_sfn(self):
 
@@ -387,7 +399,7 @@ class ControlBrokerStack(Stack):
                         },
                         "OpaEval": {
                             "Type": "Task",
-                            "Next": "ParseOutput",
+                            "Next": "IsInfraction",
                             "ResultPath": "$.OpaEval",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
@@ -398,6 +410,17 @@ class ControlBrokerStack(Stack):
                                         "Bucket": self.bucket_opa_policies.bucket_name
                                     },
                                 },
+                            },
+                            "ResultSelector": {"Payload.$": "$.Payload"},
+                        },
+                        "IsInfraction": {
+                            "Type": "Task",
+                            "Next": "ParseOutput",
+                            "ResultPath": "$.OpaEval",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Parameters": {
+                                "FunctionName": self.lambda_is_infraction.function_name,
+                                "Payload.$": "$.OpaEval.Payload"
                             },
                             "ResultSelector": {"Payload.$": "$.Payload"},
                         },
