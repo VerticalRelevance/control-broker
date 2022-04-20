@@ -457,7 +457,7 @@ class ControlBrokerStack(Stack):
                         },
                         "GatherInfractions": {
                             "Type": "Task",
-                            "Next": "ForEachInfraction",
+                            "Next": "ChoiceInfractionsExist",
                             "ResultPath": "$.GatherInfractions",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
