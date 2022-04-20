@@ -30,7 +30,7 @@ env = cdk.Environment(
 
 control_broker_stack = ControlBrokerStack(
     deploy_stage or app,
-    "ControlBrokerEvalEngineCdkStackV5x0",
+    "ControlBrokerEvalEngineCdkStackV6x0",
     env=env,
     application_team_cdk_app=application_team_cdk_app,
     config_rule_enabled=app.node.try_get_context("control-broker/config-rule/enabled"),
