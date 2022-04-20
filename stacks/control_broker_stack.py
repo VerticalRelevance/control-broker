@@ -267,16 +267,29 @@ class ControlBrokerStack(Stack):
                 ],
             )
         )
-        # is infraction
+        
+        # gather infractions
 
-        self.lambda_is_infraction = aws_lambda.Function(
+        self.lambda_gather_infractions = aws_lambda.Function(
             self,
-            "IsInfraction",
+            "GatherInfractions",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/is-infraction"),
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/gather-infractions"),
+        )
+
+        # handle infraction
+
+        self.lambda_handle_infraction = aws_lambda.Function(
+            self,
+            "HandleInfraction",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/handle-infraction"),
         )
 
 
@@ -399,7 +412,7 @@ class ControlBrokerStack(Stack):
                         },
                         "OpaEval": {
                             "Type": "Task",
-                            "Next": "IsInfraction",
+                            "Next": "GatherInfractions",
                             "ResultPath": "$.OpaEval",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
@@ -413,16 +426,49 @@ class ControlBrokerStack(Stack):
                             },
                             "ResultSelector": {"Payload.$": "$.Payload"},
                         },
-                        "IsInfraction": {
+                        "GatherInfractions": {
                             "Type": "Task",
-                            "Next": "ParseOutput",
-                            "ResultPath": "$.OpaEval",
+                            "Next": "ForEachInfraction",
+                            "ResultPath": "$.GatherInfractions",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
-                                "FunctionName": self.lambda_is_infraction.function_name,
+                                "FunctionName": self.lambda_gather_infractions.function_name,
                                 "Payload.$": "$.OpaEval.Payload"
                             },
                             "ResultSelector": {"Payload.$": "$.Payload"},
+                        },
+                        "ForEachInfraction": {
+                            "Type": "Map",
+                            "Next": "ParseOutput",
+                            "ResultPath": "$.ForEachInfraction",
+                            "ItemsPath": "$.GatherInfractions.Payload",
+                            "Parameters": {
+                                "Infraction.$": "$$.Map.Item.Value",
+                                "JsonInput.$": "$.JsonInput",
+                                "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
+                                "Metadata.$": "$.GetMetadata.Metadata",
+                            },
+                            "Iterator": {
+                                "StartAt": "HandleInfraction",
+                                "States": {
+                                    "HandleInfraction": {
+                                        "Type": "Task",
+                                        "End": True,
+                                        "ResultPath": "$.HandleInfraction",
+                                        "Resource": "arn:aws:states:::lambda:invoke",
+                                        "Parameters": {
+                                            "FunctionName": self.lambda_handle_infraction.function_name,
+                                            "Payload": {
+                                                "Infraction.$": "$.Infraction",
+                                                "JsonInput.$": "$.JsonInput",
+                                                "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
+                                                "Metadata.$": "$.Metadata",
+                                            }
+                                        },
+                                        "ResultSelector": {"Payload.$": "$.Payload"},
+                                    },
+                                }
+                            }
                         },
                         "ParseOutput": {
                             "Type": "Pass",
