@@ -126,7 +126,7 @@ def lambda_handler(event, context):
     stdout_ = json.loads(opa_eval_result.get('stdout'))
     print(f'stdout_:\n{stdout_}\n{type(stdout_)}')
     
-    opa_eval_results = [{"PackagePlaceholder":stdout_[i]} for i in stdout_]
+    opa_eval_results = stdout_
     print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
     
     return {
