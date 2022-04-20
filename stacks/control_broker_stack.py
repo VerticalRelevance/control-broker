@@ -28,10 +28,6 @@ class ControlBrokerStack(Stack):
         application_team_cdk_app: dict,
         config_rule_enabled: bool = False,
         config_rule_scope: aws_config.RuleScope = None,
-        continously_deployed: bool = True,
-        github_repo_name: str = None,
-        github_repo_owner: str = None,
-        github_repo_branch: str = None,
         **kwargs,
     ) -> None:
         """A full Control Broker installation.
@@ -277,7 +273,7 @@ class ControlBrokerStack(Stack):
         log_group_inner_eval_engine_sfn = aws_logs.LogGroup(
             self,
             "InnerEvalEngineSfnLogs",
-            log_group_name="/aws/vendedlogs/states/InnerEvalEngineSfnLogs",
+            log_group_name=f"/aws/vendedlogs/states/InnerEvalEngineSfnLogs-{self.stack_name}",
             removal_policy=RemovalPolicy.DESTROY,
         )
 
@@ -737,6 +733,7 @@ class ControlBrokerStack(Stack):
         log_group_outer_eval_engine_sfn = aws_logs.LogGroup(
             self,
             "OuterEvalEngineSfnLogs",
+            log_group_name=f"/aws/vendedlogs/states/OuterEvalEngineSfnLogs-{self.stack_name}",
             removal_policy=RemovalPolicy.DESTROY,
         )
 
