@@ -290,6 +290,35 @@ class ControlBrokerStack(Stack):
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/handle-infraction"),
+            environment = {
+                "TableName": self.table_eval_results.table_name,
+                "EventBusName": self.event_bus_infractions.event_bus_name
+            }
+        )
+        
+        self.lambda_handle_infraction.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "dynamodb:UpdateItem",
+                    "dynamodb:Query",
+                ],
+                resources=[
+                    self.table_eval_results.table_arn,
+                    f"{self.table_eval_results.table_arn}/*",
+                ],
+            )
+        )
+        
+        self.lambda_handle_infraction.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "events:PutEvents",
+                ],
+                resources=[
+                    self.event_bus_infractions.event_bus_arn,
+                    f"{self.event_bus_infractions.event_bus_arn}*",
+                ],
+            )
         )
 
 
