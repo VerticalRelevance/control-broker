@@ -13,7 +13,10 @@ def update_item(*,
     Sk,
     Attributes:list
 ):
-    
+    """
+    Attributes: list of dicts
+    [{Attribute1Name:Attribute1Value}]
+    """
     def ddb_compatible_type(Item):
         if type(Item) == float:
             return str(Item)
