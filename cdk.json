@@ -28,7 +28,7 @@
     ],
     "performance-testing-example-template": "supplementary_files/ExampleStack.template.json",
     "control-broker/config-rule/enabled": true,
-    "control-broker/continuous-deployment/enabled": true,
+    "control-broker/continuous-deployment/enabled": false,
     "control-broker/continuous-deployment/github-config": {
       "github_repo_name": "ControlBrokerEvalEngine-Blueprint",
       "github_repo_owner": "VerticalRelevance",
