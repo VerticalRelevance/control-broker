@@ -363,6 +363,8 @@ class ControlBrokerStack(Stack):
                 resources=[
                     self.lambda_opa_eval_python_subprocess_single_threaded.function_arn,
                     self.lambda_s3_select.function_arn,
+                    self.lambda_gather_infractions.function_arn,
+                    self.lambda_handle_infraction.function_arn,
                 ],
             )
         )
@@ -393,7 +395,8 @@ class ControlBrokerStack(Stack):
         self.sfn_inner_eval_engine = aws_stepfunctions.CfnStateMachine(
             self,
             "InnerEvalEngine",
-            state_machine_type="EXPRESS",
+            # state_machine_type="EXPRESS",
+            state_machine_type="STANDARD",
             role_arn=role_inner_eval_engine_sfn.role_arn,
             logging_configuration=aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
                 destinations=[
