@@ -466,9 +466,23 @@ class ControlBrokerStack(Stack):
                             },
                             "ResultSelector": {"Payload.$": "$.Payload"},
                         },
+                        "ChoiceInfractionsExist": {
+                            "Type": "Choice",
+                            "Default": "ForEachInfraction",
+                            "Choices": [
+                                {
+                                    "Variable": "$.GatherInfractions.Payload[0]",
+                                    "IsPresent": False,
+                                    "Next": "NoInfractions"
+                                }
+                            ],
+                        },
+                        "NoInfractions": {
+                            "Type": "Succeed",
+                        },
                         "ForEachInfraction": {
                             "Type": "Map",
-                            "Next": "ParseOutput",
+                            "Next": "InfractionsExist",
                             "ResultPath": "$.ForEachInfraction",
                             "ItemsPath": "$.GatherInfractions.Payload",
                             "Parameters": {
@@ -499,9 +513,8 @@ class ControlBrokerStack(Stack):
                                 }
                             }
                         },
-                        "ParseOutput": {
-                            "Type": "Pass",
-                            "End": True,
+                        "InfractionsExist": {
+                            "Type": "Fail",
                         }
                         # "SetMaxIndexZero": {
                         #     "Type": "Task",
