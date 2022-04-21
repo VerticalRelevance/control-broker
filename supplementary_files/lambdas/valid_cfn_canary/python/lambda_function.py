@@ -1,12 +1,15 @@
 import json
 import logging
 from os import environ, path
+from pathlib import Path
 from uuid import uuid4
 
 import boto3
 
 logging.basicConfig()
 logger = logging.getLogger()
+
+SCRIPT_DIR = Path(__file__).parent
 
 
 def lambda_handler(event=None, context=None):
@@ -21,7 +24,7 @@ def lambda_handler(event=None, context=None):
     s3 = boto3.client("s3")
     test_file_s3_key = f"automated-test-files/valid_cfn-{uuid4()}.template.json"
     s3.upload_file(
-        "./valid_cfn.template.json",
+        str(SCRIPT_DIR / "valid_cfn.template.json"),
         control_broker_readable_input_bucket,
         path.join(control_broker_input_prefix, test_file_s3_key),
     )
