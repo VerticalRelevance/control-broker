@@ -112,7 +112,7 @@ class TestStack(Stack):
             start_canary_after_creation=True,
             artifact_s3_location=canary_bucket.s3_url_for_object("canary_artifacts/"),
             execution_role_arn=canary_execution_role.role_arn,
-            name="ValidCfnTemplateTest",
+            name="validcfntemplatetest",
             schedule=aws_synthetics.CfnCanary.ScheduleProperty(
                 expression="rate(1 minute)", duration_in_seconds="600"
             ),
