@@ -5,10 +5,10 @@ from pathlib import Path
 from uuid import uuid4
 
 import boto3
+import logging
+from aws_synthetics.common import synthetics_logger as logger
 
-logging.basicConfig()
-logger = logging.getLogger()
-logger.root.setLevel(logging.DEBUG)
+logger.set_level(logging.DEBUG)
 
 SCRIPT_DIR = Path(__file__).parent
 
