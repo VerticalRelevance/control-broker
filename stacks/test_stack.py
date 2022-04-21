@@ -105,7 +105,7 @@ class TestStack(Stack):
             self,
             "ValidCfnTemplateTest",
             code=aws_synthetics.CfnCanary.CodeProperty(
-                handler="lambda_function/lambda_handler",
+                handler="lambda_function.lambda_handler",
                 s3_bucket=valid_cfn_canary_code.s3_bucket_name,
                 s3_key=valid_cfn_canary_code.s3_object_key,
             ),
