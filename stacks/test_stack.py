@@ -19,7 +19,7 @@ class TestStack(Stack):
         self,
         *args,
         control_broker_outer_state_machine: aws_stepfunctions.StateMachine,
-        control_broker_principals: List[aws_iam.IPrincipal],
+        control_broker_roles: List[aws_iam.Role],
         **kwargs,
     ):
         """Create a TestStack.
@@ -37,16 +37,8 @@ class TestStack(Stack):
             auto_delete_objects=True,
             removal_policy=RemovalPolicy.DESTROY,
         )
-        canary_bucket.add_to_resource_policy(
-            aws_iam.PolicyStatement(
-                resources=[
-                    canary_bucket.bucket_arn,
-                    canary_bucket.arn_for_objects(f"{CANARY_TEST_TEMPLATE_DEST}/*"),
-                ],
-                actions=["s3:GetObject"],
-                principals=control_broker_principals,
-            )
-        )
+        for principal in control_broker_roles:
+            canary_bucket.grant_read(aws_iam.ArnPrincipal(principal.role_arn), f"{CANARY_TEST_TEMPLATE_DEST}/*")
         control_broker_consumer_policy = aws_iam.ManagedPolicy(
             self,
             "ControlBrokerConsumerPolicy",
