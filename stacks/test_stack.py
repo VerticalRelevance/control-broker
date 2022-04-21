@@ -30,7 +30,7 @@ class TestStack(Stack):
         :type control_broker_principals: List[aws_iam.IPrincipal]
         """
         super().__init__(*args, **kwargs)
-        CANARY_TEST_TEMPLATE_DEST = "test_templates"
+        CANARY_TEST_TEMPLATE_DEST = "test-templates"
         canary_bucket = aws_s3.Bucket(
             self,
             "ControlBrokerCanaryBucket",
