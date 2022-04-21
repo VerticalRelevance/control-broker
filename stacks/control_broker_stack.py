@@ -20,6 +20,8 @@ from aws_cdk import (
 from constructs import Construct
 
 from components.config_rules import ControlBrokerConfigRule
+
+
 class ControlBrokerStack(Stack):
     def __init__(
         self,
@@ -87,15 +89,17 @@ class ControlBrokerStack(Stack):
                 ),
             )
 
+        self.template_reader_roles: List[aws_iam.Role] = [
+            self.lambda_opa_eval_python_subprocess_single_threaded.role,
+            self.role_inner_eval_engine_sfn
+        ]
+
+        self.outer_eval_engine_state_machine = aws_stepfunctions.StateMachine.from_state_machine_arn(self, "OuterEvalEngineStateMachineObj", self.sfn_outer_eval_engine.attr_arn)
+
         CfnOutput(
             self,
             "TemplateReaderArns",
-            value=json.dumps(
-                [
-                    self.lambda_opa_eval_python_subprocess_single_threaded.role.role_arn,
-                    self.sfn_inner_eval_engine.role_arn,
-                ]
-            ),
+            value=json.dumps([r.role_arn for r in self.template_reader_roles]),
         )
         CfnOutput(self, "SfnInvokeArn", value=self.sfn_outer_eval_engine.attr_arn)
 
@@ -314,13 +318,13 @@ class ControlBrokerStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
         )
 
-        role_inner_eval_engine_sfn = aws_iam.Role(
+        self.role_inner_eval_engine_sfn = aws_iam.Role(
             self,
             "InnerEvalEngineSfn",
             assumed_by=aws_iam.ServicePrincipal("states.amazonaws.com"),
         )
 
-        role_inner_eval_engine_sfn.add_to_policy(
+        self.role_inner_eval_engine_sfn.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     # "logs:*",
@@ -340,7 +344,7 @@ class ControlBrokerStack(Stack):
                 ],
             )
         )
-        role_inner_eval_engine_sfn.add_to_policy(
+        self.role_inner_eval_engine_sfn.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=["lambda:InvokeFunction"],
                 resources=[
@@ -351,7 +355,7 @@ class ControlBrokerStack(Stack):
                 ],
             )
         )
-        role_inner_eval_engine_sfn.add_to_policy(
+        self.role_inner_eval_engine_sfn.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "dynamodb:UpdateItem",
@@ -363,7 +367,7 @@ class ControlBrokerStack(Stack):
                 ],
             )
         )
-        role_inner_eval_engine_sfn.add_to_policy(
+        self.role_inner_eval_engine_sfn.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "events:PutEvents",
@@ -379,8 +383,7 @@ class ControlBrokerStack(Stack):
             self,
             "InnerEvalEngine",
             state_machine_type="EXPRESS",
-            # state_machine_type="STANDARD",
-            role_arn=role_inner_eval_engine_sfn.role_arn,
+            role_arn=self.role_inner_eval_engine_sfn.role_arn,
             logging_configuration=aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
                 destinations=[
                     aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
@@ -825,7 +828,7 @@ class ControlBrokerStack(Stack):
             ),
         )
 
-        self.sfn_inner_eval_engine.node.add_dependency(role_inner_eval_engine_sfn)
+        self.sfn_inner_eval_engine.node.add_dependency(self.role_inner_eval_engine_sfn)
 
         CfnOutput(self, "InnerSfnArn", value=self.sfn_inner_eval_engine.attr_arn)
 
