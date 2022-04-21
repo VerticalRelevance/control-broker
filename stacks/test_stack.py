@@ -31,11 +31,22 @@ class TestStack(Stack):
         :type control_broker_principals: List[aws_iam.IPrincipal]
         """
         super().__init__(*args, **kwargs)
+        CANARY_TEST_TEMPLATE_DEST = "test_templates"
         canary_bucket = aws_s3.Bucket(
             self,
             "ControlBrokerCanaryBucket",
             auto_delete_objects=True,
             removal_policy=RemovalPolicy.DESTROY,
+        )
+        canary_bucket.add_to_resource_policy(
+            aws_iam.PolicyStatement(
+                resources=[
+                    canary_bucket.bucket_arn,
+                    canary_bucket.arn_for_objects(f"{CANARY_TEST_TEMPLATE_DEST}/*"),
+                ],
+                actions=["s3:GetObject"],
+                principals=control_broker_principals
+            )
         )
         control_broker_consumer_policy = aws_iam.ManagedPolicy(
             self,
@@ -126,7 +137,7 @@ class TestStack(Stack):
             run_config=aws_synthetics.CfnCanary.RunConfigProperty(
                 environment_variables={
                     "CONTROL_BROKER_READABLE_INPUT_BUCKET": canary_bucket.bucket_name,
-                    "CONTROL_BROKER_INPUT_PREFIX": "test_templates/",
+                    "CONTROL_BROKER_INPUT_PREFIX": CANARY_TEST_TEMPLATE_DEST,
                     "CONTROL_BROKER_OUTER_STATE_MACHINE_ARN": control_broker_outer_state_machine.state_machine_arn,
                 }
             ),
