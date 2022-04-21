@@ -23,7 +23,7 @@ def lambda_handler(event=None, context=None):
     ]
     sfn = boto3.client("stepfunctions")
     s3 = boto3.client("s3")
-    test_file_s3_key = f"automated-test-files/valid_cfn-{uuid4()}.template.json"
+    test_file_s3_key = f"valid_cfn-{uuid4()}.template.json"
     s3.upload_file(
         str(SCRIPT_DIR / "valid_cfn.template.json"),
         control_broker_readable_input_bucket,
