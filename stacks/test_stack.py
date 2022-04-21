@@ -64,12 +64,16 @@ class TestStack(Stack):
                             actions=[
                                 "s3:PutObject",
                                 "s3:GetBucketLocation",
-                                "s3:ListAllMyBuckets",
                             ],
                             resources=[
                                 canary_bucket.bucket_arn,
                                 canary_bucket.arn_for_objects("*"),
                             ],
+                        ),
+                        aws_iam.PolicyStatement(
+                            sid="AllowBucketListing",
+                            actions=["s3:ListAllMyBuckets"],
+                            resources=["*"],
                         ),
                         aws_iam.PolicyStatement(
                             sid="AllowCanaryLogging",
@@ -99,7 +103,9 @@ class TestStack(Stack):
             },
         )
         valid_cfn_canary_code = aws_s3_assets.Asset(
-            self, "ValidCfnCanaryCode", path=str(paths.LAMBDA_FUNCTIONS / "valid_cfn_canary")
+            self,
+            "ValidCfnCanaryCode",
+            path=str(paths.LAMBDA_FUNCTIONS / "valid_cfn_canary"),
         )
         valid_cfn_canary = aws_synthetics.CfnCanary(
             self,
