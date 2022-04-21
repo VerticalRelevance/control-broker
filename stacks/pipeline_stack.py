@@ -89,4 +89,5 @@ class GitHubCDKPipelineStack(Stack):
             self,
             "Pipeline",
             synth=pipeline_synth_action,
+            publish_assets_in_parallel=False,
         )
