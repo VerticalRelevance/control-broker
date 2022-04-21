@@ -41,7 +41,7 @@ def lambda_handler(event=None, context=None):
         stateMachineArn=control_broker_outer_state_machine_arn,
         input=control_broker_input_object,
     )
-    logger.debug("Full result: %s", state_machine_result)
+    logger.debug(f"Full result: {state_machine_result}")
 
     if state_machine_result["status"] in ["FAILED", "TIMED_OUT"]:
         raise Exception("Sync start failed")
@@ -57,7 +57,7 @@ def lambda_handler(event=None, context=None):
         }
         for i in nested_results
     ]
-    logger.debug("Parsed results: %s", results)
+    logger.debug(f"Parsed results: {results}")
     assert all(
         i["Status"] == "SUCCEEDED" for i in results
     ), "A valid template had infractions"
