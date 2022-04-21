@@ -8,6 +8,7 @@ import boto3
 
 logging.basicConfig()
 logger = logging.getLogger()
+logger.root.setLevel(logging.DEBUG)
 
 SCRIPT_DIR = Path(__file__).parent
 
