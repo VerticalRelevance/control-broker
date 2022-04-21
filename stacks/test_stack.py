@@ -5,7 +5,6 @@ from aws_cdk import (
     Stack,
     aws_synthetics,
     aws_iam,
-    aws_lambda,
     aws_s3,
     aws_s3_assets,
     aws_stepfunctions,
@@ -45,7 +44,7 @@ class TestStack(Stack):
                     canary_bucket.arn_for_objects(f"{CANARY_TEST_TEMPLATE_DEST}/*"),
                 ],
                 actions=["s3:GetObject"],
-                principals=control_broker_principals
+                principals=control_broker_principals,
             )
         )
         control_broker_consumer_policy = aws_iam.ManagedPolicy(
