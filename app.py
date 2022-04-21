@@ -47,7 +47,7 @@ if app.node.try_get_context("control-broker/post-deployment-testing/enabled"):
         deploy_stage or app,
         f"ControlBrokerTestStack{STACK_VERSION}",
         control_broker_outer_state_machine=control_broker_stack.outer_eval_engine_state_machine,
-        control_broker_principals=control_broker_stack.template_reader_roles,
+        control_broker_roles=control_broker_stack.template_reader_roles,
         env=env
     )
 
