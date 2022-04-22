@@ -51,9 +51,9 @@ def lambda_handler(event=None, context=None):
     nested_results = output["ForEachTemplate"]
     results = [
         {
-            "Status": i.get("TemplateToNestedSFN").get("Status"),
-            "Cause": i.get("TemplateToNestedSFN").get("Cause"),
-            "EvalResultsTablePk": f"{outer_sfn_exec_id}#{i.get('TemplateToNestedSFN').get('ExecutionArn')}",
+            "Status": i.get("InvokeInnerEvalEngineSfn").get("Status"),
+            "Cause": i.get("InvokeInnerEvalEngineSfn").get("Cause"),
+            "EvalResultsTablePk": f"{outer_sfn_exec_id}#{i.get('InvokeInnerEvalEngineSfn').get('ExecutionArn')}",
         }
         for i in nested_results
     ]
