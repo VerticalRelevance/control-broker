@@ -41,13 +41,14 @@ def lambda_handler(event=None, context=None):
         stateMachineArn=control_broker_outer_state_machine_arn,
         input=control_broker_input_object,
     )
-    logger.debug(f"Full result: {state_machine_result}")
+    logger.debug(f"Full result: {json.dumps(state_machine_result)}")
 
     if state_machine_result["status"] in ["FAILED", "TIMED_OUT"]:
         raise Exception("Sync start failed")
 
     outer_sfn_exec_id = state_machine_result["executionArn"]
     output = json.loads(state_machine_result["output"])
+    logger.debug(f"Output: {output}")
     nested_results = output["ForEachTemplate"]
     results = [
         {
