@@ -2,10 +2,9 @@ import json
 import logging
 from os import environ, path
 from pathlib import Path
+from pprint import pformat
 from uuid import uuid4
-
 import boto3
-import logging
 from aws_synthetics.common import synthetics_logger as logger
 
 logger.set_level(logging.DEBUG)
@@ -41,14 +40,14 @@ def lambda_handler(event=None, context=None):
         stateMachineArn=control_broker_outer_state_machine_arn,
         input=control_broker_input_object,
     )
-    logger.debug(f"Full result: {json.dumps(state_machine_result)}")
+    logger.debug(f"Full result: {pformat(state_machine_result)}")
 
     if state_machine_result["status"] in ["FAILED", "TIMED_OUT"]:
         raise Exception("Sync start failed")
 
     outer_sfn_exec_id = state_machine_result["executionArn"]
     output = json.loads(state_machine_result["output"])
-    logger.debug(f"Output: {output}")
+    logging.debug(pformat(output))
     nested_results = output["ForEachTemplate"]
     results = [
         {
@@ -58,7 +57,7 @@ def lambda_handler(event=None, context=None):
         }
         for i in nested_results
     ]
-    logger.debug(f"Parsed results: {results}")
+    logger.debug(f"Parsed results: {pformat(results)}")
     assert all(
         i["Status"] == "SUCCEEDED" for i in results
     ), "A valid template had infractions"
