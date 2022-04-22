@@ -470,7 +470,7 @@ class ControlBrokerStack(Stack):
                             "Type": "Map",
                             "Next": "InfractionsExist",
                             "ResultPath": "$.ForEachInfraction",
-                            "ItemsPath": "$.GatherInfractions.Payload",
+                            "ItemsPath": "$.GatherInfractions.Infractions",
                             "Parameters": {
                                 "Infraction.$": "$$.Map.Item.Value",
                                 "JsonInput.$": "$.JsonInput",
