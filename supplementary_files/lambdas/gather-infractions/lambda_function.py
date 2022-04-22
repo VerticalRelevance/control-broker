@@ -8,4 +8,6 @@ def lambda_handler(event, context):
 
     print(f'infractions:\n{infractions}\n{type(infractions)}')
     
-    return infractions
+    return {
+        "Infractions": infractions
+    }

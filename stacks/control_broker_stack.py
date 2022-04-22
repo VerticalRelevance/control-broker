@@ -439,7 +439,7 @@ class ControlBrokerStack(Stack):
                                     },
                                 },
                             },
-                            "ResultSelector": {"Payload.$": "$.Payload"},
+                            "ResultSelector": {"OpaEvalResults.$": "$.Payload.OpaEvalResults"},
                         },
                         "GatherInfractions": {
                             "Type": "Task",
@@ -448,16 +448,16 @@ class ControlBrokerStack(Stack):
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
                                 "FunctionName": self.lambda_gather_infractions.function_name,
-                                "Payload.$": "$.OpaEval.Payload"
+                                "Payload.$": "$.OpaEval.OpaEvalResults"
                             },
-                            "ResultSelector": {"Payload.$": "$.Payload"},
+                            "ResultSelector": {"Infractions.$": "$.Payload.Infractions"},
                         },
                         "ChoiceInfractionsExist": {
                             "Type": "Choice",
                             "Default": "ForEachInfraction",
                             "Choices": [
                                 {
-                                    "Variable": "$.GatherInfractions.Payload[0]",
+                                    "Variable": "$.GatherInfractions.Infractions[0]",
                                     "IsPresent": False,
                                     "Next": "NoInfractions"
                                 }
