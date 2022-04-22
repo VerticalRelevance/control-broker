@@ -142,23 +142,6 @@ class ControlBrokerStack(Stack):
             ],
         )
 
-        # internal state
-
-        self.table_eval_internal_state = aws_dynamodb.Table(
-            self,
-            "EvalInternalState",
-            partition_key=aws_dynamodb.Attribute(
-                name="pk", type=aws_dynamodb.AttributeType.STRING
-            ),
-            sort_key=aws_dynamodb.Attribute(
-                name="sk",
-                type=aws_dynamodb.AttributeType.STRING
-                # name="sk", type=aws_dynamodb.AttributeType.STRING
-            ),
-            billing_mode=aws_dynamodb.BillingMode.PAY_PER_REQUEST,
-            removal_policy=RemovalPolicy.DESTROY,
-        )
-
     def s3_deploy_local_assets(self):
 
         # CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneSSH",
@@ -902,18 +885,6 @@ class ControlBrokerStack(Stack):
                 resources=[
                     f"arn:aws:events:{os.getenv('CDK_DEFAULT_REGION')}:{os.getenv('CDK_DEFAULT_ACCOUNT')}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule",
                     "*",
-                ],
-            )
-        )
-        role_outer_eval_engine_sfn.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    "dynamodb:UpdateItem",
-                    "dynamodb:Query",
-                ],
-                resources=[
-                    self.table_eval_internal_state.table_arn,
-                    f"{self.table_eval_internal_state.table_arn}/*",
                 ],
             )
         )
