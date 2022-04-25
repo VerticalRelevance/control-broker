@@ -16,7 +16,8 @@ from aws_cdk import (
     aws_iam,
     aws_logs,
     aws_events,
-    aws_apigatewayv2
+    aws_apigatewayv2,
+    aws_apigatewayv2_integrations, # experimental as of 4.25.22
 )
 from constructs import Construct
 
@@ -47,6 +48,36 @@ class ClientStack(Stack):
     def main(self):
     
         
-        # enumerate credentials/awsID of requestor that client is aware of of
+        # Objective 1.0: enumerate credentials/awsID of requestor that client is aware of of
         
-        pass
+        lambda_invoked_by_apigw = aws_lambda.Function(
+            self,
+            "InvokedByApigw",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/invoked_by_apigw"
+            ),
+        )
+
+        # lambda_invoked_by_apigw.role.add_to_policy(
+        #     aws_iam.PolicyStatement(
+        #         actions=[
+        #             "s3:List*",
+        #         ],
+        #         resources=[
+        #         ],
+        #     )
+        # )
+    
+        integration = aws_apigatewayv2_integrations.HttpLambdaIntegration("Integration", lambda_invoked_by_apigw)
+    
+        http_api = aws_apigatewayv2.HttpApi(self, "HttpApi")
+        
+        http_api.add_routes(
+            path="/items",
+            methods=[aws_apigatewayv2.HttpMethod.GET],
+            integration=integration
+        )
