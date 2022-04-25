@@ -67,8 +67,14 @@ class ClientStack(Stack):
             ),
         )
     
-        authorizer = aws_apigatewayv2_authorizers_alpha.HttpLambdaAuthorizer("ControlBrokerClientAuthorizer", lambda_authorizer,
-            response_types=[aws_apigatewayv2_authorizers_alpha.HttpLambdaResponseType.SIMPLE]
+        authorizer = aws_apigatewayv2_authorizers_alpha.HttpLambdaAuthorizer(
+            "ControlBrokerClientAuthorizer",
+            lambda_authorizer,
+            response_types=[aws_apigatewayv2_authorizers_alpha.HttpLambdaResponseType.SIMPLE],
+            results_cache_ttl = Duration.seconds(0),
+            identity_source = [
+                "$.request.header.Authorization"
+            ]
         )
         
         # integration
@@ -95,17 +101,26 @@ class ClientStack(Stack):
         #     )
         # )
         
-        integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration("ControlBrokerClient", lambda_invoked_by_apigw)
+        integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
+            "ControlBrokerClient",
+            lambda_invoked_by_apigw
+        )
     
         # api
     
-        http_api = aws_apigatewayv2_alpha.HttpApi(self, "ControlBrokerClient")
+        http_api = aws_apigatewayv2_alpha.HttpApi(
+            self,
+            "ControlBrokerClient",
+            # default_authorizer = authorizer
+        )
         
         path = "/items"
         
         http_api.add_routes(
             path=path,
-            methods=[aws_apigatewayv2_alpha.HttpMethod.GET],
+            methods=[
+                aws_apigatewayv2_alpha.HttpMethod.GET
+            ],
             integration=integration,
             authorizer=authorizer
         )
