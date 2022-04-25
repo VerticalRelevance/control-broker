@@ -53,7 +53,7 @@ class ClientStack(Stack):
         # Objective 1.0: enumerate credentials/awsID of requestor that client is aware of of
         
         
-        # auth
+        # auth - lambda
         
         lambda_authorizer = aws_lambda.Function(
             self,
@@ -67,16 +67,22 @@ class ClientStack(Stack):
             ),
         )
     
-        authorizer = aws_apigatewayv2_authorizers_alpha.HttpLambdaAuthorizer(
+        authorizer_lambda = aws_apigatewayv2_authorizers_alpha.HttpLambdaAuthorizer(
             "ControlBrokerClientAuthorizer",
             lambda_authorizer,
             response_types=[aws_apigatewayv2_authorizers_alpha.HttpLambdaResponseType.SIMPLE],
             results_cache_ttl = Duration.seconds(0),
             identity_source = [
-                "$request.header.Authorization"
+                "$request.header.Authorization", # request must match or 401: requests.get(invoke_url,headers={'Authorization':'foo'})
+                # "$context.identity.principalOrgId",
             ]
         )
         
+        
+        # auth - iam
+        
+        authorizer_iam = aws_apigatewayv2_authorizers_alpha.HttpIamAuthorizer()
+
         # integration
         
         lambda_invoked_by_apigw = aws_lambda.Function(
@@ -91,16 +97,6 @@ class ClientStack(Stack):
             ),
         )
 
-        # lambda_invoked_by_apigw.role.add_to_policy(
-        #     aws_iam.PolicyStatement(
-        #         actions=[
-        #             "s3:List*",
-        #         ],
-        #         resources=[
-        #         ],
-        #     )
-        # )
-        
         integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
             "ControlBrokerClient",
             lambda_invoked_by_apigw
@@ -116,11 +112,92 @@ class ClientStack(Stack):
         
         path = "/items"
         
-        http_api.add_routes(
+        routes = http_api.add_routes(
             path=path,
             methods=[
                 aws_apigatewayv2_alpha.HttpMethod.GET
             ],
             integration=integration,
-            authorizer=authorizer
+            authorizer=authorizer_lambda
+            # authorizer=authorizer_iam
         )
+        
+        # routes[0].grant_invoke(principal)
+        
+        
+        # test Invoker
+        
+        # lambda_apigw_invoker = aws_lambda.Function(
+        #     self,
+        #     "ApigwInvoker",
+        #     runtime=aws_lambda.Runtime.PYTHON_3_9,
+        #     handler="lambda_function.lambda_handler",
+        #     timeout=Duration.seconds(60),
+        #     memory_size=1024,
+        #     code=aws_lambda.Code.from_asset(
+        #         "./supplementary_files/lambdas/invoked_by_apigw"
+        #     ),
+        # )
+
+        # lambda_invoked_by_apigw.role.add_to_policy(
+        #     aws_iam.PolicyStatement(
+        #         actions=[
+        #             "s3:List*",
+        #         ],
+        #         resources=[
+        #         ],
+        #     )
+        # )
+        
+        """
+        Eval Engine Client Layer
+        update 4.25.22
+        
+        
+        objective:
+        
+        manage access control to
+        
+        
+        input:
+        
+        1+ synthedTemplates
+        BucketOwnedBy: Requestor
+        AccessGrantedTo: EvalEngine
+        AccessType: Read
+        
+        output:
+        
+        1 evaluationReport
+        BucketOwnedBy: EvalEngine
+        AccessGrantedTo: Requestor
+        AccessType: Read
+        
+        
+        desired method:
+        
+        
+        ReportRequestor awsID is received by EvalEngine.
+        EvalEngine writes the evaluationReport to S3 with key:
+        my-requestor-id.report.json
+        
+        ReportRequestor make the getObject request as signed by that same awsID 
+        
+        The dynamic bucket policy uses IAM Conditions to compare requestor's awsID to the key,
+        ensuring that they can only request their own report.
+        https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-principalarn
+        
+        
+        progress so far:
+        
+        
+        this `aws-requests-auth` package (https://github.com/DavidMuller/aws-requests-auth)
+        uses boto3 creds to sign Python `requests` request
+        
+        when this is done, both the customAuth Lambda and InvokedByApigw have access to a string in
+        the identity source and authorization header with the following format per these docs
+        
+        'AWS4-HMAC-SHA256 Credential=MY_ACCESS_KEY/20220425/us-east-1/execute-api/aws4_request, SignedHeaders=host;x-amz-date, Signature=MY_SIG',
+        
+        https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
+        """
