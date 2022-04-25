@@ -46,7 +46,7 @@ def test_valid_cfn_template_passes_control_broker_evaluation(
         {
             "Status": i.get("TemplateToNestedSFN").get("Status"),
             "Cause": i.get("TemplateToNestedSFN").get("Cause"),
-            "EvalResultsTablePk": f"{outer_sfn_exec_id}#{i.get('TemplateToNestedSFN').get('ExecutionArn')}",
+            "EvalResultsTablePk": outer_sfn_exec_id,
         }
         for i in nested_results
     ]
