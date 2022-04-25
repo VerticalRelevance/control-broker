@@ -82,19 +82,28 @@ def lambda_handler(event, context):
     
     print(event)
     
-    event_bus_name = os.environ.get('EventBusName')
-    
     infraction_key = list(event['Infraction'].keys())[0]
+    
+    pipeline_ownership_metadata = event.get('Metadata')
+    
+    inner_sfn_json_input = event.get('JsonInput')
+    
+    template_key = inner_sfn_json_input['Key']
+    
+    sk = f'{template_key}#{infraction_key}'
     
     # to ddb
     
     update_item(
-        Table = os.environ.get('TableName'),
+        Table = os.environ['TableName'],
         Pk = event['OuterEvalEngineSfnExecutionId'],
-        Sk = infraction_key,
+        Sk = sk,
         Attributes = [
-            {'Metadata':'someMetadata'},
-            {'OuterEvalEngineSfnExecutionId':event['OuterEvalEngineSfnExecutionId']}
+            {'BusinessUnit':pipeline_ownership_metadata.get('BusinessUnit')},
+            {'BillingCode':pipeline_ownership_metadata.get('BillingCode')},
+            {'TargetProvisioningEnvironment':pipeline_ownership_metadata.get('TargetProvisioningEnvironment')},
+            {'PipelineOwnerName':pipeline_ownership_metadata.get('TargetProvisioningEnvironment').get('Name')},
+            {'PipelineOwnerEmail':pipeline_ownership_metadata.get('TargetProvisioningEnvironment').get('Email')},
         ]
     )
     
@@ -103,8 +112,10 @@ def lambda_handler(event, context):
     put_event_entry(
         EventBusName = os.environ.get('EventBusName'),
         Detail = {
-            'Infraction':event['Infraction'],
-            'Metadata':'someMetadata',
-            'OuterEvalEngineSfnExecutionId':event['OuterEvalEngineSfnExecutionId']
+            'Infraction':event.get('Infraction'),
+            'PipelineOwnershipMetadata':pipeline_ownership_metadata,
+            'OuterEvalEngineSfnExecutionId':event.get('OuterEvalEngineSfnExecutionId')
         }
     )
+    
+    return True
