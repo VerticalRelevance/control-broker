@@ -56,6 +56,7 @@ def update_item(*,
         return False
     else:
         print(r)
+        print(f'no ClientError: update_item')
         return True
 
 def put_event_entry(*,
@@ -76,6 +77,7 @@ def put_event_entry(*,
         return False
     else:
         print(r)
+        print(f'no ClientError: put_events')
         return True
 
 def lambda_handler(event, context):
@@ -94,7 +96,7 @@ def lambda_handler(event, context):
     
     # to ddb
     
-    update_item(
+    update = update_item(
         Table = os.environ['TableName'],
         Pk = event['OuterEvalEngineSfnExecutionId'],
         Sk = sk,
@@ -102,14 +104,14 @@ def lambda_handler(event, context):
             {'BusinessUnit':pipeline_ownership_metadata.get('BusinessUnit')},
             {'BillingCode':pipeline_ownership_metadata.get('BillingCode')},
             {'TargetProvisioningEnvironment':pipeline_ownership_metadata.get('TargetProvisioningEnvironment')},
-            {'PipelineOwnerName':pipeline_ownership_metadata.get('TargetProvisioningEnvironment').get('Name')},
-            {'PipelineOwnerEmail':pipeline_ownership_metadata.get('TargetProvisioningEnvironment').get('Email')},
+            {'PipelineOwnerName':pipeline_ownership_metadata.get('PipelineOwner').get('Name')},
+            {'PipelineOwnerEmail':pipeline_ownership_metadata.get('PipelineOwner').get('Email')},
         ]
     )
     
     # to eb
     
-    put_event_entry(
+    put = put_event_entry(
         EventBusName = os.environ.get('EventBusName'),
         Detail = {
             'Infraction':event.get('Infraction'),
@@ -118,4 +120,4 @@ def lambda_handler(event, context):
         }
     )
     
-    return True
+    return update and put
