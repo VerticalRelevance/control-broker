@@ -12,7 +12,7 @@ def lambda_handler(event,context):
     
     headers = event.get('headers')
     
-    auth_header = headers.get('authortization')
+    auth_header = headers.get('authorization')
     
     is_authorized = determine_is_authorized()
     
