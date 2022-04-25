@@ -73,7 +73,7 @@ class ClientStack(Stack):
             response_types=[aws_apigatewayv2_authorizers_alpha.HttpLambdaResponseType.SIMPLE],
             results_cache_ttl = Duration.seconds(0),
             identity_source = [
-                "$.request.header.Authorization"
+                "$request.header.Authorization"
             ]
         )
         
