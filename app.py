@@ -11,6 +11,7 @@ from stacks.control_broker_stack import (
 )
 from stacks.pipeline_stack import GitHubCDKPipelineStack
 from stacks.test_stack import TestStack
+from stacks.client_stack import ClientStack
 
 STACK_VERSION = "V6x0"
 
@@ -46,6 +47,14 @@ if app.node.try_get_context("control-broker/post-deployment-testing/enabled"):
     TestStack(
         deploy_stage or app,
         f"ControlBrokerTestStack{STACK_VERSION}",
+        control_broker_outer_state_machine=control_broker_stack.outer_eval_engine_state_machine,
+        control_broker_roles=control_broker_stack.template_reader_roles,
+        env=env
+    )
+if app.node.try_get_context("control-broker/client/enabled"):
+    ClientStack(
+        deploy_stage or app,
+        f"ControlBrokerClientStack{STACK_VERSION}",
         control_broker_outer_state_machine=control_broker_stack.outer_eval_engine_state_machine,
         control_broker_roles=control_broker_stack.template_reader_roles,
         env=env

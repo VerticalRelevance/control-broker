@@ -33,6 +33,7 @@
       "github_repo_owner": "VerticalRelevance",
       "github_repo_branch": "config-integration"
     },
-    "control-broker/post-deployment-testing/enabled": true
+    "control-broker/post-deployment-testing/enabled": true,
+    "control-broker/client/enabled": true
   }
 }
