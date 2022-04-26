@@ -47,8 +47,9 @@ class ClientStack(Stack):
         super().__init__(*args, **kwargs)
     
         self.apigw()
-        self.consumer_client()
-    
+        # self.consumer_client_task_token() # outer consumer sfn would have to be standard, can't be express endpoint and support waitForTaskToken
+        self.consumer_client_retry()
+        
     def apigw(self):
         
         # Objective 1.0: enumerate credentials/awsID of requestor that client is aware of of
@@ -105,16 +106,16 @@ class ClientStack(Stack):
     
         # api
     
-        http_api = aws_apigatewayv2_alpha.HttpApi(
+        self.http_api = aws_apigatewayv2_alpha.HttpApi(
             self,
             "ControlBrokerClient",
             # default_authorizer = authorizer
         )
         
-        path = "/items"
+        self.path = "/"
         
-        routes = http_api.add_routes(
-            path=path,
+        routes = self.http_api.add_routes(
+            path=self.path,
             methods=[
                 aws_apigatewayv2_alpha.HttpMethod.GET
             ],
@@ -123,32 +124,8 @@ class ClientStack(Stack):
             # authorizer=authorizer_iam
         )
         
-        # routes[0].grant_invoke(principal)
+        self.apigw_full_invoke_url = f'{self.http_api.invoke_url}{self.path}'
         
-        
-        # test Invoker
-        
-        # lambda_apigw_invoker = aws_lambda.Function(
-        #     self,
-        #     "ApigwInvoker",
-        #     runtime=aws_lambda.Runtime.PYTHON_3_9,
-        #     handler="lambda_function.lambda_handler",
-        #     timeout=Duration.seconds(60),
-        #     memory_size=1024,
-        #     code=aws_lambda.Code.from_asset(
-        #         "./supplementary_files/lambdas/invoked_by_apigw"
-        #     ),
-        # )
-
-        # lambda_invoked_by_apigw.role.add_to_policy(
-        #     aws_iam.PolicyStatement(
-        #         actions=[
-        #             "s3:List*",
-        #         ],
-        #         resources=[
-        #         ],
-        #     )
-        # )
         
         """
         Eval Engine Client Layer
@@ -203,7 +180,7 @@ class ClientStack(Stack):
         https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
         """
     
-    def consumer_client(self):
+    def consumer_client_task_token(self):
         
         # sqs
         
@@ -322,6 +299,179 @@ class ClientStack(Stack):
                 }
             )
         )
+        
+        self.sfn_consumer_client.node.add_dependency(self.role_consumer_client_sfn)
+    
+    def consumer_client_retry(self):
+        
+        # lambda
+        
+        self.lambda_object_exists = aws_lambda.Function(
+            self,
+            "ObjectExists",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,  # todo power-tune
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/s3_head_object"
+            ),
+        )
+
+        self.lambda_object_exists.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:HeadObject",
+                    "s3:List*",
+                ],
+                resources=[
+                    "*"
+                ],
+            )
+        )
+
+        layer_requests = aws_lambda.LayerVersion.from_layer_version_arn(
+            self,
+            "Requests",
+            "arn:aws:lambda:us-east-1:899456967600:layer:requests:1" # built via CodeCommit/cschneider-utils/lambda/utils/layer-builder.sh
+        )
+        
+        layer_aws_requests_auth = aws_lambda.LayerVersion.from_layer_version_arn(
+            self,
+            "Requests",
+            "arn:aws:lambda:us-east-1:899456967600:layer:aws-requests-auth:1" # built via CodeCommit/cschneider-utils/lambda/utils/layer-builder.sh
+        )
+        
+        self.lambda_sign_apigw_request = aws_lambda.Function(
+            self,
+            "SignApigwRequest",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/sign_apigw_request"
+            ),
+            layers = [
+                layer_requests,
+                layer_aws_requests_auth
+            ],
+            environment = {
+                "ApigwInvokeUrl" : self.apigw_full_invoke_url
+            }
+        )
+        
+        # self.lambda_sign_apigw_request.role.add_to_policy(
+        #     aws_iam.PolicyStatement(
+        #         actions=[
+        #         ],
+        #         resources=[
+        #         ],
+        #     )
+        # )
+        
+        # s3
+        
+        self.bucket_consumer_inputs = aws_s3.Bucket(
+            self,
+            "ConsumerInputs",
+            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+        )
+        
+        
+        # sfn
+        
+        log_group_consumer_client_sfn = aws_logs.LogGroup(
+            self,
+            "ConsumerClientLogs",
+            log_group_name=f"/aws/vendedlogs/states/ConsumerClientLogs-{self.stack_name}",
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
+        self.role_consumer_client_sfn = aws_iam.Role(
+            self,
+            "ConsumerClientSfn",
+            assumed_by=aws_iam.ServicePrincipal("states.amazonaws.com"),
+        )
+
+        self.role_consumer_client_sfn.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    # "logs:*",
+                    "logs:CreateLogDelivery",
+                    "logs:GetLogDelivery",
+                    "logs:UpdateLogDelivery",
+                    "logs:DeleteLogDelivery",
+                    "logs:ListLogDeliveries",
+                    "logs:PutResourcePolicy",
+                    "logs:DescribeResourcePolicies",
+                    "logs:DescribeLogGroups",
+                ],
+                resources=[
+                    "*",
+                    log_group_consumer_client_sfn.log_group_arn,
+                    f"{log_group_consumer_client_sfn.log_group_arn}*",
+                ],
+            )
+        )
+        self.role_consumer_client_sfn.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "lambda:InvokeFunction",
+                ],
+                resources=[
+                    self.lambda_object_exists.function_arn
+                ],
+            )
+        )
+
+        self.sfn_consumer_client = aws_stepfunctions.CfnStateMachine(
+            self,
+            "ConsumerClient",
+            # state_machine_type="EXPRESS",
+            state_machine_type="STANDARD",
+            role_arn=self.role_consumer_client_sfn.role_arn,
+            logging_configuration=aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
+                destinations=[
+                    aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
+                        cloud_watch_logs_log_group=aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
+                            log_group_arn=log_group_consumer_client_sfn.log_group_arn
+                        )
+                    )
+                ],
+                # include_execution_data=False,
+                # level="ALL"
+                include_execution_data=True,
+                level="ERROR",
+            ),
+            definition_string=json.dumps(
+                {
+                    "StartAt": "SignApigwRequest",
+                    "States": {
+                        "SignApigwRequest": {
+                            "Type": "Task",
+                            "Next": "CheckResponseReportExists",
+                            "ResultPath": "$.SignApigwRequest",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Parameters": {
+                                "FunctionName": self.lambda_sign_apigw_request.function_name,
+                                "Payload.$": "$"
+                            },
+                            "ResultSelector": {
+                                "Payload.$": "$.Payload"
+                            },
+                        },
+                        "CheckResponseReportExists": {
+                            "Type":"Succeed"
+                            # ObjectDoesNotExistException
+                        }
+                    }
+                }
+            )
+        )
+        
         
         self.sfn_consumer_client.node.add_dependency(self.role_consumer_client_sfn)
 
