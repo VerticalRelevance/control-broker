@@ -31,13 +31,12 @@ def lambda_handler(event,context):
         aws_service='execute-api'
     )
     
-    
     headers = {'Authorization':'foo'}
     
     # r = requests.get(full_invoke_url,headers=headers,auth=auth)
     r = requests.get(full_invoke_url,auth=auth)
     
-    print(dict(r.request.headers))
+    print(f'headers:\n{dict(r.request.headers))}')
     
     content = json.loads(r.content)
     
@@ -46,6 +45,6 @@ def lambda_handler(event,context):
         'Content': content
     }
     
-    print(r)
+    print(f'apigw formatted response:\n{r}')
     
     return True
