@@ -1,16 +1,25 @@
 import json
 import os
+import re
 
 import boto3
 from botocore.exceptions import ClientError
 
 sfn = boto3.client('stepfunctions')
 
-def get_result_report_s3_uri(*,AuthHeader):
+
+def extract_acces_key_id(*,Aws4Authorization):
+    m = re.search('AWS4-HMAC-SHA256 Credential=(\w*)/.*',Aws4Authorization)
+    return m.group(1)
+
+def get_result_report_s3_uri(*,AuthorizationHeader):
+    
+    access_key_id = extract_acces_key_id(AuthorizationHeader=AuthorizationHeader)
+    
     return 's3://cschneider-terraform-backend/foo.json'
     # FIXME - form path based on auth, make sure EvalEngine writes to that same path
 
-def get_requestor_authorization_status(*,AuthHeader):
+def get_requestor_authorization_status(*,AuthorizationHeader):
     return True
     # TODO
 
@@ -25,6 +34,7 @@ def async_sfn(*, SfnArn, Input: dict):
         print(f"ClientError\n{e}")
         raise
     else:
+        print(f'no ClientError start_execution:\nSfnArn:\n{SfnArn}\nInput:\n{Input}')
         return r["executionArn"]
 
 
@@ -39,26 +49,25 @@ def lambda_handler(event,context):
     
     headers = event.get('headers')
     
-    auth_header = headers.get('authorization')
+    authorization_header = headers.get('authorization')
     
-    print(f'auth_header:\n{auth_header}')
+    print(f'authorization_header:\n{authorization_header}')
     
     eval_engine_sfn_input = {
         "InvokedByApigw": post_request_json_body,
-        "ResponseReportS3Path": get_result_report_s3_uri(AuthHeader=auth_header)
+        "ResponseReportS3Path": get_result_report_s3_uri(AuthorizationHeader=authorization_header)
     }
     
-    async_sfn(
+    eval_engine_sfn_execution_arn = async_sfn(
         SfnArn = eval_engine_sfn_arn,
         Input = eval_engine_sfn_input
     )
     
-    """
-    
     control_broker_request_status = {
-        "RequestorIsAuthorized": get_requestor_authorization_status(AuthHeader=auth_header), # TODO
-        "EvalEngineHasReadAccessToInputs": get_eval_engine_read_access_to_inputs_status(), # TODO
-        "ResponseReportS3Path": get_result_report_s3_uri(AuthHeader=auth_header),
+        "RequestorIsAuthorized": get_requestor_authorization_status(AuthorizationHeader=authorization_header),
+        "EvalEngineHasReadAccessToInputs": get_eval_engine_read_access_to_inputs_status(),
+        "ResponseReportS3Path": get_result_report_s3_uri(AuthorizationHeader=authorization_header),
+        "EvalEngineSfnExecutionArn": eval_engine_sfn_execution_arn
     }
     
     print(f'control_broker_request_status:\n{control_broker_request_status}')
