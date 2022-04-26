@@ -16,7 +16,7 @@ def get_result_report_s3_uri(*,EvalResultsReportsBucket,AuthorizationHeader):
     
     access_key_id = extract_acces_key_id(Aws4Authorization=AuthorizationHeader)
     
-    result_report_s3_uri = f'{EvalResultsReportsBucket}/{access_key_id}/response.json'
+    result_report_s3_uri = f's3://{EvalResultsReportsBucket}/{access_key_id}/response.json'
     return result_report_s3_uri
 
 def get_requestor_authorization_status(*,AuthorizationHeader):
@@ -40,7 +40,7 @@ def async_sfn(*, SfnArn, Input: dict):
 
 def lambda_handler(event,context):
     
-    print(event)
+    print(f'event:\n{event}\ncontext:\n{context}')
     
     post_request_json_body = json.loads(event['body'])
     

@@ -18,7 +18,7 @@ def get_host(*,FullInvokeUrl):
     
 def lambda_handler(event,context):
     
-    print(event)
+    print(f'event:\n{event}\ncontext:\n{context}')
     
     print(f'AWS_ACCESS_KEY_ID:\n{os.environ.get("AWS_ACCESS_KEY_ID")}')
 
