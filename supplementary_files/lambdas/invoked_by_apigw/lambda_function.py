@@ -32,6 +32,8 @@ def lambda_handler(event,context):
     
     print(event)
     
+    post_request_json_body = json.loads(event['body'])
+    
     eval_engine_sfn_arn = os.environ.get('ControlBrokerOuterSfnArn')
     print(f'eval_engine_sfn_arn:\n{eval_engine_sfn_arn}')
     
@@ -41,12 +43,15 @@ def lambda_handler(event,context):
     
     print(f'auth_header:\n{auth_header}')
     
+    eval_engine_sfn_input = {
+        "InvokedByApigw": post_request_json_body,
+        "ResponseReportS3Path": get_result_report_s3_uri(AuthHeader=auth_header)
+    }
     
-    """
-    TODO:
-    
-    StartExecution (async) of Eval Engine
-    
+    async_sfn(
+        SfnArn = eval_engine_sfn_arn,
+        Input = eval_engine_sfn_input
+    )
     
     """
     
