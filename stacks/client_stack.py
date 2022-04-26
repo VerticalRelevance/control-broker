@@ -322,10 +322,12 @@ class ClientStack(Stack):
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:HeadObject",
+                    "s3:GetObject",
                     "s3:List*",
                 ],
                 resources=[
-                    "*"
+                    # "*",
+                    "arn:aws:s3:::cschneider-terraform-backend/*" # test
                 ],
             )
         )
@@ -380,7 +382,6 @@ class ClientStack(Stack):
             auto_delete_objects=True,
         )
         
-        
         # sfn
         
         log_group_consumer_client_sfn = aws_logs.LogGroup(
@@ -416,6 +417,7 @@ class ClientStack(Stack):
                 ],
             )
         )
+        
         self.role_consumer_client_sfn.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
