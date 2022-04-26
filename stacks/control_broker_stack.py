@@ -95,7 +95,10 @@ class ControlBrokerStack(Stack):
         ]
 
         self.outer_eval_engine_state_machine = aws_stepfunctions.StateMachine.from_state_machine_arn(self, "OuterEvalEngineStateMachineObj", self.sfn_outer_eval_engine.attr_arn)
-
+        
+        self.eval_results_reports_bucket = aws_s3.Bucket.from_bucket_name(self,
+            "EvalResultsReportsBucketObj", self.bucket_eval_results_reports.bucket_name)
+        
         CfnOutput(
             self,
             "TemplateReaderArns",
@@ -144,6 +147,16 @@ class ControlBrokerStack(Stack):
                     arn=logs_infraction_events.log_group_arn, id="InfractionEvents"
                 )
             ],
+        )
+
+        # result reports
+
+        self.bucket_eval_results_reports = aws_s3.Bucket(
+            self,
+            "EvalResultsReports",
+            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
         )
 
     def s3_deploy_local_assets(self):

@@ -35,6 +35,7 @@ class ClientStack(Stack):
         *args,
         control_broker_outer_state_machine: aws_stepfunctions.StateMachine,
         control_broker_roles: List[aws_iam.Role],
+        control_broker_eval_results_bucket: aws_s3.Bucket,
         **kwargs,
     ):
         """Create a ClientStack.
@@ -47,6 +48,7 @@ class ClientStack(Stack):
         super().__init__(*args, **kwargs)
     
         self.control_broker_outer_state_machine = control_broker_outer_state_machine
+        self.control_broker_eval_results_bucket = control_broker_eval_results_bucket
     
         self.apigw()
         # self.consumer_client_task_token() # outer consumer sfn would have to be standard, can't be express endpoint and support waitForTaskToken
@@ -100,7 +102,8 @@ class ClientStack(Stack):
                 "./supplementary_files/lambdas/invoked_by_apigw"
             ),
             environment = {
-                "ControlBrokerOuterSfnArn" : self.control_broker_outer_state_machine.state_machine_arn
+                "ControlBrokerOuterSfnArn" : self.control_broker_outer_state_machine.state_machine_arn,
+                "ControlBrokerEvalResultsReportsBucket": self.control_broker_eval_results_bucket.bucket_name
             }
         )
         
@@ -473,7 +476,7 @@ class ClientStack(Stack):
                             "Parameters": {
                                 "FunctionName": self.lambda_object_exists.function_name,
                                 "Payload": {
-                                    "S3Uri.$":"$.SignApigwRequest.Payload.ControlBrokerRequestStatus.ResponseReportS3Path"
+                                    "S3Uri.$":"$.SignApigwRequest.Payload.ControlBrokerRequestStatus.ResultReportS3Uri"
                                 }
                             },
                             "ResultSelector": {

@@ -12,12 +12,12 @@ def extract_acces_key_id(*,Aws4Authorization):
     m = re.search('AWS4-HMAC-SHA256 Credential=(\w*)/.*',Aws4Authorization)
     return m.group(1)
 
-def get_result_report_s3_uri(*,AuthorizationHeader):
+def get_result_report_s3_uri(*,EvalResultsReportsBucket,AuthorizationHeader):
     
-    access_key_id = extract_acces_key_id(AuthorizationHeader=AuthorizationHeader)
+    access_key_id = extract_acces_key_id(Aws4Authorization=AuthorizationHeader)
     
-    return 's3://cschneider-terraform-backend/foo.json'
-    # FIXME - form path based on auth, make sure EvalEngine writes to that same path
+    result_report_s3_uri = f'{EvalResultsReportsBucket}/{access_key_id}/response.json'
+    return result_report_s3_uri
 
 def get_requestor_authorization_status(*,AuthorizationHeader):
     return True
@@ -47,15 +47,23 @@ def lambda_handler(event,context):
     eval_engine_sfn_arn = os.environ.get('ControlBrokerOuterSfnArn')
     print(f'eval_engine_sfn_arn:\n{eval_engine_sfn_arn}')
     
+    eval_results_reports_bucket = os.environ.get('ControlBrokerEvalResultsReportsBucket')
+    print(f'eval_results_reports_bucket:\n{eval_results_reports_bucket}')
+    
     headers = event.get('headers')
     
     authorization_header = headers.get('authorization')
     
     print(f'authorization_header:\n{authorization_header}')
     
+    result_report_s3_path = get_result_report_s3_uri(
+        EvalResultsReportsBucket = eval_results_reports_bucket,
+        AuthorizationHeader = authorization_header
+    )
+    
     eval_engine_sfn_input = {
         "InvokedByApigw": post_request_json_body,
-        "ResponseReportS3Path": get_result_report_s3_uri(AuthorizationHeader=authorization_header)
+        "ResultReportS3Uri": result_report_s3_path
     }
     
     eval_engine_sfn_execution_arn = async_sfn(
@@ -66,7 +74,7 @@ def lambda_handler(event,context):
     control_broker_request_status = {
         "RequestorIsAuthorized": get_requestor_authorization_status(AuthorizationHeader=authorization_header),
         "EvalEngineHasReadAccessToInputs": get_eval_engine_read_access_to_inputs_status(),
-        "ResponseReportS3Path": get_result_report_s3_uri(AuthorizationHeader=authorization_header),
+        "ResultReportS3Uri": result_report_s3_path,
         "EvalEngineSfnExecutionArn": eval_engine_sfn_execution_arn
     }
     
