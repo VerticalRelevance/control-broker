@@ -36,7 +36,7 @@ def lambda_handler(event,context):
     # r = requests.get(full_invoke_url,headers=headers,auth=auth)
     r = requests.get(full_invoke_url,auth=auth)
     
-    print(f'headers:\n{dict(r.request.headers))}')
+    print(f'headers:\n{dict(r.request.headers)}')
     
     content = json.loads(r.content)
     
@@ -47,4 +47,4 @@ def lambda_handler(event,context):
     
     print(f'apigw formatted response:\n{r}')
     
-    return True
+    return content

@@ -5,6 +5,7 @@ from botocore.exceptions import ClientError
 s3 = boto3.client('s3')
 
 def object_exists(*,Bucket,Key):
+    print(f'trying head_object\nbucket:\n{Bucket}\nkey:\n{Key}')
     try:
         r = s3.head_object(
             Bucket = Bucket,
