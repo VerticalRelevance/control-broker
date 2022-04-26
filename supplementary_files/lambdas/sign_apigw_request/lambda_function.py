@@ -12,16 +12,17 @@ session = boto3.session.Session()
 region = session.region_name
 account_id = boto3.client('sts').get_caller_identity().get('Account')
 
+def get_host(*,FullInvokeUrl):
+    m = re.search('https://(.*)/.*',FullInvokeUrl)
+    return m.group(1)
+    
 def lambda_handler(event,context):
     
     print(event)
     
+    print(f'AWS_ACCESS_KEY_ID:\n{os.environ.get("AWS_ACCESS_KEY_ID")}')
+
     full_invoke_url = os.environ.get('ApigwInvokeUrl')
-    
-    def get_host(*,FullInvokeUrl):
-        m = re.search('https://(.*)/.*',FullInvokeUrl)
-        return m.group(1)
-    
     
     host = get_host(FullInvokeUrl=full_invoke_url)
     
@@ -31,7 +32,9 @@ def lambda_handler(event,context):
         aws_service='execute-api'
     )
     
-    headers = {'Authorization':'foo'}
+    print(f'BotoAWSRequestsAuth:\n{auth}')
+    
+    # headers = {'Authorization':'foo'}
     
     control_broker_consumer_input = {"foo":"bar"} # FIXME
     
