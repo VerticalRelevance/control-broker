@@ -124,7 +124,7 @@ class ClientStack(Stack):
             # authorizer=authorizer_iam
         )
         
-        self.apigw_full_invoke_url = f'{self.http_api.invoke_url}{self.path}'
+        self.apigw_full_invoke_url = f'{self.http_api.url}{self.path}'
         
         
         """
@@ -338,7 +338,7 @@ class ClientStack(Stack):
         
         layer_aws_requests_auth = aws_lambda.LayerVersion.from_layer_version_arn(
             self,
-            "Requests",
+            "AwsRequestsAuth",
             "arn:aws:lambda:us-east-1:899456967600:layer:aws-requests-auth:1" # built via CodeCommit/cschneider-utils/lambda/utils/layer-builder.sh
         )
         
@@ -422,6 +422,7 @@ class ClientStack(Stack):
                     "lambda:InvokeFunction",
                 ],
                 resources=[
+                    self.lambda_sign_apigw_request.function_arn,
                     self.lambda_object_exists.function_arn
                 ],
             )
@@ -464,15 +465,35 @@ class ClientStack(Stack):
                             },
                         },
                         "CheckResponseReportExists": {
-                            "Type":"Succeed"
-                            # ObjectDoesNotExistException
+                            "Type": "Task",
+                            "End": True,
+                            "ResultPath": "$.CheckResponseReportExists",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Parameters": {
+                                "FunctionName": self.lambda_object_exists.function_name,
+                                "Payload": {
+                                    "S3Uri.$":"$.SignApigwRequest.Payload.ControlBrokerRequestStatus.ResponseReportS3Path"
+                                }
+                            },
+                            "ResultSelector": {
+                                "Payload.$": "$.Payload"
+                            },
+                            "Retry": [
+                                {
+                                    "ErrorEquals": [
+                                        "ObjectDoesNotExistException"
+                                    ],
+                                    "IntervalSeconds": 1,
+                                    "MaxAttempts": 6,
+                                    "BackoffRate": 2.0
+                                }
+                            ]
                         }
                     }
                 }
             )
         )
         
-        
         self.sfn_consumer_client.node.add_dependency(self.role_consumer_client_sfn)
-
+        
         
