@@ -38,7 +38,7 @@ def lambda_handler(event,context):
     r = requests.post(
         full_invoke_url,
         auth = auth,
-        data = control_broker_consumer_input
+        json = control_broker_consumer_input
     )
     
     print(f'headers:\n{dict(r.request.headers)}')

@@ -103,6 +103,17 @@ class ClientStack(Stack):
                 "ControlBrokerOuterSfnArn" : self.control_broker_outer_state_machine.state_machine_arn
             }
         )
+        
+        lambda_invoked_by_apigw.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "states:StartExecution",
+                ],
+                resources=[
+                    self.control_broker_outer_state_machine.state_machine_arn
+                ],
+            )
+        )
 
         integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
             "ControlBrokerClient",
