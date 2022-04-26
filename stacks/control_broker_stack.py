@@ -537,9 +537,9 @@ class ControlBrokerStack(Stack):
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
-            memory_size=10240,  # todo power-tune
+            memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas/opa-eval/python-subprocess/single-threaded"
+                "./supplementary_files/lambdas/write_result_report"
             ),
         )
 
@@ -649,7 +649,6 @@ class ControlBrokerStack(Stack):
                                     "Key.$": "$$.Map.Item.Value",
                                 },
                                 "ConsumerMetadata.$": "$.InvokedByApigw.ControlBrokerConsumerInputs.ConsumerMetadata",
-                                
                             },
                             "Iterator": {
                                 "StartAt": "InvokeInnerEvalEngineSfn",

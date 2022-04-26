@@ -10,3 +10,8 @@ def lambda_handler(event, context):
     
     print(event)
     
+    sfn_exec_id = os.environ.get('OuterEvalEngineSfnExecutionId')
+    
+    print(f'sfn_exec_id:\n{sfn_exec_id}')
+    
+    return True

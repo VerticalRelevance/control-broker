@@ -48,7 +48,7 @@ if app.node.try_get_context("control-broker/post-deployment-testing/enabled"):
         deploy_stage or app,
         f"ControlBrokerTestStack{STACK_VERSION}",
         control_broker_outer_state_machine=control_broker_stack.outer_eval_engine_state_machine,
-        control_broker_roles=control_broker_stack.template_reader_roles,
+        control_broker_roles=control_broker_stack.Input_reader_roles,
         env=env
     )
 if app.node.try_get_context("control-broker/client/enabled"):
@@ -56,7 +56,7 @@ if app.node.try_get_context("control-broker/client/enabled"):
         deploy_stage or app,
         f"ControlBrokerClientStack{STACK_VERSION}",
         control_broker_outer_state_machine=control_broker_stack.outer_eval_engine_state_machine,
-        control_broker_roles=control_broker_stack.template_reader_roles,
+        control_broker_roles=control_broker_stack.Input_reader_roles,
         control_broker_eval_results_bucket=control_broker_stack.eval_results_reports_bucket,
         env=env
     )
