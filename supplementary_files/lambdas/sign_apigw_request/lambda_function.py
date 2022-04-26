@@ -33,8 +33,13 @@ def lambda_handler(event,context):
     
     headers = {'Authorization':'foo'}
     
-    # r = requests.get(full_invoke_url,headers=headers,auth=auth)
-    r = requests.get(full_invoke_url,auth=auth)
+    control_broker_consumer_input = {"foo":"bar"} # FIXME
+    
+    r = requests.post(
+        full_invoke_url,
+        auth = auth,
+        data = control_broker_consumer_input
+    )
     
     print(f'headers:\n{dict(r.request.headers)}')
     
