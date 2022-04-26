@@ -63,7 +63,7 @@ def lambda_handler(event,context):
     
     eval_engine_sfn_input = {
         "InvokedByApigw": post_request_json_body,
-        "ResultReportS3Uri": result_report_s3_path
+        "ResultsReportS3Uri": result_report_s3_path
     }
     
     eval_engine_sfn_execution_arn = async_sfn(
@@ -74,7 +74,7 @@ def lambda_handler(event,context):
     control_broker_request_status = {
         "RequestorIsAuthorized": get_requestor_authorization_status(AuthorizationHeader=authorization_header),
         "EvalEngineHasReadAccessToInputs": get_eval_engine_read_access_to_inputs_status(),
-        "ResultReportS3Uri": result_report_s3_path,
+        "ResultsReportS3Uri": result_report_s3_path,
         "EvalEngineSfnExecutionArn": eval_engine_sfn_execution_arn
     }
     

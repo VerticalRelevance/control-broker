@@ -197,6 +197,25 @@ class ClientStack(Stack):
         'AWS4-HMAC-SHA256 Credential=MY_ACCESS_KEY/20220425/us-east-1/execute-api/aws4_request, SignedHeaders=host;x-amz-date, Signature=MY_SIG',
         
         https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
+        
+        
+        update 4.26.22
+        
+        Decisions made:
+        
+        using AWS_ACCESS_KEY_ID as ResultsReportS3Uri prefix.
+        
+        InProgress:
+        
+        refactoring EvalEngine SFN's to account for new InvokedByApigw input
+        
+        TODO:
+        
+        still yet to test implementation of Bucket Policy IAM Conditions
+        
+        rework GetMetadata in InnerSfn to new model where ControlBrokerConsumerInputs.ConsumerMetadata contains the key to consumerMetadata
+        
+
         """
     
     def consumer_client_task_token(self):
