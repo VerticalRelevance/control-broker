@@ -291,7 +291,7 @@ class ClientStack(Stack):
                     "States": {
                         "SendMessageTaskToken": {
                             "Type": "Task",
-                            "Next": "GetResponseReport",
+                            "Next": "GetResultsReport",
                             "Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
                             "HeartbeatSeconds": 10, #FIXME
                             "Parameters": {
@@ -311,7 +311,7 @@ class ClientStack(Stack):
                                 }
                             },
                         },
-                        "GetResponseReport": {
+                        "GetResultsReport": {
                             "Type":"Succeed"
                         }
                     }
@@ -457,7 +457,7 @@ class ClientStack(Stack):
                     "States": {
                         "SignApigwRequest": {
                             "Type": "Task",
-                            "Next": "CheckResponseReportExists",
+                            "Next": "CheckResultsReportExists",
                             "ResultPath": "$.SignApigwRequest",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
@@ -468,15 +468,15 @@ class ClientStack(Stack):
                                 "Payload.$": "$.Payload"
                             },
                         },
-                        "CheckResponseReportExists": {
+                        "CheckResultsReportExists": {
                             "Type": "Task",
-                            "Next": "ResponseReportExists",
-                            "ResultPath": "$.CheckResponseReportExists",
+                            "Next": "ResultsReportExists",
+                            "ResultPath": "$.CheckResultsReportExists",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
                                 "FunctionName": self.lambda_object_exists.function_name,
                                 "Payload": {
-                                    "S3Uri.$":"$.SignApigwRequest.Payload.ControlBrokerRequestStatus.ResultReportS3Uri"
+                                    "S3Uri.$":"$.SignApigwRequest.Payload.ControlBrokerRequestStatus.ResultsReportS3Uri"
                                 }
                             },
                             "ResultSelector": {
@@ -497,14 +497,14 @@ class ClientStack(Stack):
                                     "ErrorEquals":[
                                         "States.ALL"
                                     ],
-                                    "Next": "ResponseReportDoesNotYetExist"
+                                    "Next": "ResultsReportDoesNotYetExist"
                                 }
                             ]
                         },
-                        "ResponseReportDoesNotYetExist": {
+                        "ResultsReportDoesNotYetExist": {
                             "Type":"Fail"
                         },
-                        "ResponseReportExists": {
+                        "ResultsReportExists": {
                             "Type":"Succeed"
                         }
                     }
