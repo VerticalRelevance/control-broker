@@ -237,7 +237,7 @@ class ControlBrokerStack(Stack):
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/s3-select"),
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/s3_select"),
         )
 
         self.lambda_s3_select.role.add_to_policy(
