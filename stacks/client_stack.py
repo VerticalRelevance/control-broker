@@ -210,9 +210,17 @@ class ClientStack(Stack):
         queue_consumer_client_task_tokens = aws_sqs.Queue(
             self,
             "ConsumerClientTaskTokens",
-            fifo=False
         )
         
+        # s3
+        
+        self.bucket_consumer_inputs = aws_s3.Bucket(
+            self,
+            "ConsumerInputs",
+            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+        )
         
         # sfn
         
@@ -283,11 +291,32 @@ class ClientStack(Stack):
             ),
             definition_string=json.dumps(
                 {
-                    "StartAt": "ParseInput",
+                    "StartAt": "SendMessageTaskToken",
                     "States": {
-                        "ParseInput": {
-                            "Type": "Pass",
-                            "End": True,
+                        "SendMessageTaskToken": {
+                            "Type": "Task",
+                            "Next": "GetResponseReport",
+                            "Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
+                            "HeartbeatSeconds": 10, #FIXME
+                            "Parameters": {
+                                "QueueUrl": queue_consumer_client_task_tokens.queue_url,
+                                "MessageBody": {
+                                    "Message": {
+                                        "ControlBrokerConsumerInputs":{
+                                            "Bucket": self.bucket_consumer_inputs.bucket_name,
+                                            "ConsumerMetadata": "my-consumer-metadata-key",
+                                            "InputKeys":[
+                                                "input-01-key",
+                                                "input-02-key"
+                                            ]
+                                        }
+                                    },
+                                    "TaskToken.$": "$$.Task.Token"
+                                }
+                            },
+                        },
+                        "GetResponseReport": {
+                            "Type":"Succeed"
                         }
                     }
                 }
