@@ -133,3 +133,34 @@ class TestStack(Stack):
                 }
             ),
         )
+
+
+        
+        """
+        TODO.1
+        
+        test that "out-of-the-box" conversion from Config Event -> cloud_control.get_resource() is working
+        
+        for an example ResourceType:
+        
+        compare the Describe__ API response of two resources of that ResourceType:
+        - existingDescribedByConfig
+        - newlyProvisionedPerGetResourceConvertedCloudFormation
+        
+        assert that for each non-read-only property, the API response is the same
+        
+        
+        TODO.2
+        
+        test that "custom" conversion of resource that cloudformation.describe_type() lists as NON_PROVISIONABLE is working
+        
+        for an example ResourceType:
+        
+        compare the Describe__ API response of two resources of that ResourceType:
+        - existingDescribedByConfig
+        - newlyProvisionedPerDescribeTypeConvertedCloudFormation
+        
+        assert that for each non-read-only property, the API response is the same
+        
+        
+        """
