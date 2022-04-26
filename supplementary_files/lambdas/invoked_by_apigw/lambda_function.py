@@ -1,8 +1,10 @@
 import json
+import os
 
 import boto3
 from botocore.exceptions import ClientError
 
+sfn = boto3.client('stepfunctions')
 
 def get_result_report_s3_uri(*,AuthHeader):
     return 's3://cschneider-terraform-backend/foo.json'
@@ -16,8 +18,22 @@ def get_eval_engine_read_access_to_inputs_status():
     return True
     #TODO
 
+def async_sfn(*, SfnArn, Input: dict):
+    try:
+        r = sfn.start_execution(stateMachineArn=SfnArn, input=json.dumps(Input))
+    except ClientError as e:
+        print(f"ClientError\n{e}")
+        raise
+    else:
+        return r["executionArn"]
+
+
 def lambda_handler(event,context):
+    
     print(event)
+    
+    eval_engine_sfn_arn = os.environ.get('ControlBrokerOuterSfnArn')
+    print(f'eval_engine_sfn_arn:\n{eval_engine_sfn_arn}')
     
     headers = event.get('headers')
     

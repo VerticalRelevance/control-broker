@@ -46,6 +46,8 @@ class ClientStack(Stack):
         """
         super().__init__(*args, **kwargs)
     
+        self.control_broker_outer_state_machine = control_broker_outer_state_machine
+    
         self.apigw()
         # self.consumer_client_task_token() # outer consumer sfn would have to be standard, can't be express endpoint and support waitForTaskToken
         self.consumer_client_retry()
@@ -97,6 +99,9 @@ class ClientStack(Stack):
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/lambdas/invoked_by_apigw"
             ),
+            environment = {
+                "ControlBrokerOuterSfnArn" : self.control_broker_outer_state_machine.state_machine_arn
+            }
         )
 
         integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
@@ -117,7 +122,7 @@ class ClientStack(Stack):
         routes = self.http_api.add_routes(
             path=self.path,
             methods=[
-                aws_apigatewayv2_alpha.HttpMethod.GET
+                aws_apigatewayv2_alpha.HttpMethod.POST
             ],
             integration=integration,
             authorizer=authorizer_lambda
@@ -304,7 +309,7 @@ class ClientStack(Stack):
     
     def consumer_client_retry(self):
         
-        # lambda
+        # object exists
         
         self.lambda_object_exists = aws_lambda.Function(
             self,
@@ -331,6 +336,8 @@ class ClientStack(Stack):
                 ],
             )
         )
+        
+        # sign apigw request
 
         layer_requests = aws_lambda.LayerVersion.from_layer_version_arn(
             self,
@@ -361,25 +368,6 @@ class ClientStack(Stack):
             environment = {
                 "ApigwInvokeUrl" : self.apigw_full_invoke_url
             }
-        )
-        
-        # self.lambda_sign_apigw_request.role.add_to_policy(
-        #     aws_iam.PolicyStatement(
-        #         actions=[
-        #         ],
-        #         resources=[
-        #         ],
-        #     )
-        # )
-        
-        # s3
-        
-        self.bucket_consumer_inputs = aws_s3.Bucket(
-            self,
-            "ConsumerInputs",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
-            removal_policy=RemovalPolicy.DESTROY,
-            auto_delete_objects=True,
         )
         
         # sfn
@@ -486,7 +474,7 @@ class ClientStack(Stack):
                                         "ObjectDoesNotExistException"
                                     ],
                                     "IntervalSeconds": 1,
-                                    "MaxAttempts": 6,
+                                    "MaxAttempts": 3,
                                     "BackoffRate": 2.0
                                 }
                             ],
