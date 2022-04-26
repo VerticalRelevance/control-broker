@@ -10,6 +10,7 @@ from aws_cdk import (
     aws_config,
     aws_dynamodb,
     aws_s3,
+    aws_sqs,
     aws_s3_deployment,
     aws_lambda,
     aws_stepfunctions,
@@ -45,10 +46,10 @@ class ClientStack(Stack):
         """
         super().__init__(*args, **kwargs)
     
-        self.main()
+        self.apigw()
+        self.consumer_client()
     
-    def main(self):
-    
+    def apigw(self):
         
         # Objective 1.0: enumerate credentials/awsID of requestor that client is aware of of
         
@@ -201,3 +202,98 @@ class ClientStack(Stack):
         
         https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
         """
+    
+    def consumer_client(self):
+        
+        # sqs
+        
+        queue_consumer_client_task_tokens = aws_sqs.Queue(
+            self,
+            "ConsumerClientTaskTokens",
+            fifo=False
+        )
+        
+        
+        # sfn
+        
+        log_group_consumer_client_sfn = aws_logs.LogGroup(
+            self,
+            "ConsumerClientLogs",
+            log_group_name=f"/aws/vendedlogs/states/ConsumerClientLogs-{self.stack_name}",
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
+        self.role_consumer_client_sfn = aws_iam.Role(
+            self,
+            "ConsumerClientSfn",
+            assumed_by=aws_iam.ServicePrincipal("states.amazonaws.com"),
+        )
+
+        self.role_consumer_client_sfn.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    # "logs:*",
+                    "logs:CreateLogDelivery",
+                    "logs:GetLogDelivery",
+                    "logs:UpdateLogDelivery",
+                    "logs:DeleteLogDelivery",
+                    "logs:ListLogDeliveries",
+                    "logs:PutResourcePolicy",
+                    "logs:DescribeResourcePolicies",
+                    "logs:DescribeLogGroups",
+                ],
+                resources=[
+                    "*",
+                    log_group_consumer_client_sfn.log_group_arn,
+                    f"{log_group_consumer_client_sfn.log_group_arn}*",
+                ],
+            )
+        )
+        self.role_consumer_client_sfn.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "sqs:SendMessage",
+                ],
+                resources=[
+                    "*",
+                    queue_consumer_client_task_tokens.queue_arn,
+                    f"{queue_consumer_client_task_tokens.queue_arn}*",
+                ],
+            )
+        )
+
+        self.sfn_consumer_client = aws_stepfunctions.CfnStateMachine(
+            self,
+            "ConsumerClient",
+            # state_machine_type="EXPRESS",
+            state_machine_type="STANDARD",
+            role_arn=self.role_consumer_client_sfn.role_arn,
+            logging_configuration=aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
+                destinations=[
+                    aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
+                        cloud_watch_logs_log_group=aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
+                            log_group_arn=log_group_consumer_client_sfn.log_group_arn
+                        )
+                    )
+                ],
+                # include_execution_data=False,
+                # level="ALL"
+                include_execution_data=True,
+                level="ERROR",
+            ),
+            definition_string=json.dumps(
+                {
+                    "StartAt": "ParseInput",
+                    "States": {
+                        "ParseInput": {
+                            "Type": "Pass",
+                            "End": True,
+                        }
+                    }
+                }
+            )
+        )
+        
+        self.sfn_consumer_client.node.add_dependency(self.role_consumer_client_sfn)
+
+        
