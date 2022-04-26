@@ -468,7 +468,7 @@ class ClientStack(Stack):
                         },
                         "CheckResponseReportExists": {
                             "Type": "Task",
-                            "End": True,
+                            "Next": "ResponseReportExists",
                             "ResultPath": "$.CheckResponseReportExists",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
@@ -489,7 +489,21 @@ class ClientStack(Stack):
                                     "MaxAttempts": 6,
                                     "BackoffRate": 2.0
                                 }
+                            ],
+                            "Catch": [
+                                {
+                                    "ErrorEquals":[
+                                        "States.ALL"
+                                    ],
+                                    "Next": "ResponseReportDoesNotYetExist"
+                                }
                             ]
+                        },
+                        "ResponseReportDoesNotYetExist": {
+                            "Type":"Fail"
+                        },
+                        "ResponseReportExists": {
+                            "Type":"Succeed"
                         }
                     }
                 }
