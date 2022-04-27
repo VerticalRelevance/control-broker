@@ -70,6 +70,8 @@ Try launching one of the [Example use cases]()!
 
 # Setup
 
+## install cdk experimental modules
+
 pip install aws_cdk.aws_apigatewayv2_alpha
 pip install aws_cdk.aws_apigatewayv2_integrations_alpha
 pip install aws_cdk.aws_apigatewayv2_authorizers_alpha
