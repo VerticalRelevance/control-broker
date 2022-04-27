@@ -27,6 +27,7 @@ def put_object(*,S3Uri,Dict):
         print(f'ClientError:\n{e}')
         raise
     else:
+        print(f'no ClientError s3.put_object()\nS3Uri:\n{S3Uri}')
         return True
 
 def simple_pk_query(*,
