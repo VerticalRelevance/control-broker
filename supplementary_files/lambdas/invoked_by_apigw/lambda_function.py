@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import uuid
 
 import boto3
 from botocore.exceptions import ClientError
@@ -11,13 +12,17 @@ sfn = boto3.client('stepfunctions')
 def extract_acces_key_id(*,Aws4Authorization):
     m = re.search('AWS4-HMAC-SHA256 Credential=(\w*)/.*',Aws4Authorization)
     return m.group(1)
+    
+def generate_uuid():
+    return str(uuid.uuid4())
+    
+def get_result_report_s3_uri(*,EvalResultsReportsBucket):
+    
+    uuid = generate_uuid()
 
-def get_result_report_s3_uri(*,EvalResultsReportsBucket,AuthorizationHeader):
+    s3_uri = f's3://{EvalResultsReportsBucket}/cb-{uuid}'
     
-    access_key_id = extract_acces_key_id(Aws4Authorization=AuthorizationHeader)
-    
-    result_report_s3_uri = f's3://{EvalResultsReportsBucket}/{access_key_id}/response.json'
-    return result_report_s3_uri
+    return s3_uri
 
 def get_requestor_authorization_status(*,AuthorizationHeader):
     return True
@@ -57,8 +62,7 @@ def lambda_handler(event,context):
     print(f'authorization_header:\n{authorization_header}')
     
     result_report_s3_path = get_result_report_s3_uri(
-        EvalResultsReportsBucket = eval_results_reports_bucket,
-        AuthorizationHeader = authorization_header
+        EvalResultsReportsBucket = eval_results_reports_bucket
     )
     
     eval_engine_sfn_input = {
