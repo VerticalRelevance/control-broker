@@ -36,7 +36,7 @@ def lambda_handler(event,context):
     
     # headers = {'Authorization':'foo'}
     
-    control_broker_consumer_input = {"foo":"bar"} # FIXME
+    control_broker_consumer_input = event
     
     r = requests.post(
         full_invoke_url,

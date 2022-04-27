@@ -541,6 +541,9 @@ class ControlBrokerStack(Stack):
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/lambdas/write_result_report"
             ),
+            environment = {
+                "EvalResultsTable": self.table_eval_results.table_name
+            }
         )
 
         self.lambda_write_result_report.role.add_to_policy(
