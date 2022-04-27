@@ -4,7 +4,7 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 
-ddb = boto3.resource('dynamodb')
+ddb = boto3.client('dynamodb')
 
 def simple_pk_query(*,
     Table,
@@ -23,6 +23,8 @@ def simple_pk_query(*,
     except ClientError as e:
         raise
     else:
+        print(f'no ClientError ddb.query()\nTable:\n{Table}\nPk:\n{Pk}')
+        print(r)
         items = r['Items']
         print(items)
         return items
@@ -31,7 +33,7 @@ def lambda_handler(event, context):
     
     print(event)
     
-    sfn_exec_id = os.environ.get('OuterEvalEngineSfnExecutionId')
+    sfn_exec_id = event['OuterEvalEngineSfnExecutionId']
     
     print(f'sfn_exec_id:\n{sfn_exec_id}')
     
@@ -41,7 +43,7 @@ def lambda_handler(event, context):
     
     items = simple_pk_query(
         Table = eval_results_table,
-        Pk = eval_results_table
+        Pk = sfn_exec_id
     )
     
     return True

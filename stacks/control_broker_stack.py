@@ -406,9 +406,9 @@ class ControlBrokerStack(Stack):
                     )
                 ],
                 # include_execution_data=False,
-                # level="ALL"
+                # level="ERROR",
                 include_execution_data=True,
-                level="ERROR",
+                level="ALL"
             ),
             definition_string=json.dumps(
                 {
@@ -600,6 +600,14 @@ class ControlBrokerStack(Stack):
                     "states:StartSyncExecution",
                 ],
                 resources=[self.sfn_inner_eval_engine.attr_arn],
+            )
+        )
+        role_outer_eval_engine_sfn.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "lambda:InvokeFunction",
+                ],
+                resources=[self.lambda_write_result_report.function_arn],
             )
         )
         role_outer_eval_engine_sfn.add_to_policy(
