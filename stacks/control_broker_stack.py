@@ -730,7 +730,7 @@ class ControlBrokerStack(Stack):
                                 "FunctionName": self.lambda_write_results_report.function_name,
                                 "Payload": {
                                     "OuterEvalEngineSfnExecutionId.$": "$$.Execution.Id",
-                                    "ResultsReportS3Uri.$":"$.InvokedByApigw.ResultsReportS3Uri"
+                                    "ResultsReportS3Uri.$":"$.ResultsReportS3Uri"
                                 }
                             },
                             "ResultSelector": {"Payload.$": "$.Payload"},
