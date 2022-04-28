@@ -7,6 +7,7 @@ from aws_cdk import (
     Stack,
     RemovalPolicy,
     CfnOutput,
+    Runtime,
     aws_config,
     aws_dynamodb,
     aws_s3,
@@ -21,6 +22,7 @@ from aws_cdk import (
     aws_apigatewayv2_alpha, # experimental as of 4.25.22
     aws_apigatewayv2_integrations_alpha, # experimental as of 4.25.22
     aws_apigatewayv2_authorizers_alpha, # experimental as of 4.25.22
+    aws_lambda_python_alpha, # experimental as of 4.25.22
 )
 from constructs import Construct
 
@@ -173,11 +175,22 @@ class ClientStack(Stack):
         
         # sign apigw request
 
+        aws_lambda_python_alpha.PythonFunction(
+            self,
+            "SignApigwRequestVAlpha",
+            entry="./supplementary_files/lambdas/sign_apigw_request"
+            runtime=Runtime.PYTHON_3_9,
+            index="lambda_function.py",
+            handler="lambda_handler"
+        )
+
+
+
         layer_requests = aws_lambda.LayerVersion.from_layer_version_arn(
             self,
             "Requests",
             "arn:aws:lambda:us-east-1:899456967600:layer:requests:1" # built via CodeCommit/cschneider-utils/lambda/utils/layer-builder.sh
-        ) # TODO refactor to use https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_lambda_python_alpha/README.html#custom-bundling-with-code-artifact
+        ) # TODO refactor to use https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_lambda_python_alpha/README.html
         
         layer_aws_requests_auth = aws_lambda.LayerVersion.from_layer_version_arn(
             self,
