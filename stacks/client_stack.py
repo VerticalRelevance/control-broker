@@ -79,6 +79,7 @@ class ClientStack(Stack):
             results_cache_ttl = Duration.seconds(0),
             identity_source = [
                 "$request.header.Authorization", # Authorization my be present in headers or 401, e.g. r = requests.post(url,auth = auth, ...)
+            ]
         )
         
         # auth - iam
