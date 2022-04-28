@@ -78,9 +78,7 @@ class ClientStack(Stack):
             response_types=[aws_apigatewayv2_authorizers_alpha.HttpLambdaResponseType.SIMPLE],
             results_cache_ttl = Duration.seconds(0),
             identity_source = [
-                "$request.header.Authorization", # request must match or 401: requests.get(invoke_url,headers={'Authorization':'foo'})
-                # "$context.identity.principalOrgId",
-            ]
+                "$request.header.Authorization", # Authorization my be present in headers or 401, e.g. r = requests.post(url,auth = auth, ...)
         )
         
         # auth - iam
@@ -141,7 +139,7 @@ class ClientStack(Stack):
             # authorizer=authorizer_iam
         )
         
-        self.apigw_full_invoke_url = f'{self.http_api.url}{self.path}'
+        self.apigw_full_invoke_url = f'{self.http_api.url[:-1]}{self.path}' # remove duplicate slash
         
         CfnOutput(self, "ApigwInvokeUrl", value=self.apigw_full_invoke_url)
 
