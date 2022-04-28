@@ -142,6 +142,8 @@ class ClientStack(Stack):
         
         self.apigw_full_invoke_url = f'{self.http_api.url}{self.path}'
         
+        CfnOutput(self, "ApigwInvokeUrl", value=self.apigw_full_invoke_url)
+
     def consumer_client_retry(self):
         
         # object exists
@@ -176,7 +178,7 @@ class ClientStack(Stack):
 
         self.lambda_sign_apigw_request = aws_lambda_python_alpha.PythonFunction(
             self,
-            "SignApigwRequestVAlpha",
+            "SignApigwRequest",
             entry="./supplementary_files/lambdas/sign_apigw_request",
             runtime= aws_lambda.Runtime.PYTHON_3_9,
             index="lambda_function.py",
