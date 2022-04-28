@@ -364,8 +364,8 @@ class ClientStack(Stack):
                     "s3:List*",
                 ],
                 resources=[
-                    # "*",
-                    "arn:aws:s3:::cschneider-terraform-backend/*" # test
+                    self.control_broker_eval_results_bucket.bucket_arn,
+                    f"{self.control_broker_eval_results_bucket.bucket_arn}*"
                 ],
             )
         )
@@ -466,9 +466,9 @@ class ClientStack(Stack):
                     )
                 ],
                 # include_execution_data=False,
-                # level="ALL"
+                # level="ERROR",
                 include_execution_data=True,
-                level="ERROR",
+                level="ALL"
             ),
             definition_string=json.dumps(
                 {
@@ -507,7 +507,7 @@ class ClientStack(Stack):
                                         "ObjectDoesNotExistException"
                                     ],
                                     "IntervalSeconds": 1,
-                                    "MaxAttempts": 3,
+                                    "MaxAttempts": 6,
                                     "BackoffRate": 2.0
                                 }
                             ],
