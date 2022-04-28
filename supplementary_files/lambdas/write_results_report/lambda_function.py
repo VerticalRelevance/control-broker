@@ -58,8 +58,8 @@ def simple_pk_query(*,
         
         return items
 
-def determine_compliance(*,EvalItems):
-    return not bool(EvalItems)
+def determine_compliance(*,InfractionItems):
+    return not bool(InfractionItems)
 
 def lambda_handler(event, context):
     
@@ -73,7 +73,7 @@ def lambda_handler(event, context):
     
     print(f'eval_results_table:\n{eval_results_table}')
     
-    eval_items = simple_pk_query(
+    infraction_items = simple_pk_query(
         Table = eval_results_table,
         Pk = sfn_exec_id
     )
@@ -90,8 +90,8 @@ def lambda_handler(event, context):
                 }
             },
             "Evaluation": {
-                "IsCompliant" : determine_compliance(EvalItems=eval_items),
-                "EvaluationItems" : eval_items
+                "IsCompliant" : determine_compliance(InfractionItems=infraction_items),
+                "InfractionItems" : infraction_items
             }
         }
     }
