@@ -403,6 +403,33 @@ class ClientStack(Stack):
             }
         )
         
+        # s3 select
+        
+        self.lambda_s3_select = aws_lambda.Function(
+            self,
+            "S3Select",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/s3_select"),
+        )
+
+        self.lambda_s3_select.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:HeadObject",
+                    "s3:GetObject",
+                    "s3:List*",
+                    "s3:SelectObjectContent",
+                ],
+                resources=[
+                    self.control_broker_eval_results_bucket.bucket_arn,
+                    f"{self.control_broker_eval_results_bucket.bucket_arn}/*",
+                ],
+            )
+        )
+        
         # sfn
         
         log_group_consumer_client_sfn = aws_logs.LogGroup(
@@ -446,7 +473,8 @@ class ClientStack(Stack):
                 ],
                 resources=[
                     self.lambda_sign_apigw_request.function_arn,
-                    self.lambda_object_exists.function_arn
+                    self.lambda_object_exists.function_arn,
+                    self.lambda_s3_select
                 ],
             )
         )
@@ -489,7 +517,7 @@ class ClientStack(Stack):
                         },
                         "CheckResultsReportExists": {
                             "Type": "Task",
-                            "Next": "ResultsReportExists",
+                            "Next": "GetResultsReportIsAllowedBoolean",
                             "ResultPath": "$.CheckResultsReportExists",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
@@ -523,9 +551,20 @@ class ClientStack(Stack):
                         "ResultsReportDoesNotYetExist": {
                             "Type":"Fail"
                         },
-                        "ResultsReportExists": {
-                            "Type":"Succeed"
-                        }
+                        "GetResultsReportIsAllowedBoolean": {
+                            "Type": "Task",
+                            "End": True,
+                            "ResultPath": "$.GetResultsReportIsAllowedBoolean",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Parameters": {
+                                "FunctionName": self.lambda_s3_select.function_name,
+                                "Payload": {
+                                    "S3Uri.$":"$.SignApigwRequest.Payload.ControlBrokerRequestStatus.ResultsReportS3Uri",
+                                    "Expression": "SELECT * from S3Object s",
+                                },
+                            },
+                            "ResultSelector": {"Metadata.$": "$.Payload.Selected"},
+                        },
                     }
                 }
             )
