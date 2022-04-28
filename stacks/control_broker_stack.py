@@ -184,14 +184,6 @@ class ControlBrokerStack(Stack):
 
     def s3_deploy_local_assets(self):
 
-        # CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneSSH",
-        #     value = self.repo_app_team_cdk.repository_clone_url_ssh
-        # )
-
-        # CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneHTTP",
-        #     value = self.repo_app_team_cdk.repository_clone_url_http
-        # )
-
         # pipeline ownership metadata
 
         self.bucket_pipeline_ownership_metadata = aws_s3.Bucket(
@@ -246,7 +238,7 @@ class ControlBrokerStack(Stack):
             timeout=Duration.seconds(60),
             memory_size=10240,  # todo power-tune
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas/opa-eval/python-subprocess/single-threaded"
+                "./supplementary_files/lambdas/opa_eval/python_subprocess"
             ),
         )
 
