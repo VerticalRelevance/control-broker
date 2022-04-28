@@ -32,8 +32,6 @@ def lambda_handler(event,context):
     
     print(f'BotoAWSRequestsAuth:\n{auth}')
     
-    # headers = {'Authorization':'foo'}
-    
     control_broker_consumer_input = event
     
     r = requests.post(
