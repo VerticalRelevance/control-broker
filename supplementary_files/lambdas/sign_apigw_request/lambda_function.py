@@ -20,8 +20,6 @@ def lambda_handler(event,context):
     
     print(f'event:\n{event}\ncontext:\n{context}')
     
-    print(f'AWS_ACCESS_KEY_ID:\n{os.environ.get("AWS_ACCESS_KEY_ID")}')
-
     full_invoke_url = os.environ.get('ApigwInvokeUrl')
     
     host = get_host(FullInvokeUrl=full_invoke_url)
@@ -36,7 +34,7 @@ def lambda_handler(event,context):
     
     # headers = {'Authorization':'foo'}
     
-    control_broker_consumer_input = {"foo":"bar"} # FIXME
+    control_broker_consumer_input = event
     
     r = requests.post(
         full_invoke_url,

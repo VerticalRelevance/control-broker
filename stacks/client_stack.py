@@ -21,6 +21,7 @@ from aws_cdk import (
     aws_apigatewayv2_alpha, # experimental as of 4.25.22
     aws_apigatewayv2_integrations_alpha, # experimental as of 4.25.22
     aws_apigatewayv2_authorizers_alpha, # experimental as of 4.25.22
+    aws_lambda_python_alpha, # experimental as of 4.25.22
 )
 from constructs import Construct
 
@@ -51,13 +52,9 @@ class ClientStack(Stack):
         self.control_broker_eval_results_bucket = control_broker_eval_results_bucket
     
         self.apigw()
-        # self.consumer_client_task_token() # outer consumer sfn would have to be standard, can't be express endpoint and support waitForTaskToken
         self.consumer_client_retry()
         
     def apigw(self):
-        
-        # Objective 1.0: enumerate credentials/awsID of requestor that client is aware of of
-        
         
         # auth - lambda
         
@@ -145,201 +142,6 @@ class ClientStack(Stack):
         
         self.apigw_full_invoke_url = f'{self.http_api.url}{self.path}'
         
-        
-        """
-        Eval Engine Client Layer
-        update 4.25.22
-        
-        
-        objective:
-        
-        manage access control to
-        
-        
-        input:
-        
-        1+ synthedTemplates
-        BucketOwnedBy: Requestor
-        AccessGrantedTo: EvalEngine
-        AccessType: Read
-        
-        output:
-        
-        1 evaluationReport
-        BucketOwnedBy: EvalEngine
-        AccessGrantedTo: Requestor
-        AccessType: Read
-        
-        
-        desired method:
-        
-        
-        ReportRequestor awsID is received by EvalEngine.
-        EvalEngine writes the evaluationReport to S3 with key:
-        my-requestor-id.report.json
-        
-        ReportRequestor make the getObject request as signed by that same awsID 
-        
-        The dynamic bucket policy uses IAM Conditions to compare requestor's awsID to the key,
-        ensuring that they can only request their own report.
-        https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-principalarn
-        
-        
-        progress so far:
-        
-        
-        this `aws-requests-auth` package (https://github.com/DavidMuller/aws-requests-auth)
-        uses boto3 creds to sign Python `requests` request
-        
-        when this is done, both the customAuth Lambda and InvokedByApigw have access to a string in
-        the identity source and authorization header with the following format per these docs
-        
-        'AWS4-HMAC-SHA256 Credential=MY_ACCESS_KEY/20220425/us-east-1/execute-api/aws4_request, SignedHeaders=host;x-amz-date, Signature=MY_SIG',
-        
-        https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
-        
-        
-        update 4.26.22
-        
-        Decisions made:
-        
-        using AWS_ACCESS_KEY_ID as ResultsReportS3Uri prefix.
-        
-        InProgress:
-        
-        refactoring EvalEngine SFN's to account for new InvokedByApigw input
-        
-        TODO:
-        
-        still yet to test implementation of Bucket Policy IAM Conditions
-        
-        rework GetMetadata in InnerSfn to new model where ControlBrokerConsumerInputs.ConsumerMetadata contains the key to consumerMetadata
-        
-
-        """
-    
-    def consumer_client_task_token(self):
-        
-        # sqs
-        
-        queue_consumer_client_task_tokens = aws_sqs.Queue(
-            self,
-            "ConsumerClientTaskTokens",
-        )
-        
-        # s3
-        
-        self.bucket_consumer_inputs = aws_s3.Bucket(
-            self,
-            "ConsumerInputs",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
-            removal_policy=RemovalPolicy.DESTROY,
-            auto_delete_objects=True,
-        )
-        
-        # sfn
-        
-        log_group_consumer_client_sfn = aws_logs.LogGroup(
-            self,
-            "ConsumerClientLogs",
-            log_group_name=f"/aws/vendedlogs/states/ConsumerClientLogs-{self.stack_name}",
-            removal_policy=RemovalPolicy.DESTROY,
-        )
-
-        self.role_consumer_client_sfn = aws_iam.Role(
-            self,
-            "ConsumerClientSfn",
-            assumed_by=aws_iam.ServicePrincipal("states.amazonaws.com"),
-        )
-
-        self.role_consumer_client_sfn.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    # "logs:*",
-                    "logs:CreateLogDelivery",
-                    "logs:GetLogDelivery",
-                    "logs:UpdateLogDelivery",
-                    "logs:DeleteLogDelivery",
-                    "logs:ListLogDeliveries",
-                    "logs:PutResourcePolicy",
-                    "logs:DescribeResourcePolicies",
-                    "logs:DescribeLogGroups",
-                ],
-                resources=[
-                    "*",
-                    log_group_consumer_client_sfn.log_group_arn,
-                    f"{log_group_consumer_client_sfn.log_group_arn}*",
-                ],
-            )
-        )
-        self.role_consumer_client_sfn.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    "sqs:SendMessage",
-                ],
-                resources=[
-                    "*",
-                    queue_consumer_client_task_tokens.queue_arn,
-                    f"{queue_consumer_client_task_tokens.queue_arn}*",
-                ],
-            )
-        )
-
-        self.sfn_consumer_client = aws_stepfunctions.CfnStateMachine(
-            self,
-            "ConsumerClient",
-            # state_machine_type="EXPRESS",
-            state_machine_type="STANDARD",
-            role_arn=self.role_consumer_client_sfn.role_arn,
-            logging_configuration=aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
-                destinations=[
-                    aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
-                        cloud_watch_logs_log_group=aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
-                            log_group_arn=log_group_consumer_client_sfn.log_group_arn
-                        )
-                    )
-                ],
-                # include_execution_data=False,
-                # level="ALL"
-                include_execution_data=True,
-                level="ERROR",
-            ),
-            definition_string=json.dumps(
-                {
-                    "StartAt": "SendMessageTaskToken",
-                    "States": {
-                        "SendMessageTaskToken": {
-                            "Type": "Task",
-                            "Next": "GetResultsReport",
-                            "Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
-                            "HeartbeatSeconds": 10, #FIXME
-                            "Parameters": {
-                                "QueueUrl": queue_consumer_client_task_tokens.queue_url,
-                                "MessageBody": {
-                                    "Message": {
-                                        "ControlBrokerConsumerInputs":{
-                                            "Bucket": self.bucket_consumer_inputs.bucket_name,
-                                            "ConsumerMetadata": "my-consumer-metadata-key",
-                                            "InputKeys":[
-                                                "input-01-key",
-                                                "input-02-key"
-                                            ]
-                                        }
-                                    },
-                                    "TaskToken.$": "$$.Task.Token"
-                                }
-                            },
-                        },
-                        "GetResultsReport": {
-                            "Type":"Succeed"
-                        }
-                    }
-                }
-            )
-        )
-        
-        self.sfn_consumer_client.node.add_dependency(self.role_consumer_client_sfn)
-    
     def consumer_client_retry(self):
         
         # object exists
@@ -364,43 +166,70 @@ class ClientStack(Stack):
                     "s3:List*",
                 ],
                 resources=[
-                    # "*",
-                    "arn:aws:s3:::cschneider-terraform-backend/*" # test
+                    self.control_broker_eval_results_bucket.bucket_arn,
+                    f"{self.control_broker_eval_results_bucket.bucket_arn}*"
                 ],
             )
         )
         
         # sign apigw request
 
-        layer_requests = aws_lambda.LayerVersion.from_layer_version_arn(
+        self.lambda_sign_apigw_request = aws_lambda_python_alpha.PythonFunction(
             self,
-            "Requests",
-            "arn:aws:lambda:us-east-1:899456967600:layer:requests:1" # built via CodeCommit/cschneider-utils/lambda/utils/layer-builder.sh
+            "SignApigwRequestVAlpha",
+            entry="./supplementary_files/lambdas/sign_apigw_request",
+            runtime= aws_lambda.Runtime.PYTHON_3_9,
+            index="lambda_function.py",
+            handler="lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            environment = {
+                "ApigwInvokeUrl" : self.apigw_full_invoke_url
+            },
+            layers=[
+                aws_lambda_python_alpha.PythonLayerVersion(
+                    self,
+                    "aws_requests_auth",
+                    entry="./supplementary_files/lambda_layers/aws_requests_auth",
+                    compatible_runtimes=[
+                        aws_lambda.Runtime.PYTHON_3_9
+                    ]
+                ),
+                aws_lambda_python_alpha.PythonLayerVersion(self,
+                    "requests",
+                    entry="./supplementary_files/lambda_layers/requests",
+                    compatible_runtimes=[
+                        aws_lambda.Runtime.PYTHON_3_9
+                    ]
+                ),
+            ]
         )
         
-        layer_aws_requests_auth = aws_lambda.LayerVersion.from_layer_version_arn(
-            self,
-            "AwsRequestsAuth",
-            "arn:aws:lambda:us-east-1:899456967600:layer:aws-requests-auth:1" # built via CodeCommit/cschneider-utils/lambda/utils/layer-builder.sh
-        )
+        # s3 select
         
-        self.lambda_sign_apigw_request = aws_lambda.Function(
+        self.lambda_s3_select = aws_lambda.Function(
             self,
-            "SignApigwRequest",
+            "S3Select",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
-            code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas/sign_apigw_request"
-            ),
-            layers = [
-                layer_requests,
-                layer_aws_requests_auth
-            ],
-            environment = {
-                "ApigwInvokeUrl" : self.apigw_full_invoke_url
-            }
+            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/s3_select"),
+        )
+
+        self.lambda_s3_select.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:HeadObject",
+                    "s3:GetObject",
+                    "s3:List*",
+                    "s3:SelectObjectContent",
+                ],
+                resources=[
+                    self.control_broker_eval_results_bucket.bucket_arn,
+                    f"{self.control_broker_eval_results_bucket.bucket_arn}/*",
+                ],
+            )
         )
         
         # sfn
@@ -446,7 +275,8 @@ class ClientStack(Stack):
                 ],
                 resources=[
                     self.lambda_sign_apigw_request.function_arn,
-                    self.lambda_object_exists.function_arn
+                    self.lambda_object_exists.function_arn,
+                    self.lambda_s3_select.function_arn
                 ],
             )
         )
@@ -466,9 +296,9 @@ class ClientStack(Stack):
                     )
                 ],
                 # include_execution_data=False,
-                # level="ALL"
+                # level="ERROR",
                 include_execution_data=True,
-                level="ERROR",
+                level="ALL"
             ),
             definition_string=json.dumps(
                 {
@@ -489,7 +319,7 @@ class ClientStack(Stack):
                         },
                         "CheckResultsReportExists": {
                             "Type": "Task",
-                            "Next": "ResultsReportExists",
+                            "Next": "GetResultsReportIsCompliantBoolean",
                             "ResultPath": "$.CheckResultsReportExists",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
@@ -507,7 +337,7 @@ class ClientStack(Stack):
                                         "ObjectDoesNotExistException"
                                     ],
                                     "IntervalSeconds": 1,
-                                    "MaxAttempts": 3,
+                                    "MaxAttempts": 6,
                                     "BackoffRate": 2.0
                                 }
                             ],
@@ -523,8 +353,36 @@ class ClientStack(Stack):
                         "ResultsReportDoesNotYetExist": {
                             "Type":"Fail"
                         },
-                        "ResultsReportExists": {
+                        "GetResultsReportIsCompliantBoolean": {
+                            "Type": "Task",
+                            "Next": "ChoiceIsComplaint",
+                            "ResultPath": "$.GetResultsReportIsCompliantBoolean",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Parameters": {
+                                "FunctionName": self.lambda_s3_select.function_name,
+                                "Payload": {
+                                    "S3Uri.$":"$.SignApigwRequest.Payload.ControlBrokerRequestStatus.ResultsReportS3Uri",
+                                    "Expression": "SELECT * from S3Object s",
+                                },
+                            },
+                            "ResultSelector": {"S3SelectResult.$": "$.Payload.Selected"},
+                        },
+                        "ChoiceIsComplaint": {
+                            "Type":"Choice",
+                            "Default":"CompliantFalse",
+                            "Choices":[
+                                {
+                                    "Variable":"$.GetResultsReportIsCompliantBoolean.S3SelectResult.ControlBrokerResultsReport.Evaluation.IsCompliant",
+                                    "BooleanEquals":True,
+                                    "Next":"CompliantTrue"
+                                }
+                            ]
+                        },
+                        "CompliantTrue": {
                             "Type":"Succeed"
+                        },
+                        "CompliantFalse": {
+                            "Type":"Fail"
                         }
                     }
                 }

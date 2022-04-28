@@ -159,6 +159,28 @@ class ControlBrokerStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
         )
+        
+        # self.bucket_eval_results_reports.add_to_resource_policy(
+        #     aws_iam.PolicyStatement(
+        #         principals=[
+        #             aws_iam.AnyPrincipal()
+        #         ],
+        #         actions=[
+        #             "s3:GetObject",
+        #             "s3:ListBucket",
+        #         ],
+        #         resources=["*"],
+        #         # conditions= [
+        #         #     {
+        #         #         "StringEquals": {
+        #         #             "aws:PrincipalOrgID": [
+        #         #                 aws_iam.OrganizationPrincipal.organization_id
+        #         #             ]
+        #         #         }
+        #         #     }
+        #         # ]
+        #     )
+        # )
 
     def s3_deploy_local_assets(self):
 
@@ -406,9 +428,9 @@ class ControlBrokerStack(Stack):
                     )
                 ],
                 # include_execution_data=False,
-                # level="ALL"
+                # level="ERROR",
                 include_execution_data=True,
-                level="ERROR",
+                level="ALL"
             ),
             definition_string=json.dumps(
                 {
@@ -529,21 +551,24 @@ class ControlBrokerStack(Stack):
 
     def deploy_outer_sfn_lambdas(self):
         
-        # write result reports
+        # write results report
 
-        self.lambda_write_result_report = aws_lambda.Function(
+        self.lambda_write_results_report = aws_lambda.Function(
             self,
-            "WriteResultReport",
+            "WriteResultsReport",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas/write_result_report"
+                "./supplementary_files/lambdas/write_results_report"
             ),
+            environment = {
+                "EvalResultsTable": self.table_eval_results.table_name
+            }
         )
 
-        self.lambda_write_result_report.role.add_to_policy(
+        self.lambda_write_results_report.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "dynamodb:Query",
@@ -551,6 +576,26 @@ class ControlBrokerStack(Stack):
                 resources=[
                     self.table_eval_results.table_arn,
                     f"{self.table_eval_results.table_arn}*",
+                ],
+            )
+        )
+        self.lambda_write_results_report.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:List*",
+                ],
+                resources=[
+                    self.bucket_eval_results_reports.bucket_arn
+                ],
+            )
+        )
+        self.lambda_write_results_report.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                ],
+                resources=[
+                    f"{self.bucket_eval_results_reports.bucket_arn}*",
                 ],
             )
         )
@@ -601,6 +646,14 @@ class ControlBrokerStack(Stack):
         )
         role_outer_eval_engine_sfn.add_to_policy(
             aws_iam.PolicyStatement(
+                actions=[
+                    "lambda:InvokeFunction",
+                ],
+                resources=[self.lambda_write_results_report.function_arn],
+            )
+        )
+        role_outer_eval_engine_sfn.add_to_policy(
+            aws_iam.PolicyStatement(
                 actions=["states:DescribeExecution", "states:StopExecution"],
                 resources=["*"],
             )
@@ -640,7 +693,7 @@ class ControlBrokerStack(Stack):
                     "States": {
                         "ForEachInput": {
                             "Type": "Map",
-                            "Next": "WriteResultReport",
+                            "Next": "WriteResultsReport",
                             "ResultPath": "$.ForEachInput",
                             "ItemsPath": "$.InvokedByApigw.ControlBrokerConsumerInputs.InputKeys",
                             "Parameters": {
@@ -690,15 +743,16 @@ class ControlBrokerStack(Stack):
                                 },
                             },
                         },
-                        "WriteResultReport": {
+                        "WriteResultsReport": {
                             "Type": "Task",
                             "End": True,
                             "ResultPath": "$.WriteResultReport",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
-                                "FunctionName": self.lambda_write_result_report.function_name,
+                                "FunctionName": self.lambda_write_results_report.function_name,
                                 "Payload": {
                                     "OuterEvalEngineSfnExecutionId.$": "$$.Execution.Id",
+                                    "ResultsReportS3Uri.$":"$.ResultsReportS3Uri"
                                 }
                             },
                             "ResultSelector": {"Payload.$": "$.Payload"},
