@@ -177,13 +177,13 @@ class ClientStack(Stack):
             self,
             "Requests",
             "arn:aws:lambda:us-east-1:899456967600:layer:requests:1" # built via CodeCommit/cschneider-utils/lambda/utils/layer-builder.sh
-        )
+        ) # TODO refactor to use https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_lambda_python_alpha/README.html#custom-bundling-with-code-artifact
         
         layer_aws_requests_auth = aws_lambda.LayerVersion.from_layer_version_arn(
             self,
             "AwsRequestsAuth",
             "arn:aws:lambda:us-east-1:899456967600:layer:aws-requests-auth:1" # built via CodeCommit/cschneider-utils/lambda/utils/layer-builder.sh
-        )
+        ) # TODO refactor to use https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_lambda_python_alpha/README.html#custom-bundling-with-code-artifact
         
         self.lambda_sign_apigw_request = aws_lambda.Function(
             self,
