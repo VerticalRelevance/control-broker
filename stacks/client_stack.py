@@ -51,13 +51,9 @@ class ClientStack(Stack):
         self.control_broker_eval_results_bucket = control_broker_eval_results_bucket
     
         self.apigw()
-        # self.consumer_client_task_token() # outer consumer sfn would have to be standard, can't be express endpoint and support waitForTaskToken
         self.consumer_client_retry()
         
     def apigw(self):
-        
-        # Objective 1.0: enumerate credentials/awsID of requestor that client is aware of of
-        
         
         # auth - lambda
         
@@ -145,201 +141,6 @@ class ClientStack(Stack):
         
         self.apigw_full_invoke_url = f'{self.http_api.url}{self.path}'
         
-        
-        """
-        Eval Engine Client Layer
-        update 4.25.22
-        
-        
-        objective:
-        
-        manage access control to
-        
-        
-        input:
-        
-        1+ synthedTemplates
-        BucketOwnedBy: Requestor
-        AccessGrantedTo: EvalEngine
-        AccessType: Read
-        
-        output:
-        
-        1 evaluationReport
-        BucketOwnedBy: EvalEngine
-        AccessGrantedTo: Requestor
-        AccessType: Read
-        
-        
-        desired method:
-        
-        
-        ReportRequestor awsID is received by EvalEngine.
-        EvalEngine writes the evaluationReport to S3 with key:
-        my-requestor-id.report.json
-        
-        ReportRequestor make the getObject request as signed by that same awsID 
-        
-        The dynamic bucket policy uses IAM Conditions to compare requestor's awsID to the key,
-        ensuring that they can only request their own report.
-        https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-principalarn
-        
-        
-        progress so far:
-        
-        
-        this `aws-requests-auth` package (https://github.com/DavidMuller/aws-requests-auth)
-        uses boto3 creds to sign Python `requests` request
-        
-        when this is done, both the customAuth Lambda and InvokedByApigw have access to a string in
-        the identity source and authorization header with the following format per these docs
-        
-        'AWS4-HMAC-SHA256 Credential=MY_ACCESS_KEY/20220425/us-east-1/execute-api/aws4_request, SignedHeaders=host;x-amz-date, Signature=MY_SIG',
-        
-        https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
-        
-        
-        update 4.26.22
-        
-        Decisions made:
-        
-        using AWS_ACCESS_KEY_ID as ResultsReportS3Uri prefix.
-        
-        InProgress:
-        
-        refactoring EvalEngine SFN's to account for new InvokedByApigw input
-        
-        TODO:
-        
-        still yet to test implementation of Bucket Policy IAM Conditions
-        
-        rework GetMetadata in InnerSfn to new model where ControlBrokerConsumerInputs.ConsumerMetadata contains the key to consumerMetadata
-        
-
-        """
-    
-    def consumer_client_task_token(self):
-        
-        # sqs
-        
-        queue_consumer_client_task_tokens = aws_sqs.Queue(
-            self,
-            "ConsumerClientTaskTokens",
-        )
-        
-        # s3
-        
-        self.bucket_consumer_inputs = aws_s3.Bucket(
-            self,
-            "ConsumerInputs",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
-            removal_policy=RemovalPolicy.DESTROY,
-            auto_delete_objects=True,
-        )
-        
-        # sfn
-        
-        log_group_consumer_client_sfn = aws_logs.LogGroup(
-            self,
-            "ConsumerClientLogs",
-            log_group_name=f"/aws/vendedlogs/states/ConsumerClientLogs-{self.stack_name}",
-            removal_policy=RemovalPolicy.DESTROY,
-        )
-
-        self.role_consumer_client_sfn = aws_iam.Role(
-            self,
-            "ConsumerClientSfn",
-            assumed_by=aws_iam.ServicePrincipal("states.amazonaws.com"),
-        )
-
-        self.role_consumer_client_sfn.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    # "logs:*",
-                    "logs:CreateLogDelivery",
-                    "logs:GetLogDelivery",
-                    "logs:UpdateLogDelivery",
-                    "logs:DeleteLogDelivery",
-                    "logs:ListLogDeliveries",
-                    "logs:PutResourcePolicy",
-                    "logs:DescribeResourcePolicies",
-                    "logs:DescribeLogGroups",
-                ],
-                resources=[
-                    "*",
-                    log_group_consumer_client_sfn.log_group_arn,
-                    f"{log_group_consumer_client_sfn.log_group_arn}*",
-                ],
-            )
-        )
-        self.role_consumer_client_sfn.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    "sqs:SendMessage",
-                ],
-                resources=[
-                    "*",
-                    queue_consumer_client_task_tokens.queue_arn,
-                    f"{queue_consumer_client_task_tokens.queue_arn}*",
-                ],
-            )
-        )
-
-        self.sfn_consumer_client = aws_stepfunctions.CfnStateMachine(
-            self,
-            "ConsumerClient",
-            # state_machine_type="EXPRESS",
-            state_machine_type="STANDARD",
-            role_arn=self.role_consumer_client_sfn.role_arn,
-            logging_configuration=aws_stepfunctions.CfnStateMachine.LoggingConfigurationProperty(
-                destinations=[
-                    aws_stepfunctions.CfnStateMachine.LogDestinationProperty(
-                        cloud_watch_logs_log_group=aws_stepfunctions.CfnStateMachine.CloudWatchLogsLogGroupProperty(
-                            log_group_arn=log_group_consumer_client_sfn.log_group_arn
-                        )
-                    )
-                ],
-                # include_execution_data=False,
-                # level="ALL"
-                include_execution_data=True,
-                level="ERROR",
-            ),
-            definition_string=json.dumps(
-                {
-                    "StartAt": "SendMessageTaskToken",
-                    "States": {
-                        "SendMessageTaskToken": {
-                            "Type": "Task",
-                            "Next": "GetResultsReport",
-                            "Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
-                            "HeartbeatSeconds": 10, #FIXME
-                            "Parameters": {
-                                "QueueUrl": queue_consumer_client_task_tokens.queue_url,
-                                "MessageBody": {
-                                    "Message": {
-                                        "ControlBrokerConsumerInputs":{
-                                            "Bucket": self.bucket_consumer_inputs.bucket_name,
-                                            "ConsumerMetadata": "my-consumer-metadata-key",
-                                            "InputKeys":[
-                                                "input-01-key",
-                                                "input-02-key"
-                                            ]
-                                        }
-                                    },
-                                    "TaskToken.$": "$$.Task.Token"
-                                }
-                            },
-                        },
-                        "GetResultsReport": {
-                            "Type":"Succeed"
-                        }
-                    }
-                }
-            )
-        )
-        
-        self.sfn_consumer_client.node.add_dependency(self.role_consumer_client_sfn)
-    
     def consumer_client_retry(self):
         
         # object exists
@@ -517,7 +318,7 @@ class ClientStack(Stack):
                         },
                         "CheckResultsReportExists": {
                             "Type": "Task",
-                            "Next": "GetResultsReportIsAllowedBoolean",
+                            "Next": "GetResultsReportIsCompliantBoolean",
                             "ResultPath": "$.CheckResultsReportExists",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
@@ -551,10 +352,10 @@ class ClientStack(Stack):
                         "ResultsReportDoesNotYetExist": {
                             "Type":"Fail"
                         },
-                        "GetResultsReportIsAllowedBoolean": {
+                        "GetResultsReportIsCompliantBoolean": {
                             "Type": "Task",
-                            "End": True,
-                            "ResultPath": "$.GetResultsReportIsAllowedBoolean",
+                            "Next": "ChoiceIsComplaint",
+                            "ResultPath": "$.GetResultsReportIsCompliantBoolean",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
                                 "FunctionName": self.lambda_s3_select.function_name,
@@ -563,8 +364,25 @@ class ClientStack(Stack):
                                     "Expression": "SELECT * from S3Object s",
                                 },
                             },
-                            "ResultSelector": {"Metadata.$": "$.Payload.Selected"},
+                            "ResultSelector": {"S3SelectResult.$": "$.Payload.Selected"},
                         },
+                        "ChoiceIsComplaint": {
+                            "Type":"Choice",
+                            "Default":"CompliantFalse",
+                            "Choices":[
+                                {
+                                    "Variable":"$.GetResultsReportIsCompliantBoolean.S3SelectResult.ControlBrokerResultsReport.Evaluation.IsCompliant",
+                                    "BooleanEquals":True,
+                                    "Next":"CompliantTrue"
+                                }
+                            ]
+                        },
+                        "CompliantTrue": {
+                            "Type":"Succeed"
+                        },
+                        "CompliantFalse": {
+                            "Type":"Fail"
+                        }
                     }
                 }
             )

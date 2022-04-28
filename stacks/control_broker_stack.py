@@ -159,6 +159,28 @@ class ControlBrokerStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
         )
+        
+        # self.bucket_eval_results_reports.add_to_resource_policy(
+        #     aws_iam.PolicyStatement(
+        #         principals=[
+        #             aws_iam.AnyPrincipal()
+        #         ],
+        #         actions=[
+        #             "s3:GetObject",
+        #             "s3:ListBucket",
+        #         ],
+        #         resources=["*"],
+        #         # conditions= [
+        #         #     {
+        #         #         "StringEquals": {
+        #         #             "aws:PrincipalOrgID": [
+        #         #                 aws_iam.OrganizationPrincipal.organization_id
+        #         #             ]
+        #         #         }
+        #         #     }
+        #         # ]
+        #     )
+        # )
 
     def s3_deploy_local_assets(self):
 
