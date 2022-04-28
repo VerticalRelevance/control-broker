@@ -45,6 +45,8 @@ class ClientStack(Stack):
         :type control_broker_outer_state_machine: aws_stepfunctions.StateMachine
         :param control_broker_principals: The principals to which we need to give S3 access for our input bucket.
         :type control_broker_principals: List[aws_iam.IPrincipal]
+        :param control_broker_eval_results_bucket: The bucket owned by ControlBroker to host Evaluation ResultsReports.
+        :type control_broker_eval_results_bucket: aws_s3.Bcuket
         """
         super().__init__(*args, **kwargs)
     
@@ -80,7 +82,6 @@ class ClientStack(Stack):
                 # "$context.identity.principalOrgId",
             ]
         )
-        
         
         # auth - iam
         
