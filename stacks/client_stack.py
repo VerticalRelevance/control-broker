@@ -7,7 +7,6 @@ from aws_cdk import (
     Stack,
     RemovalPolicy,
     CfnOutput,
-    Runtime,
     aws_config,
     aws_dynamodb,
     aws_s3,
@@ -175,46 +174,35 @@ class ClientStack(Stack):
         
         # sign apigw request
 
-        aws_lambda_python_alpha.PythonFunction(
+        self.lambda_sign_apigw_request = aws_lambda_python_alpha.PythonFunction(
             self,
             "SignApigwRequestVAlpha",
-            entry="./supplementary_files/lambdas/sign_apigw_request"
-            runtime=Runtime.PYTHON_3_9,
+            entry="./supplementary_files/lambdas/sign_apigw_request",
+            runtime= aws_lambda.Runtime.PYTHON_3_9,
             index="lambda_function.py",
-            handler="lambda_handler"
-        )
-
-
-
-        layer_requests = aws_lambda.LayerVersion.from_layer_version_arn(
-            self,
-            "Requests",
-            "arn:aws:lambda:us-east-1:899456967600:layer:requests:1" # built via CodeCommit/cschneider-utils/lambda/utils/layer-builder.sh
-        ) # TODO refactor to use https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_lambda_python_alpha/README.html
-        
-        layer_aws_requests_auth = aws_lambda.LayerVersion.from_layer_version_arn(
-            self,
-            "AwsRequestsAuth",
-            "arn:aws:lambda:us-east-1:899456967600:layer:aws-requests-auth:1" # built via CodeCommit/cschneider-utils/lambda/utils/layer-builder.sh
-        ) # TODO refactor to use https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_lambda_python_alpha/README.html#custom-bundling-with-code-artifact
-        
-        self.lambda_sign_apigw_request = aws_lambda.Function(
-            self,
-            "SignApigwRequest",
-            runtime=aws_lambda.Runtime.PYTHON_3_9,
-            handler="lambda_function.lambda_handler",
+            handler="lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
-            code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas/sign_apigw_request"
-            ),
-            layers = [
-                layer_requests,
-                layer_aws_requests_auth
-            ],
             environment = {
                 "ApigwInvokeUrl" : self.apigw_full_invoke_url
-            }
+            },
+            layers=[
+                aws_lambda_python_alpha.PythonLayerVersion(
+                    self,
+                    "aws_requests_auth",
+                    entry="./supplementary_files/lambda_layers/aws_requests_auth",
+                    compatible_runtimes=[
+                        aws_lambda.Runtime.PYTHON_3_9
+                    ]
+                ),
+                aws_lambda_python_alpha.PythonLayerVersion(self,
+                    "requests",
+                    entry="./supplementary_files/lambda_layers/requests",
+                    compatible_runtimes=[
+                        aws_lambda.Runtime.PYTHON_3_9
+                    ]
+                ),
+            ]
         )
         
         # s3 select
