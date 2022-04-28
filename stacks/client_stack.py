@@ -474,7 +474,7 @@ class ClientStack(Stack):
                 resources=[
                     self.lambda_sign_apigw_request.function_arn,
                     self.lambda_object_exists.function_arn,
-                    self.lambda_s3_select
+                    self.lambda_s3_select.function_arn
                 ],
             )
         )

@@ -59,7 +59,7 @@ def simple_pk_query(*,
         return items
 
 def determine_compliance(*,EvalItems):
-    return bool(EvalItems)
+    return not bool(EvalItems)
 
 def lambda_handler(event, context):
     
