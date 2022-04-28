@@ -43,7 +43,7 @@ def lambda_handler(event,context):
         bucket, key = s3_uri_to_bucket_key(Uri=event['S3Uri'])
 
     existance = object_exists(Bucket=bucket,Key=key)
-    print(f'existance:\n{existance}\n{type(existance)}')
+    print(f'existance:\n{existance}')
     
     if not existance:
         raise ObjectDoesNotExistException
