@@ -157,22 +157,36 @@ class ControlBrokerStack(Stack):
             )
         )
         
-        self.bucket_eval_results_reports.add_to_resource_policy(
-            aws_iam.PolicyStatement(
-                principals=[
-                    aws_iam.OrganizationPrincipal(os.environ.get('AWS_ORG_ID'))
-                ],
-                actions=[
-                    "s3:GetObject",
-                    "s3:ListBucket",
-                ],
-                resources=[
-                    # "*",
-                    self.bucket_eval_results_reports.bucket_arn,
-                    self.bucket_eval_results_reports.arn_for_objects("*"),
-                ],
-            )
-        )
+        """
+        TODO
+        
+        - console-created SecretsManager Secret containing sensitive/dynamic, e.g. AWS_ORG_ID, referenced + resolved in stack for PrincipalOrgPath
+        
+        """
+        
+        policy_same_org = aws_iam.PolicyStatement.from_json({
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "*"
+            },
+            "Action": [
+                "s3:GetObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                self.bucket_eval_results_reports.bucket_arn,
+                self.bucket_eval_results_reports.arn_for_objects("*"),
+            ],
+            "Condition": {
+                "ForAnyValue:StringLike": {
+                    "aws:PrincipalOrgPaths": [
+                        f'{os.environ.get("AWS_ORG_ID")}/*',
+                    ]
+                }
+            }
+        })
+        
+        self.bucket_eval_results_reports.add_to_resource_policy(policy_same_org)
 
     def s3_deploy_local_assets(self):
 
