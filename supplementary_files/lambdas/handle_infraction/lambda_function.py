@@ -1,6 +1,5 @@
 import os
 import json
-from typing import Dict
 
 import boto3
 from botocore.exceptions import ClientError
@@ -12,7 +11,7 @@ def update_item(*,
     Table,
     Pk,
     Sk,
-    Attributes:Dict[str,str]
+    Attributes:dict[str,str]
 ):
     
     def ddb_compatible_type(Item):
