@@ -58,12 +58,22 @@ def simple_pk_query(*,
         
         return items
 
-def determine_compliance(*,InfractionItems):
-    return not bool(InfractionItems)
+def determine_compliance(*,InfractionItems,AllNestedSfnsSucceeded):
+    no_infractions = not bool(InfractionItems)
+
+    return no_infractions and AllNestedSfnsSucceeded
+
+def determine_if_all_nested_sfns_succeeded(*,NestedSfns):
+    return not bool([i for i in NestedSfns if i['InvokeInnerEvalEngineSfn']['Status']!='SUCCEEDED'])
+
 
 def lambda_handler(event, context):
     
     print(event)
+    
+    invoking_sfn_for_each_input = event['ForEachInput']
+    
+    all_nested_sfns_succeeded = determine_if_all_nested_sfns_succeeded(NestedSfns=invoking_sfn_for_each_input)
     
     sfn_exec_id = event['OuterEvalEngineSfnExecutionId']
     
@@ -78,6 +88,11 @@ def lambda_handler(event, context):
         Pk = sfn_exec_id
     )
     
+    compliance = determine_compliance(
+        InfractionItems = infraction_items,
+        AllNestedSfnsSucceeded = all_nested_sfns_succeeded
+    ),
+    
     eval_results_report = {
         "ControlBrokerResultsReport": {
             "Metadata": {
@@ -90,17 +105,17 @@ def lambda_handler(event, context):
                 }
             },
             "Evaluation": {
-                "IsCompliant" : determine_compliance(InfractionItems=infraction_items),
+                "IsCompliant" : compliance,
                 "InfractionItems" : infraction_items
             }
         }
     }
     
+    print(f'eval_results_report:\n{eval_results_report}')
+    
     put_object(
         S3Uri = event['ResultsReportS3Uri'],
         Dict = eval_results_report
     )
-    
-    
     
     return True
