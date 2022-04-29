@@ -7,6 +7,7 @@ from aws_cdk import (
     Stack,
     RemovalPolicy,
     CfnOutput,
+    SecretValue,
     aws_config,
     aws_dynamodb,
     aws_s3,
@@ -180,7 +181,21 @@ class ControlBrokerStack(Stack):
             "Condition": {
                 "ForAnyValue:StringLike": {
                     "aws:PrincipalOrgPaths": [
+                        
+                        # A - works. requires local export of env var
+                    
                         f'{os.environ.get("AWS_ORG_ID")}/*',
+                        
+                        # B - not working
+                        
+                        # does not resolve. Policy in console reads:<aws_cdk.SecretValue object at 0x7fa1d1ac7fd0>/
+                        f'{SecretValue.ssm_secure(parameter_name="/control-broker/aws-organization-id",version="1")}/*',
+                        
+                        # do not deploy
+                        f'{SecretValue.ssm_secure(parameter_name="/control-broker/aws-organization-id",version="1").resolve()}/*',
+                        f'{SecretValue.ssm_secure(parameter_name="/control-broker/aws-organization-id",version="1").unsafe_unwrap()}/*',
+                        f'{SecretValue.ssm_secure(parameter_name="/control-broker/aws-organization-id",version="1").to_string()}/*',
+
                     ]
                 }
             }
