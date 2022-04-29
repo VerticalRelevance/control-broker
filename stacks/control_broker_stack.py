@@ -84,7 +84,7 @@ class ControlBrokerStack(Stack):
             )
 
         self.Input_reader_roles: List[aws_iam.Role] = [
-            self.lambda_opa_eval_python_subprocess_single_threaded.role,
+            self.lambda_opa_eval_python_subprocess.role,
         ]
 
         self.outer_eval_engine_state_machine = aws_stepfunctions.StateMachine.from_state_machine_arn(self, "OuterEvalEngineStateMachineObj", self.sfn_outer_eval_engine.attr_arn)
@@ -200,7 +200,7 @@ class ControlBrokerStack(Stack):
 
         # opa eval - python subprocess - single threaded
 
-        self.lambda_opa_eval_python_subprocess_single_threaded = aws_lambda.Function(
+        self.lambda_opa_eval_python_subprocess = aws_lambda.Function(
             self,
             "OpaEvalPythonSubprocessSingleThreaded",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
@@ -212,7 +212,7 @@ class ControlBrokerStack(Stack):
             ),
         )
 
-        self.lambda_opa_eval_python_subprocess_single_threaded.role.add_to_policy(
+        self.lambda_opa_eval_python_subprocess.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:HeadObject",
@@ -318,7 +318,7 @@ class ControlBrokerStack(Stack):
             aws_iam.PolicyStatement(
                 actions=["lambda:InvokeFunction"],
                 resources=[
-                    self.lambda_opa_eval_python_subprocess_single_threaded.function_arn,
+                    self.lambda_opa_eval_python_subprocess.function_arn,
                     self.lambda_gather_infractions.function_arn,
                     self.lambda_handle_infraction.function_arn,
                 ],
@@ -389,7 +389,7 @@ class ControlBrokerStack(Stack):
                             "ResultPath": "$.OpaEval",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
-                                "FunctionName": self.lambda_opa_eval_python_subprocess_single_threaded.function_name,
+                                "FunctionName": self.lambda_opa_eval_python_subprocess.function_name,
                                 "Payload": {
                                     "JsonInput.$": "$.JsonInput",
                                     "OpaPolicies": {
