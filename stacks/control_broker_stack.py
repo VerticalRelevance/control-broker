@@ -7,6 +7,7 @@ from aws_cdk import (
     Stack,
     RemovalPolicy,
     CfnOutput,
+    SecretValue,
     aws_config,
     aws_dynamodb,
     aws_s3,
@@ -16,14 +17,14 @@ from aws_cdk import (
     aws_iam,
     aws_logs,
     aws_events,
-    aws_ssm,
 )
 from constructs import Construct
 
 from components.config_rules import ControlBrokerConfigRule
+from utils.mixins import SecretConfigStackMixin
 
 
-class ControlBrokerStack(Stack):
+class ControlBrokerStack(Stack, SecretConfigStackMixin):
     def __init__(
         self,
         scope: Construct,
@@ -61,7 +62,7 @@ class ControlBrokerStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.application_team_cdk_app = application_team_cdk_app
-        
+
         self.organization_id_parameter = organization_id_parameter
 
         self.pipeline_ownership_metadata = {}
@@ -96,14 +97,23 @@ class ControlBrokerStack(Stack):
 
         self.Input_reader_roles: List[aws_iam.Role] = [
             self.lambda_opa_eval_python_subprocess_single_threaded.role,
-            self.role_inner_eval_engine_sfn
+            self.role_inner_eval_engine_sfn,
         ]
 
-        self.outer_eval_engine_state_machine = aws_stepfunctions.StateMachine.from_state_machine_arn(self, "OuterEvalEngineStateMachineObj", self.sfn_outer_eval_engine.attr_arn)
-        
-        self.eval_results_reports_bucket = aws_s3.Bucket.from_bucket_name(self,
-            "EvalResultsReportsBucketObj", self.bucket_eval_results_reports.bucket_name)
-        
+        self.outer_eval_engine_state_machine = (
+            aws_stepfunctions.StateMachine.from_state_machine_arn(
+                self,
+                "OuterEvalEngineStateMachineObj",
+                self.sfn_outer_eval_engine.attr_arn,
+            )
+        )
+
+        self.eval_results_reports_bucket = aws_s3.Bucket.from_bucket_name(
+            self,
+            "EvalResultsReportsBucketObj",
+            self.bucket_eval_results_reports.bucket_name,
+        )
+
         CfnOutput(
             self,
             "InputReaderArns",
@@ -162,24 +172,29 @@ class ControlBrokerStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
             block_public_access=aws_s3.BlockPublicAccess(
-                block_public_acls = True,
-                ignore_public_acls = True,
-                block_public_policy = True,
-                restrict_public_buckets = True,
-            )
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
         )
-        
+
         self.bucket_eval_results_reports.add_to_resource_policy(
             aws_iam.PolicyStatement(
                 principals=[
-                    aws_iam.OrganizationPrincipal(os.environ.get('AWS_ORG_ID'))
+                    aws_iam.AnyPrincipal().with_conditions(
+                        {
+                            "ForAnyValue:StringLike": {
+                                "aws:PrincipalOrgPaths": self.secrets.allowed_org_paths
+                            }
+                        }
+                    )
                 ],
                 actions=[
                     "s3:GetObject",
                     "s3:ListBucket",
                 ],
                 resources=[
-                    # "*",
                     self.bucket_eval_results_reports.bucket_arn,
                     self.bucket_eval_results_reports.arn_for_objects("*"),
                 ],
@@ -286,7 +301,7 @@ class ControlBrokerStack(Stack):
                 ],
             )
         )
-        
+
         # gather infractions
 
         self.lambda_gather_infractions = aws_lambda.Function(
@@ -296,7 +311,9 @@ class ControlBrokerStack(Stack):
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/gather_infractions"),
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/gather_infractions"
+            ),
         )
 
         # handle infraction
@@ -308,13 +325,15 @@ class ControlBrokerStack(Stack):
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/handle_infraction"),
-            environment = {
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/handle_infraction"
+            ),
+            environment={
                 "TableName": self.table_eval_results.table_name,
-                "EventBusName": self.event_bus_infractions.event_bus_name
-            }
+                "EventBusName": self.event_bus_infractions.event_bus_name,
+            },
         )
-        
+
         self.lambda_handle_infraction.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
@@ -327,7 +346,7 @@ class ControlBrokerStack(Stack):
                 ],
             )
         )
-        
+
         self.lambda_handle_infraction.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
@@ -426,7 +445,7 @@ class ControlBrokerStack(Stack):
                 # include_execution_data=False,
                 # level="ERROR",
                 include_execution_data=True,
-                level="ALL"
+                level="ALL",
             ),
             definition_string=json.dumps(
                 {
@@ -473,7 +492,9 @@ class ControlBrokerStack(Stack):
                                     },
                                 },
                             },
-                            "ResultSelector": {"OpaEvalResults.$": "$.Payload.OpaEvalResults"},
+                            "ResultSelector": {
+                                "OpaEvalResults.$": "$.Payload.OpaEvalResults"
+                            },
                         },
                         "GatherInfractions": {
                             "Type": "Task",
@@ -482,9 +503,11 @@ class ControlBrokerStack(Stack):
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
                                 "FunctionName": self.lambda_gather_infractions.function_name,
-                                "Payload.$": "$.OpaEval.OpaEvalResults"
+                                "Payload.$": "$.OpaEval.OpaEvalResults",
                             },
-                            "ResultSelector": {"Infractions.$": "$.Payload.Infractions"},
+                            "ResultSelector": {
+                                "Infractions.$": "$.Payload.Infractions"
+                            },
                         },
                         "ChoiceInfractionsExist": {
                             "Type": "Choice",
@@ -493,7 +516,7 @@ class ControlBrokerStack(Stack):
                                 {
                                     "Variable": "$.GatherInfractions.Infractions[0]",
                                     "IsPresent": False,
-                                    "Next": "NoInfractions"
+                                    "Next": "NoInfractions",
                                 }
                             ],
                         },
@@ -526,19 +549,19 @@ class ControlBrokerStack(Stack):
                                                 "JsonInput.$": "$.JsonInput",
                                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
                                                 "Metadata.$": "$.Metadata",
-                                            }
+                                            },
                                         },
                                         "ResultSelector": {"Payload.$": "$.Payload"},
                                     },
-                                }
-                            }
+                                },
+                            },
                         },
                         "InfractionsExist": {
                             "Type": "Fail",
-                        }
-                    }
+                        },
+                    },
                 }
-            )
+            ),
         )
 
         self.sfn_inner_eval_engine.node.add_dependency(self.role_inner_eval_engine_sfn)
@@ -546,7 +569,7 @@ class ControlBrokerStack(Stack):
         CfnOutput(self, "InnerSfnArn", value=self.sfn_inner_eval_engine.attr_arn)
 
     def deploy_outer_sfn_lambdas(self):
-        
+
         # write results report
 
         self.lambda_write_results_report = aws_lambda.Function(
@@ -559,9 +582,7 @@ class ControlBrokerStack(Stack):
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/lambdas/write_results_report"
             ),
-            environment = {
-                "EvalResultsTable": self.table_eval_results.table_name
-            }
+            environment={"EvalResultsTable": self.table_eval_results.table_name},
         )
 
         self.lambda_write_results_report.role.add_to_policy(
@@ -580,9 +601,7 @@ class ControlBrokerStack(Stack):
                 actions=[
                     "s3:List*",
                 ],
-                resources=[
-                    self.bucket_eval_results_reports.bucket_arn
-                ],
+                resources=[self.bucket_eval_results_reports.bucket_arn],
             )
         )
         self.lambda_write_results_report.role.add_to_policy(
@@ -595,7 +614,7 @@ class ControlBrokerStack(Stack):
                 ],
             )
         )
-        
+
     def deploy_outer_sfn(self):
 
         log_group_outer_eval_engine_sfn = aws_logs.LogGroup(
@@ -728,14 +747,8 @@ class ControlBrokerStack(Stack):
                                             }
                                         ],
                                     },
-                                    "InnerSfnFailed": {
-                                        "Type": "Pass",
-                                        "End": True
-                                    },
-                                    "InnerSfnSucceeded": {
-                                        "Type": "Pass",
-                                        "End": True
-                                    },
+                                    "InnerSfnFailed": {"Type": "Pass", "End": True},
+                                    "InnerSfnSucceeded": {"Type": "Pass", "End": True},
                                 },
                             },
                         },
@@ -748,8 +761,8 @@ class ControlBrokerStack(Stack):
                                 "FunctionName": self.lambda_write_results_report.function_name,
                                 "Payload": {
                                     "OuterEvalEngineSfnExecutionId.$": "$$.Execution.Id",
-                                    "ResultsReportS3Uri.$":"$.ResultsReportS3Uri"
-                                }
+                                    "ResultsReportS3Uri.$": "$.ResultsReportS3Uri",
+                                },
                             },
                             "ResultSelector": {"Payload.$": "$.Payload"},
                         },
