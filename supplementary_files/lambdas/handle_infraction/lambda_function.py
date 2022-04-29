@@ -31,7 +31,7 @@ def update_item(*,
     
     for i,v in enumerate(Attributes):
         key = list(v.keys())[0]
-        print(v[key])
+        # print(v[key])
         
         placeholder = f':{chr(97+i)}'
         expression_attribute_values[placeholder] = ddb_compatible_type(v[key])
@@ -61,6 +61,7 @@ def update_item(*,
 
 def put_event_entry(*,
     EventBusName,
+    Source,
     Detail:dict
 ):
     try:
@@ -68,7 +69,9 @@ def put_event_entry(*,
             Entries = [
                 {
                     'EventBusName':EventBusName,
-                    'Detail':json.dumps(Detail)
+                    'Detail':json.dumps(Detail),
+                    'DetailType':os.environ.get('AWS_LAMBDA_FUNCTION_NAME'),
+                    'Source':Source,
                 }
             ]
         )
@@ -84,9 +87,11 @@ def lambda_handler(event, context):
     
     print(event)
     
+    outer_eval_enginge_sfn_execution_id = event['OuterEvalEngineSfnExecutionId']
+    
     infraction_key = list(event['Infraction'].keys())[0]
     
-    pipeline_ownership_metadata = event.get('ConsumerMetadata')
+    pipeline_ownership_metadata = event.get('ConsumerMetadata').get('PipelineOwnershipMetadata')
     
     inner_sfn_json_input = event.get('JsonInput')
     
@@ -98,14 +103,14 @@ def lambda_handler(event, context):
     
     update = update_item(
         Table = os.environ['TableName'],
-        Pk = event['OuterEvalEngineSfnExecutionId'],
+        Pk = outer_eval_enginge_sfn_execution_id,
         Sk = sk,
         Attributes = [
             {'BusinessUnit':pipeline_ownership_metadata.get('BusinessUnit')},
             {'BillingCode':pipeline_ownership_metadata.get('BillingCode')},
             {'TargetProvisioningEnvironment':pipeline_ownership_metadata.get('TargetProvisioningEnvironment')},
-            {'PipelineOwnerName':pipeline_ownership_metadata.get('PipelineOwnerName'),
-            {'PipelineOwnerEmail':pipeline_ownership_metadata.get('PipelineOwnerEmail'),
+            {'PipelineOwnerName':pipeline_ownership_metadata.get('PipelineOwnerName')},
+            {'PipelineOwnerEmail':pipeline_ownership_metadata.get('PipelineOwnerEmail')},
         ]
     )
     
@@ -113,6 +118,7 @@ def lambda_handler(event, context):
     
     put = put_event_entry(
         EventBusName = os.environ.get('EventBusName'),
+        Source = outer_eval_enginge_sfn_execution_id,
         Detail = {
             'Infraction':event.get('Infraction'),
             'PipelineOwnershipMetadata':pipeline_ownership_metadata,
