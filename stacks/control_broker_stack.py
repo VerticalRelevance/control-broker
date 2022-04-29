@@ -180,7 +180,6 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                 ],
                 actions=[
                     "s3:GetObject",
-                    "s3:ListBucket",
                 ],
                 resources=[
                     self.bucket_eval_results_reports.bucket_arn,
