@@ -22,7 +22,7 @@ def s3_download(*,Bucket,Key,LocalPath):
         print(f'ClientError:\nBucket: {Bucket}\nKey: {Key}\n{e}')
         raise
     else:
-        print('No ClientError download_file')
+        print(f'No ClientError download_file\nBucket:\n{Bucket}\nKey:\n{Key}')
         return True
 
 def s3_download_dir(*,Bucket, Prefix=None, LocalPath):
@@ -94,6 +94,8 @@ def lambda_handler(event, context):
     
     policy_path_root = mkdir('/tmp/opa-policies')
     
+    print(f'begin: Get Policies')
+    
     s3_download_dir(
         Bucket = opa_policies_bucket,
         LocalPath = policy_path_root
@@ -102,6 +104,8 @@ def lambda_handler(event, context):
     # get json_input
     
     json_input_path = '/tmp/input.json'
+    
+    print(f'begin: Get json_input')
     
     s3_download(
         Bucket = json_input['Bucket'],
