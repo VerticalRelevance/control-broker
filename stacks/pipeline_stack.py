@@ -90,4 +90,5 @@ class GitHubCDKPipelineStack(Stack):
             "Pipeline",
             synth=pipeline_synth_action,
             publish_assets_in_parallel=False,
+            docker_enabled_for_synth=True
         )
