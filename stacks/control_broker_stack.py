@@ -434,31 +434,33 @@ class ControlBrokerStack(Stack):
                     "States": {
                         "ParseInput": {
                             "Type": "Pass",
-                            "Next": "GetMetadata",
+                            # "Next": "GetMetadata",
+                            "Next": "OpaEval",
                             "Parameters": {
                                 "JsonInput": {
                                     "Bucket.$": "$.Input.Bucket",
                                     "Key.$": "$.Input.Key",
                                 },
                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfn.ExecutionId",
+                                "ConsumerMetadata.$":"$.ConsumerMetadata",
                             },
                             "ResultPath": "$",
                         },
-                        "GetMetadata": {
-                            "Type": "Task",
-                            "Next": "OpaEval",
-                            "ResultPath": "$.GetMetadata",
-                            "Resource": "arn:aws:states:::lambda:invoke",
-                            "Parameters": {
-                                "FunctionName": self.lambda_s3_select.function_name,
-                                "Payload": {
-                                    "Bucket": self.bucket_pipeline_ownership_metadata.bucket_name,
-                                    "Key": self.pipeline_ownership_metadata["Suffix"],
-                                    "Expression": "SELECT * from S3Object s",
-                                },
-                            },
-                            "ResultSelector": {"Metadata.$": "$.Payload.Selected"},
-                        },
+                        # "GetMetadata": {
+                        #     "Type": "Task",
+                        #     "Next": "OpaEval",
+                        #     "ResultPath": "$.GetMetadata",
+                        #     "Resource": "arn:aws:states:::lambda:invoke",
+                        #     "Parameters": {
+                        #         "FunctionName": self.lambda_s3_select.function_name,
+                        #         "Payload": {
+                        #             "Bucket": self.bucket_pipeline_ownership_metadata.bucket_name,
+                        #             "Key": self.pipeline_ownership_metadata["Suffix"],
+                        #             "Expression": "SELECT * from S3Object s",
+                        #         },
+                        #     },
+                        #     "ResultSelector": {"Metadata.$": "$.Payload.Selected"},
+                        # },
                         "OpaEval": {
                             "Type": "Task",
                             "Next": "GatherInfractions",
@@ -509,7 +511,7 @@ class ControlBrokerStack(Stack):
                                 "Infraction.$": "$$.Map.Item.Value",
                                 "JsonInput.$": "$.JsonInput",
                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                "Metadata.$": "$.GetMetadata.Metadata",
+                                "ConsumerMetadata.$": "$.ConsumerMetadata",
                             },
                             "Iterator": {
                                 "StartAt": "HandleInfraction",
@@ -525,7 +527,7 @@ class ControlBrokerStack(Stack):
                                                 "Infraction.$": "$.Infraction",
                                                 "JsonInput.$": "$.JsonInput",
                                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                                "Metadata.$": "$.Metadata",
+                                                "ConsumerMetadata.$": "$.ConsumerMetadata",
                                             }
                                         },
                                         "ResultSelector": {"Payload.$": "$.Payload"},
@@ -714,6 +716,7 @@ class ControlBrokerStack(Stack):
                                                 "OuterEvalEngineSfn": {
                                                     "ExecutionId.$": "$$.Execution.Id"
                                                 },
+                                                "ConsumerMetadata.$": "$.ConsumerMetadata",
                                             },
                                         },
                                     },
