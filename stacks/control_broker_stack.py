@@ -85,7 +85,6 @@ class ControlBrokerStack(Stack):
 
         self.Input_reader_roles: List[aws_iam.Role] = [
             self.lambda_opa_eval_python_subprocess_single_threaded.role,
-            self.role_inner_eval_engine_sfn
         ]
 
         self.outer_eval_engine_state_machine = aws_stepfunctions.StateMachine.from_state_machine_arn(self, "OuterEvalEngineStateMachineObj", self.sfn_outer_eval_engine.attr_arn)
