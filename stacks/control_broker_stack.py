@@ -434,7 +434,6 @@ class ControlBrokerStack(Stack):
                     "States": {
                         "ParseInput": {
                             "Type": "Pass",
-                            # "Next": "GetMetadata",
                             "Next": "OpaEval",
                             "Parameters": {
                                 "JsonInput": {
@@ -446,21 +445,6 @@ class ControlBrokerStack(Stack):
                             },
                             "ResultPath": "$",
                         },
-                        # "GetMetadata": {
-                        #     "Type": "Task",
-                        #     "Next": "OpaEval",
-                        #     "ResultPath": "$.GetMetadata",
-                        #     "Resource": "arn:aws:states:::lambda:invoke",
-                        #     "Parameters": {
-                        #         "FunctionName": self.lambda_s3_select.function_name,
-                        #         "Payload": {
-                        #             "Bucket": self.bucket_pipeline_ownership_metadata.bucket_name,
-                        #             "Key": self.pipeline_ownership_metadata["Suffix"],
-                        #             "Expression": "SELECT * from S3Object s",
-                        #         },
-                        #     },
-                        #     "ResultSelector": {"Metadata.$": "$.Payload.Selected"},
-                        # },
                         "OpaEval": {
                             "Type": "Task",
                             "Next": "GatherInfractions",
