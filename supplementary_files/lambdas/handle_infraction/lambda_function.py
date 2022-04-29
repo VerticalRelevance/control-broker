@@ -86,7 +86,7 @@ def lambda_handler(event, context):
     
     infraction_key = list(event['Infraction'].keys())[0]
     
-    pipeline_ownership_metadata = event.get('Metadata')
+    pipeline_ownership_metadata = event.get('ConsumerMetadata')
     
     inner_sfn_json_input = event.get('JsonInput')
     
@@ -104,8 +104,8 @@ def lambda_handler(event, context):
             {'BusinessUnit':pipeline_ownership_metadata.get('BusinessUnit')},
             {'BillingCode':pipeline_ownership_metadata.get('BillingCode')},
             {'TargetProvisioningEnvironment':pipeline_ownership_metadata.get('TargetProvisioningEnvironment')},
-            {'PipelineOwnerName':pipeline_ownership_metadata.get('PipelineOwner').get('Name')},
-            {'PipelineOwnerEmail':pipeline_ownership_metadata.get('PipelineOwner').get('Email')},
+            {'PipelineOwnerName':pipeline_ownership_metadata.get('PipelineOwnerName'),
+            {'PipelineOwnerEmail':pipeline_ownership_metadata.get('PipelineOwnerEmail'),
         ]
     )
     
