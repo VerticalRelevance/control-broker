@@ -93,6 +93,8 @@ def lambda_handler(event, context):
         AllNestedSfnsSucceeded = all_nested_sfns_succeeded
     )
     
+    print(f'compliance:\n{compliance}')
+    
     eval_results_report = {
         "ControlBrokerResultsReport": {
             "Metadata": {
