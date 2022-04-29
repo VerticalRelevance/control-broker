@@ -16,6 +16,7 @@ from aws_cdk import (
     aws_iam,
     aws_logs,
     aws_events,
+    aws_ssm,
 )
 from constructs import Construct
 
@@ -28,6 +29,7 @@ class ControlBrokerStack(Stack):
         scope: Construct,
         construct_id: str,
         application_team_cdk_app: dict,
+        organization_id_parameter: str,
         config_rule_enabled: bool = False,
         config_rule_scope: aws_config.RuleScope = None,
         **kwargs,
@@ -59,6 +61,8 @@ class ControlBrokerStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.application_team_cdk_app = application_team_cdk_app
+        
+        self.organization_id_parameter = organization_id_parameter
 
         self.pipeline_ownership_metadata = {}
         (
@@ -155,15 +159,20 @@ class ControlBrokerStack(Stack):
         self.bucket_eval_results_reports = aws_s3.Bucket(
             self,
             "EvalResultsReports",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls = True,
+                ignore_public_acls = True,
+                block_public_policy = True,
+                restrict_public_buckets = True,
+            )
         )
         
         self.bucket_eval_results_reports.add_to_resource_policy(
             aws_iam.PolicyStatement(
                 principals=[
-                    aws_iam.AnyPrincipal()
+                    aws_iam.OrganizationPrincipal(os.environ.get('AWS_ORG_ID'))
                 ],
                 actions=[
                     "s3:GetObject",
@@ -174,15 +183,6 @@ class ControlBrokerStack(Stack):
                     self.bucket_eval_results_reports.bucket_arn,
                     self.bucket_eval_results_reports.arn_for_objects("*"),
                 ],
-                # conditions= [
-                #     {
-                #         "StringEquals": {
-                #             "aws:PrincipalOrgID": [
-                #                 aws_iam.OrganizationPrincipal.organization_id
-                #             ]
-                #         }
-                #     }
-                # ]
             )
         )
 
