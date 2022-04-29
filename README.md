@@ -28,6 +28,21 @@ Please note that this software is meant as a starting point and is therefore not
 
 ## Deploying Your Own Control Broker
 
+### Upload your secret config file
+
+The Control Broker needs some secret values to be available in its environment. These are stored in a Secrets Manager Secret as a JSON
+blob, and the Control Broker's deployment mechanisms grab these values as they need to.
+
+Before proceeding, you'll have to copy [our example secrets file](./supplementary_files/) to a secure location on your machine and replace
+the values in it with your own. Then, [create a Secret
+in Secrets
+Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/tutorials_basic.html#tutorial-basic-step1)
+called "control-broker/secret-config" with this JSON text as its value.
+
+> Note: You can change the name of the secret that Control Broker uses by changing the value of the "control-broker/secret-config/secrets-manager-secret-id" context variable.
+
+### Deploy the CDK app
+
 Install the [AWS CDK Toolkit
 v2](https://docs.aws.amazon.com/cdk/v2/guide/cli.html) CLI tool.
 
