@@ -160,27 +160,31 @@ class ControlBrokerStack(Stack):
             auto_delete_objects=True,
         )
         
-        # self.bucket_eval_results_reports.add_to_resource_policy(
-        #     aws_iam.PolicyStatement(
-        #         principals=[
-        #             aws_iam.AnyPrincipal()
-        #         ],
-        #         actions=[
-        #             "s3:GetObject",
-        #             "s3:ListBucket",
-        #         ],
-        #         resources=["*"],
-        #         # conditions= [
-        #         #     {
-        #         #         "StringEquals": {
-        #         #             "aws:PrincipalOrgID": [
-        #         #                 aws_iam.OrganizationPrincipal.organization_id
-        #         #             ]
-        #         #         }
-        #         #     }
-        #         # ]
-        #     )
-        # )
+        self.bucket_eval_results_reports.add_to_resource_policy(
+            aws_iam.PolicyStatement(
+                principals=[
+                    aws_iam.AnyPrincipal()
+                ],
+                actions=[
+                    "s3:GetObject",
+                    "s3:ListBucket",
+                ],
+                resources=[
+                    # "*",
+                    self.bucket_eval_results_reports.bucket_arn,
+                    self.bucket_eval_results_reports.arn_for_objects("*"),
+                ],
+                # conditions= [
+                #     {
+                #         "StringEquals": {
+                #             "aws:PrincipalOrgID": [
+                #                 aws_iam.OrganizationPrincipal.organization_id
+                #             ]
+                #         }
+                #     }
+                # ]
+            )
+        )
 
     def s3_deploy_local_assets(self):
 
@@ -251,7 +255,7 @@ class ControlBrokerStack(Stack):
                 ],
                 resources=[
                     self.bucket_opa_policies.bucket_arn,
-                    f"{self.bucket_opa_policies.bucket_arn}/*",
+                    self.bucket_opa_policies.arn_for_objects("*"),
                 ],
             )
         )
@@ -278,7 +282,7 @@ class ControlBrokerStack(Stack):
                 ],
                 resources=[
                     self.bucket_pipeline_ownership_metadata.bucket_arn,
-                    f"{self.bucket_pipeline_ownership_metadata.bucket_arn}/*",
+                    self.bucket_pipeline_ownership_metadata.arn_for_objects("*"),
                 ],
             )
         )
@@ -587,7 +591,7 @@ class ControlBrokerStack(Stack):
                     "s3:PutObject",
                 ],
                 resources=[
-                    f"{self.bucket_eval_results_reports.bucket_arn}*",
+                    self.bucket_eval_results_reports.arn_for_objects("*"),
                 ],
             )
         )
