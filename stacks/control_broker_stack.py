@@ -739,32 +739,6 @@ class ControlBrokerStack(Stack):
                                 },
                             },
                         },
-                        # "WriteDefaultDenyTemplateProcessingCompleteStatus": {
-                        #     "Type" : "Task",
-                        #     "Next" : "ForEachEvalResult",
-                        #     "ResultPath" : "$.SetMaxIndexZero",
-                        #     "Resource" : "arn:aws:states:::dynamodb:updateItem",
-                        #     "ResultSelector" : {
-                        #         "HttpStatusCode.$" : "$.SdkHttpMetadata.HttpStatusCode"
-                        #         },
-                        #     "Parameters" : {
-                        #         "TableName" : self.table_eval_results.table_name,
-                        #         "Key" : {
-                        #             "pk" : {
-                        #                 "S.$" : "$.OuterEvalEngineSfnExecutionId"
-                        #             },
-                        #             "sk" : {
-                        #                 "S.$" : "$$.Execution.Id"
-                        #             }
-                        #         },
-                        #         "ExpressionAttributeValues" : {
-                        #             ":true" : {
-                        #                 "BOOL" : True
-                        #             },
-                        #         },
-                        #         "UpdateExpression" : "SET DefaultDenyTemplateProcessingCompleteStatus = :true",
-                        #     }
-                        # },
                         "WriteResultsReport": {
                             "Type": "Task",
                             "End": True,
