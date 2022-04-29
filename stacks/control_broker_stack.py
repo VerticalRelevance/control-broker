@@ -28,7 +28,6 @@ class ControlBrokerStack(Stack):
         self,
         scope: Construct,
         construct_id: str,
-        application_team_cdk_app: dict,
         organization_id_parameter: str,
         config_rule_enabled: bool = False,
         config_rule_scope: aws_config.RuleScope = None,
