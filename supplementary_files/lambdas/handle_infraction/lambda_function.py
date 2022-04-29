@@ -27,19 +27,19 @@ def update_item(*,
     update_expressions = []
     
     for index, (key, value) in enumerate(Attributes.items()):
-        print(index, key, value)
-    
+
         placeholder = f':{chr(97+index)}'
-        print(placeholder)
+
         expression_attribute_values[placeholder] = ddb_compatible_type(value)
+
         update_expressions.append(f'{key}={placeholder}')
         
     update_expression = ', '.join(update_expressions)
+    
     update_expression = f'set {update_expression}'
     
     try:
         r = table.update_item(
-            
             Key = {
                 'pk':Pk,
                 'sk':Sk
