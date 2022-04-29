@@ -91,7 +91,7 @@ def lambda_handler(event, context):
     compliance = determine_compliance(
         InfractionItems = infraction_items,
         AllNestedSfnsSucceeded = all_nested_sfns_succeeded
-    ),
+    )
     
     eval_results_report = {
         "ControlBrokerResultsReport": {
