@@ -185,7 +185,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                     aws_iam.AnyPrincipal().with_conditions(
                         {
                             "ForAnyValue:StringLike": {
-                                "aws:PrincipalOrgPaths": self.secrets.allowed_org_paths
+                                "aws:PrincipalOrgPaths": [self.secrets.allowed_org_path]
                             }
                         }
                     )

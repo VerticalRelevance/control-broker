@@ -10,13 +10,13 @@ class SecretConfigJson:
         return SecretValue.secrets_manager(self.secret_id, json_field=json_field)
 
     @property
-    def allowed_org_paths(self) -> SecretValue:
+    def allowed_org_path(self) -> SecretValue:
         """The org path to use for IAM policies that restrict access to some Org/OU.
 
         :return: Value defined at the JSON key "allowed_org_path"
         :rtype: SecretValue
         """
-        return self._get_secret_value("allowed_org_paths")
+        return self._get_secret_value("allowed_org_path")
 
 
 class SecretConfigStackMixin:
