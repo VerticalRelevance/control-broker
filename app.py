@@ -38,6 +38,7 @@ control_broker_stack = ControlBrokerStack(
     env=env,
     application_team_cdk_app=application_team_cdk_app,
     config_rule_enabled=app.node.try_get_context("control-broker/config-rule/enabled"),
+    organization_id_parameter=app.node.try_get_context("control-broker/organization-id-ssm-parameter"),
     config_rule_scope=aws_config.RuleScope.from_resources(
         resource_types=[aws_config.ResourceType.SQS_QUEUE]
     ),
