@@ -40,8 +40,6 @@ class ControlBrokerStack(Stack):
         :type scope: Construct
         :param construct_id:
         :type construct_id: str
-        :param application_team_cdk_app: (_DEPRECATED_)
-        :type application_team_cdk_app: dict
         :param config_rule_enabled: Whether to create a custom config rule that sends config events to the control broker to obtain Config compliance status, defaults to False
         :type config_rule_enabled: bool, optional
         :param config_rule_scope: What Config scope to use with the config rule, if enabled., defaults to None
@@ -60,15 +58,7 @@ class ControlBrokerStack(Stack):
         """
         super().__init__(scope, construct_id, **kwargs)
 
-        self.application_team_cdk_app = application_team_cdk_app
-        
         self.organization_id_parameter = organization_id_parameter
-
-        self.pipeline_ownership_metadata = {}
-        (
-            self.pipeline_ownership_metadata["Directory"],
-            self.pipeline_ownership_metadata["Suffix"],
-        ) = os.path.split(application_team_cdk_app["PipelineOwnershipMetadata"])
 
         self.deploy_utils()
         self.s3_deploy_local_assets()
@@ -188,28 +178,6 @@ class ControlBrokerStack(Stack):
 
     def s3_deploy_local_assets(self):
 
-        # pipeline ownership metadata
-
-        self.bucket_pipeline_ownership_metadata = aws_s3.Bucket(
-            self,
-            "PipelineOwnershipMetadata",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
-            removal_policy=RemovalPolicy.DESTROY,
-            auto_delete_objects=True,
-        )
-
-        aws_s3_deployment.BucketDeployment(
-            self,
-            "PipelineOwnershipMetadataDir",
-            sources=[
-                aws_s3_deployment.Source.asset(
-                    self.pipeline_ownership_metadata["Directory"]
-                )
-            ],
-            destination_bucket=self.bucket_pipeline_ownership_metadata,
-            retain_on_delete=False,
-        )
-
         # opa policies
 
         self.bucket_opa_policies = aws_s3.Bucket(
@@ -260,33 +228,6 @@ class ControlBrokerStack(Stack):
             )
         )
 
-        # s3 select
-
-        self.lambda_s3_select = aws_lambda.Function(
-            self,
-            "S3Select",
-            runtime=aws_lambda.Runtime.PYTHON_3_9,
-            handler="lambda_function.lambda_handler",
-            timeout=Duration.seconds(60),
-            memory_size=1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/s3_select"),
-        )
-
-        self.lambda_s3_select.role.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    "s3:HeadObject",
-                    "s3:GetObject",
-                    "s3:List*",
-                    "s3:SelectObjectContent",
-                ],
-                resources=[
-                    self.bucket_pipeline_ownership_metadata.bucket_arn,
-                    self.bucket_pipeline_ownership_metadata.arn_for_objects("*"),
-                ],
-            )
-        )
-        
         # gather infractions
 
         self.lambda_gather_infractions = aws_lambda.Function(
@@ -380,7 +321,6 @@ class ControlBrokerStack(Stack):
                 actions=["lambda:InvokeFunction"],
                 resources=[
                     self.lambda_opa_eval_python_subprocess_single_threaded.function_arn,
-                    self.lambda_s3_select.function_arn,
                     self.lambda_gather_infractions.function_arn,
                     self.lambda_handle_infraction.function_arn,
                 ],
