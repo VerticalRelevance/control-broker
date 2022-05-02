@@ -8,9 +8,9 @@ sfn = boto3.client("stepfunctions")
 config = boto3.client("config")
 
 
-def sync_sfn(*, SfnArn, Input: dict):
+def sync_sfn(*, sfn_arn, input: dict):
     try:
-        r = sfn.start_sync_execution(stateMachineArn=SfnArn, input=json.dumps(Input))
+        r = sfn.start_sync_execution(stateMachineArn=sfn_arn, input=json.dumps(input))
     except ClientError as e:
         print(f"ClientError\n{e}")
         raise
@@ -25,9 +25,9 @@ def sync_sfn(*, SfnArn, Input: dict):
             return output
 
 
-def async_sfn(*, SfnArn, Input: dict):
+def async_sfn(*, sfn_arn, input: dict):
     try:
-        r = sfn.start_execution(stateMachineArn=SfnArn, input=json.dumps(Input))
+        r = sfn.start_execution(stateMachineArn=sfn_arn, input=json.dumps(input))
     except ClientError as e:
         print(f"ClientError\n{e}")
         raise
@@ -126,7 +126,7 @@ def lambda_handler(event, context):
     result_token = event["resultToken"]
     print(f"result_token:\n{result_token}")
 
-    processed = sync_sfn(SfnArn=os.environ["ProcessingSfnArn"], Input={"Config": event})
+    processed = sync_sfn(sfn_arn=os.environ["Processingsfn_arn"], input={"Config": event})
     print(f"processed:\n{processed}")
 
     # return to Config compliance status - let Config notify

@@ -23,10 +23,33 @@ Please note that this software is meant as a starting point and is therefore not
 ## Example use cases
 
 * [Using the Control Broker from a CodePipeline application pipeline to block deployment of non-compliant CDK resources](https://github.com/VerticalRelevance/control-broker-codepipeline-example)
-* (TODO - create repo)[Using the Control Broker to detect non-compliant changes to deployed resources with AWS Config]()
+* [Using the Control Broker to detect non-compliant changes to deployed resources with AWS Config](https://github.com/VerticalRelevance/control-broker-consumer-example-config)
 * (TODO - make demo)[Using the Control Broker from a development machine to evaluate IaC against the organization's latest security policies as it is being written]()
 
 ## Deploying Your Own Control Broker
+
+### Upload your secret config file
+
+The Control Broker needs some secret values to be available in its environment. These are stored in a Secrets Manager Secret as a JSON
+blob, and the Control Broker's deployment mechanisms grab these values as they need to.
+
+Before proceeding, you'll have to copy [our example secrets file](./supplementary_files/) to a secure location on your machine and replace
+the values in it with your own. Then, [create a Secret
+in Secrets
+Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/tutorials_basic.html#tutorial-basic-step1)
+called "control-broker/secret-config" with this JSON text as its value.
+
+![Using the SecretsManager console to create the secret value](docs/diagrams/images/secretsmanager-console-secret-config.png)
+
+![Using the SecretsManager console to name the secret and give it a description](docs/diagrams/images/secretsmanager-console-secret-config-name-page.png)
+
+Here are some helpful hints about what to put in these values:
+
+* `allowed_org_path`: [`aws:PrincipalOrgPaths`](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-principalorgpaths) value to match against. Determines which Orgs/OUs can access your Control Broker results (as long as they possess a valid result token).
+
+> Note: You can change the name of the secret that Control Broker uses by changing the value of the "control-broker/secret-config/secrets-manager-secret-id" context variable.
+
+### Deploy the CDK app
 
 Install the [AWS CDK Toolkit
 v2](https://docs.aws.amazon.com/cdk/v2/guide/cli.html) CLI tool.
