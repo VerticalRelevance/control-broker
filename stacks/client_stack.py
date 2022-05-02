@@ -52,7 +52,7 @@ class ClientStack(Stack):
         self.control_broker_eval_results_bucket = control_broker_eval_results_bucket
     
         self.apigw()
-        self.consumer_client_retry()
+        # self.consumer_client_retry()
         
     def apigw(self):
         
@@ -76,7 +76,7 @@ class ClientStack(Stack):
             response_types=[aws_apigatewayv2_authorizers_alpha.HttpLambdaResponseType.SIMPLE],
             results_cache_ttl = Duration.seconds(0),
             identity_source = [
-                "$request.header.Authorization", # Authorization my be present in headers or 401, e.g. r = requests.post(url,auth = auth, ...)
+                "$request.header.Authorization", # Authorization must be present in headers or 401, e.g. r = requests.post(url,auth = auth, ...)
             ]
         )
         
