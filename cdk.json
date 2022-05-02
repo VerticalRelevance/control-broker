@@ -35,10 +35,6 @@
     },
     "control-broker/post-deployment-testing/enabled": true,
     "control-broker/client/enabled": true,
-    "control-broker/organization-id-ssm-parameter":{
-      "Name":"/control-broker/aws-organization-id",
-      "Version":1
-    },
     "control-broker/secret-config/secrets-manager-secret-id": "control-broker/secret-config"
   }
 }

@@ -30,8 +30,6 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
         scope: Construct,
         construct_id: str,
         organization_id_parameter: str,
-        config_rule_enabled: bool = False,
-        config_rule_scope: aws_config.RuleScope = None,
         **kwargs,
     ) -> None:
         """A full Control Broker installation.
@@ -40,10 +38,6 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
         :type scope: Construct
         :param construct_id:
         :type construct_id: str
-        :param config_rule_enabled: Whether to create a custom config rule that sends config events to the control broker to obtain Config compliance status, defaults to False
-        :type config_rule_enabled: bool, optional
-        :param config_rule_scope: What Config scope to use with the config rule, if enabled., defaults to None
-        :type config_rule_scope: aws_config.RuleScope, optional
         :param continously_deployed: Whether to launch the Control Broker via a CDK Pipeline and deploy on code changes, defaults to True
         :type continously_deployed: bool, optional
         :param github_repo_name: Required if continously_deployed is True
@@ -66,23 +60,6 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
         self.deploy_inner_sfn()
         self.deploy_outer_sfn_lambdas()
         self.deploy_outer_sfn()
-
-        self.config_rule = None
-        if config_rule_enabled:
-            if not config_rule_scope:
-                raise ValueError(
-                    "Expected config_rule_scope to be set since config rule is enabled"
-                )
-            self.config_rule = ControlBrokerConfigRule(
-                self,
-                "ControlBrokerConfigRule",
-                rule_scope=config_rule_scope,
-                control_broker_statemachine=aws_stepfunctions.StateMachine.from_state_machine_arn(
-                    self,
-                    "ControlBrokerStateMachine",
-                    self.sfn_outer_eval_engine.attr_arn,
-                ),
-            )
 
         self.Input_reader_roles: List[aws_iam.Role] = [
             self.lambda_opa_eval_python_subprocess.role,
