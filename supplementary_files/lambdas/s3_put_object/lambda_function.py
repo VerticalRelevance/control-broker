@@ -5,13 +5,13 @@ from botocore.exceptions import ClientError
 
 s3 = boto3.client('s3')
 
-def put_object(bucket,Key,Object:dict):
-    print(f'put_object\nbucket:\n{bucket}\nKey:\n{Key}')
+def put_object(bucket,key,object_:dict):
+    print(f'put_object\nbucket:\n{bucket}\nKey:\n{key}')
     try:
         r = s3.put_object(
             Bucket = bucket,
-            Key = Key,
-            Body = json.dumps(Object)
+            Key = key,
+            Body = json.dumps(object_)
         )
     except ClientError as e:
         print(f'ClientError:\n{e}')
@@ -39,8 +39,8 @@ def lambda_handler(event,context):
 
     put_object(
         bucket = bucket,
-        Key = key,
-        Object = event['Object']
+        key = key,
+        object_ = event['Object']
     )
 
     return {
