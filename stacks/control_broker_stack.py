@@ -29,7 +29,6 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
         self,
         scope: Construct,
         construct_id: str,
-        organization_id_parameter: str,
         **kwargs,
     ) -> None:
         """A full Control Broker installation.
@@ -51,8 +50,6 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
         :raises ValueError: When continously_deployed is True and any of the github variables is not set
         """
         super().__init__(scope, construct_id, **kwargs)
-
-        self.organization_id_parameter = organization_id_parameter
 
         self.deploy_utils()
         self.s3_deploy_local_assets()
@@ -129,7 +126,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             ],
         )
 
-        # result reports
+        # results reports
 
         self.bucket_eval_results_reports = aws_s3.Bucket(
             self,
