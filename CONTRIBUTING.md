@@ -22,7 +22,7 @@ clone control-broker at `3-implement-asynchronous-client-layer`
 
 clone [control-broker-codepipeline-example](https://github.com/VerticalRelevance/control-broker-codepipeline-example)
 
-add files from original `control-broker` deployment output to `cdk.json`
+add outputs from original `control-broker` deployment output to `cdk.json` of `control-broker-codepipeline-example`
 
 `cdk deploy`
 
