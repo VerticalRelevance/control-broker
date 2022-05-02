@@ -10,52 +10,52 @@ import re
 s3 = boto3.client('s3')
 s3r = boto3.resource('s3')
 
-def s3_download(*,Bucket,Key,LocalPath):
+def s3_download(*,bucket,key,local_path):
     
     try:
         s3.download_file(
-            Bucket,
-            Key,
-            LocalPath
+            bucket,
+            key,
+            local_path
         )
     except ClientError as e:
-        print(f'ClientError:\nBucket: {Bucket}\nKey: {Key}\n{e}')
+        print(f'ClientError:\nbucket: {bucket}\nkey: {key}\n{e}')
         raise
     else:
-        print(f'No ClientError download_file\nBucket:\n{Bucket}\nKey:\n{Key}')
+        print(f'No ClientError download_file\nbucket:\n{bucket}\nkey:\n{key}')
         return True
 
-def s3_download_dir(*,Bucket, Prefix=None, LocalPath):
-    print(f'Begin s3_download_dir\nBucket:\n{Bucket}\nPrefix:\n{Prefix}\nLocalPath:\n{LocalPath}')
+def s3_download_dir(*,bucket, prefix=None, local_path):
+    print(f'Begin s3_download_dir\nbucket:\n{bucket}\nprefix:\n{prefix}\nlocal_path:\n{local_path}')
     paginator = s3.get_paginator('list_objects')
     
-    if Prefix:
-        pagination = paginator.paginate(Bucket=Bucket, Delimiter='/', Prefix=Prefix)
+    if prefix:
+        pagination = paginator.paginate(Bucket=bucket, Delimiter='/', Prefix=prefix)
     else:
-        pagination = paginator.paginate(Bucket=Bucket, Delimiter='/')
+        pagination = paginator.paginate(Bucket=bucket, Delimiter='/')
             
     for result in pagination:
         if result.get('CommonPrefixes') is not None:
-            for subdir in result.get('CommonPrefixes'):
+            for subdir in result.get('Commonprefixes'):
                 s3_download_dir(
-                    Prefix = subdir.get('Prefix'),
-                    LocalPath = LocalPath,
-                    Bucket = Bucket
+                    prefix = subdir.get('Prefix'),
+                    local_path = local_path,
+                    bucket = bucket
                 )
         for file in result.get('Contents', []):
-            dest_pathname = os.path.join(LocalPath, file.get('Key'))
+            dest_pathname = os.path.join(local_path, file.get('Key'))
             if not os.path.exists(os.path.dirname(dest_pathname)):
                 os.makedirs(os.path.dirname(dest_pathname))
             if not file.get('Key').endswith('/'):
                 s3_download(
-                    Bucket=Bucket,
-                    Key=file.get('Key'),
-                    LocalPath=dest_pathname
+                    bucket=bucket,
+                    key=file.get('Key'),
+                    local_path=dest_pathname
                 )
                 
-def run_bash(*, BashPath):
-    subprocess.run(["chmod","u+rx", BashPath])
-    output = subprocess.run(["sh", f"{BashPath}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def run_bash(*, bash_path):
+    subprocess.run(["chmod","u+rx", bash_path])
+    output = subprocess.run(["sh", f"{bash_path}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print('raw subprocess output:')
     print(output)
     print('stdout:')
@@ -67,17 +67,17 @@ def run_bash(*, BashPath):
         'stderr': stderr
     }
     
-def re_search(RegexGroup,SearchMe):
-    m = re.search(RegexGroup,SearchMe)
+def re_search(regex_group,search_me):
+    m = re.search(regex_group,search_me)
     try:
         return m.group(1)
     except AttributeError:
-        print(f'Regex:\n{RegexGroup}')
-        print(f'SearchMe:\n{SearchMe}')
+        print(f'Regex:\n{regex_group}')
+        print(f'search_me:\n{search_me}')
         raise
 
-def mkdir(Dir):
-    p = Path(Dir)
+def mkdir(dir_):
+    p = Path(dir_)
     p.mkdir(parents=True,exist_ok=True)
     return str(p)
     
@@ -97,8 +97,8 @@ def lambda_handler(event, context):
     print(f'begin: Get Policies')
     
     s3_download_dir(
-        Bucket = opa_policies_bucket,
-        LocalPath = policy_path_root
+        bucket = opa_policies_bucket,
+        local_path = policy_path_root
     )
     
     # get json_input
@@ -108,9 +108,9 @@ def lambda_handler(event, context):
     print(f'begin: Get json_input')
     
     s3_download(
-        Bucket = json_input['Bucket'],
-        Key = json_input['Key'],
-        LocalPath = json_input_path
+        bucket = json_input['Bucket'],
+        key = json_input['Key'],
+        local_path = json_input_path
     )
     
     # to tmp
@@ -123,7 +123,7 @@ def lambda_handler(event, context):
     
     # # eval
     
-    opa_eval_result = run_bash(BashPath='/tmp/opa-eval.sh')
+    opa_eval_result = run_bash(bash_path='/tmp/opa-eval.sh')
     
     print(f'eval_result:\n{opa_eval_result}\n{type(opa_eval_result)}')
 

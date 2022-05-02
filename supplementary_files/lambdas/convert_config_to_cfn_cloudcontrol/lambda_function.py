@@ -8,18 +8,18 @@ cloudcontrol = boto3.client('cloudcontrol')
 
 class CloudControl():
     
-    def __init__(self,TypeName,Identifier):
-        self.type_name = TypeName
-        self.identifier = Identifier
+    def __init__(self,type_name,identifier):
+        self.type_name = type_name
+        self.identifier = identifier
     
-    def get_resource_schema(self,*,ResourceType):
+    def get_resource_schema(self,*,resource_type):
         try:
             r = cfn.describe_type(
                 Type = 'RESOURCE',
-                TypeName = ResourceType,
+                type_name = resource_type,
             )
         except cfn.exceptions.TypeNotFoundException:
-            print(f'TypeNotFoundException: {ResourceType}')
+            print(f'TypeNotFoundException: {resource_type}')
             return None
         except ClientError as e:
             raise
@@ -28,25 +28,25 @@ class CloudControl():
             print(schema)
             return schema
     
-    def cloudcontrol_get(self,*,TypeName,Identifier):   
+    def cloudcontrol_get(self,*,type_name,identifier):   
         try:
             r = cloudcontrol.get_resource(
-                TypeName = TypeName,
-                Identifier = Identifier
+                type_name = type_name,
+                identifier = identifier
             )
         except ClientError as e:
             print(f'ClientError\n{e}')
             raise
         else:
             properties = json.loads(r['ResourceDescription']['Properties'])
-            print(f'cloudcontrol.get_resource properties\nTypeName:\n{TypeName}\nIdentifier:\n{Identifier}\nProperties:\n{properties}')
+            print(f'cloudcontrol.get_resource properties\ntype_name:\n{type_name}\nidentifier:\n{identifier}\nProperties:\n{properties}')
             return properties
 
     def get_cfn(self):
         
-        cloudcontrol_properties = self.cloudcontrol_get(TypeName=self.type_name,Identifier=self.identifier)
+        cloudcontrol_properties = self.cloudcontrol_get(type_name=self.type_name,identifier=self.identifier)
         
-        resource_schema = self.get_resource_schema(ResourceType=self.type_name)
+        resource_schema = self.get_resource_schema(resource_type=self.type_name)
         print(f'resource_schema:\n{resource_schema}')
         
         schema_properties = resource_schema['properties']
@@ -89,7 +89,7 @@ def lambda_handler(event, context):
     item_status = configuration_item["configurationItemStatus"]
     print(f'item_status:\n{item_status}')
     
-    resource_type = configuration_item['resourceType']
+    resource_type = configuration_item['resource_type']
     print(f'resource_type:\n{resource_type}')
     
     resource_configuration = configuration_item['configuration']
@@ -103,7 +103,7 @@ def lambda_handler(event, context):
 
     # only 506/874 resources can use CloudControl, by a recent count of NON_PROVISIONABLE status
 
-    c = CloudControl(TypeName=resource_type,Identifier=resource_id)
+    c = CloudControl(type_name=resource_type,identifier=resource_id)
     
     cfn = c.get_cfn()
     

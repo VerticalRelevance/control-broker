@@ -100,15 +100,3 @@ After running `cdk deploy`, the Control Broker will be set up.
 ## Next Steps
 
 Try launching one of the [Example use cases](./README.md#example-use-cases)!
-
-# Setup
-
-## Install CDK experimental modules
-
-pip install aws_cdk.aws_lambda_python_alpha
-
-pip install aws_cdk.aws_apigatewayv2_alpha
-
-pip install aws_cdk.aws_apigatewayv2_integrations_alpha
-
-pip install aws_cdk.aws_apigatewayv2_authorizers_alpha
