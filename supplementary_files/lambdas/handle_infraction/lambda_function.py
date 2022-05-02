@@ -8,10 +8,10 @@ ddb = boto3.resource('dynamodb')
 eb = boto3.client('events')
 
 def update_item(*,
-    Table,
-    Pk,
-    Sk,
-    Attributes:dict[str,str]
+    table,
+    pk,
+    sk,
+    attributes:dict[str,str]
 ):
     
     def ddb_compatible_type(Item):
@@ -20,13 +20,13 @@ def update_item(*,
         else:
             return Item
     
-    table = ddb.Table(Table)
+    table = ddb.Table(table)
     
     expression_attribute_values = {}
     
     update_expressions = []
     
-    for index, (key, value) in enumerate(Attributes.items()):
+    for index, (key, value) in enumerate(attributes.items()):
 
         placeholder = f':{chr(97+index)}'
 
@@ -41,8 +41,8 @@ def update_item(*,
     try:
         r = table.update_item(
             Key = {
-                'pk':Pk,
-                'sk':Sk
+                'pk':pk,
+                'sk':sk
             },
             UpdateExpression = update_expression,
             ExpressionAttributeValues = expression_attribute_values
@@ -56,18 +56,18 @@ def update_item(*,
         return True
 
 def put_event_entry(*,
-    EventBusName,
-    Source,
-    Detail:dict
+    event_bus_name,
+    source,
+    detail:dict
 ):
     try:
         r = eb.put_events(
             Entries = [
                 {
-                    'EventBusName':EventBusName,
-                    'Detail':json.dumps(Detail),
+                    'EventBusName':event_bus_name,
+                    'Detail':json.dumps(detail),
                     'DetailType':os.environ.get('AWS_LAMBDA_FUNCTION_NAME'),
-                    'Source':Source,
+                    'source':source,
                 }
             ]
         )
@@ -98,18 +98,18 @@ def lambda_handler(event, context):
     # to ddb
     
     update = update_item(
-        Table = os.environ['TableName'],
-        Pk = outer_eval_enginge_sfn_execution_id,
-        Sk = sk,
-        Attributes = consumer_metadata
+        table = os.environ['tableName'],
+        pk = outer_eval_enginge_sfn_execution_id,
+        sk = sk,
+        attributes = consumer_metadata
     )
     
     # to eb
     
     put = put_event_entry(
-        EventBusName = os.environ.get('EventBusName'),
-        Source = outer_eval_enginge_sfn_execution_id,
-        Detail = {
+        event_bus_name = os.environ.get('event_bus_name'),
+        source = outer_eval_enginge_sfn_execution_id,
+        detail = {
             'Infraction':event.get('Infraction'),
             'ConsumerMetadata':consumer_metadata,
             'OuterEvalEngineSfnExecutionId':event.get('OuterEvalEngineSfnExecutionId')

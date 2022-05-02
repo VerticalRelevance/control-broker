@@ -1,6 +1,7 @@
 import os
 import json
 from typing import List, Sequence
+from os import path
 
 from aws_cdk import (
     Duration,
@@ -138,7 +139,7 @@ class ClientStack(Stack):
             # authorizer=authorizer_iam
         )
         
-        self.apigw_full_invoke_url = f'{self.http_api.url[:-1]}{self.path}' # remove duplicate slash
+        self.apigw_full_invoke_url = path.join(self.http_api.url.rstrip("/"),self.path.strip('/'))
         
         CfnOutput(self, "ApigwInvokeUrl", value=self.apigw_full_invoke_url)
 
