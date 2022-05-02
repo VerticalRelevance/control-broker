@@ -4,12 +4,12 @@ from botocore.exceptions import ClientError
 
 s3 = boto3.client('s3')
 
-def object_exists(*,Bucket,Key):
-    print(f'trying head_object\nbucket:\n{Bucket}\nkey:\n{Key}')
+def object_exists(*,bucket,key):
+    print(f'trying head_object\nbucket:\n{bucket}\nkey:\n{key}')
     try:
         r = s3.head_object(
-            Bucket = Bucket,
-            Key = Key
+            Bucket = bucket,
+            Key = key
         )
     except ClientError as e:
         print(e)
@@ -23,8 +23,8 @@ def object_exists(*,Bucket,Key):
     else:
         return True
 
-def s3_uri_to_bucket_key(*,Uri):
-    path_parts=Uri.replace("s3://","").split("/")
+def s3_uri_to_bucket_key(*,uri):
+    path_parts=uri.replace("s3://","").split("/")
     bucket=path_parts.pop(0)
     key="/".join(path_parts)
     return bucket, key
@@ -40,9 +40,9 @@ def lambda_handler(event,context):
     key = event.get('Key')
     
     if not bucket and not key:
-        bucket, key = s3_uri_to_bucket_key(Uri=event['S3Uri'])
+        bucket, key = s3_uri_to_bucket_key(uri=event['S3Uri'])
 
-    existance = object_exists(Bucket=bucket,Key=key)
+    existance = object_exists(bucket=bucket,key=key)
     print(f'existance:\n{existance}')
     
     if not existance:

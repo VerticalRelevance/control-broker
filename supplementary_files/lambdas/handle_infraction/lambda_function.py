@@ -8,45 +8,41 @@ ddb = boto3.resource('dynamodb')
 eb = boto3.client('events')
 
 def update_item(*,
-    Table,
-    Pk,
-    Sk,
-    Attributes:list
+    table,
+    pk,
+    sk,
+    attributes:dict[str,str]
 ):
-    """
-    Attributes: list of dicts
-    [{Attribute1Name:Attribute1Value}]
-    """
+    
     def ddb_compatible_type(Item):
         if type(Item) == float:
             return str(Item)
         else:
             return Item
     
-    table = ddb.Table(Table)
+    table = ddb.Table(table)
     
     expression_attribute_values = {}
     
     update_expressions = []
     
-    for i,v in enumerate(Attributes):
-        key = list(v.keys())[0]
-        print(v[key])
-        
-        placeholder = f':{chr(97+i)}'
-        expression_attribute_values[placeholder] = ddb_compatible_type(v[key])
-        
+    for index, (key, value) in enumerate(attributes.items()):
+
+        placeholder = f':{chr(97+index)}'
+
+        expression_attribute_values[placeholder] = ddb_compatible_type(value)
+
         update_expressions.append(f'{key}={placeholder}')
         
     update_expression = ', '.join(update_expressions)
+    
     update_expression = f'set {update_expression}'
     
     try:
         r = table.update_item(
-            
             Key = {
-                'pk':Pk,
-                'sk':Sk
+                'pk':pk,
+                'sk':sk
             },
             UpdateExpression = update_expression,
             ExpressionAttributeValues = expression_attribute_values
@@ -60,15 +56,18 @@ def update_item(*,
         return True
 
 def put_event_entry(*,
-    EventBusName,
-    Detail:dict
+    event_bus_name,
+    source,
+    detail:dict
 ):
     try:
         r = eb.put_events(
             Entries = [
                 {
-                    'EventBusName':EventBusName,
-                    'Detail':json.dumps(Detail)
+                    'EventBusName':event_bus_name,
+                    'Detail':json.dumps(detail),
+                    'DetailType':os.environ.get('AWS_LAMBDA_FUNCTION_NAME'),
+                    'source':source,
                 }
             ]
         )
@@ -84,9 +83,11 @@ def lambda_handler(event, context):
     
     print(event)
     
+    outer_eval_enginge_sfn_execution_id = event['OuterEvalEngineSfnExecutionId']
+    
     infraction_key = list(event['Infraction'].keys())[0]
     
-    pipeline_ownership_metadata = event.get('Metadata')
+    consumer_metadata = event.get('ConsumerMetadata')
     
     inner_sfn_json_input = event.get('JsonInput')
     
@@ -97,25 +98,20 @@ def lambda_handler(event, context):
     # to ddb
     
     update = update_item(
-        Table = os.environ['TableName'],
-        Pk = event['OuterEvalEngineSfnExecutionId'],
-        Sk = sk,
-        Attributes = [
-            {'BusinessUnit':pipeline_ownership_metadata.get('BusinessUnit')},
-            {'BillingCode':pipeline_ownership_metadata.get('BillingCode')},
-            {'TargetProvisioningEnvironment':pipeline_ownership_metadata.get('TargetProvisioningEnvironment')},
-            {'PipelineOwnerName':pipeline_ownership_metadata.get('PipelineOwner').get('Name')},
-            {'PipelineOwnerEmail':pipeline_ownership_metadata.get('PipelineOwner').get('Email')},
-        ]
+        table = os.environ['tableName'],
+        pk = outer_eval_enginge_sfn_execution_id,
+        sk = sk,
+        attributes = consumer_metadata
     )
     
     # to eb
     
     put = put_event_entry(
-        EventBusName = os.environ.get('EventBusName'),
-        Detail = {
+        event_bus_name = os.environ.get('event_bus_name'),
+        source = outer_eval_enginge_sfn_execution_id,
+        detail = {
             'Infraction':event.get('Infraction'),
-            'PipelineOwnershipMetadata':pipeline_ownership_metadata,
+            'ConsumerMetadata':consumer_metadata,
             'OuterEvalEngineSfnExecutionId':event.get('OuterEvalEngineSfnExecutionId')
         }
     )

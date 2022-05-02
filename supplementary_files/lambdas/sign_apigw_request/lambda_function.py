@@ -12,8 +12,8 @@ session = boto3.session.Session()
 region = session.region_name
 account_id = boto3.client('sts').get_caller_identity().get('Account')
 
-def get_host(*,FullInvokeUrl):
-    m = re.search('https://(.*)/.*',FullInvokeUrl)
+def get_host(*,full_invoke_url):
+    m = re.search('https://(.*)/.*',full_invoke_url)
     return m.group(1)
     
 def lambda_handler(event,context):
@@ -22,7 +22,7 @@ def lambda_handler(event,context):
     
     full_invoke_url = os.environ.get('ApigwInvokeUrl')
     
-    host = get_host(FullInvokeUrl=full_invoke_url)
+    host = get_host(full_invoke_url=full_invoke_url)
     
     auth = BotoAWSRequestsAuth(
         aws_host= host,
@@ -31,8 +31,6 @@ def lambda_handler(event,context):
     )
     
     print(f'BotoAWSRequestsAuth:\n{auth}')
-    
-    # headers = {'Authorization':'foo'}
     
     control_broker_consumer_input = event
     

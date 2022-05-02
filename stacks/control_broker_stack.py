@@ -7,6 +7,7 @@ from aws_cdk import (
     Stack,
     RemovalPolicy,
     CfnOutput,
+    SecretValue,
     aws_config,
     aws_dynamodb,
     aws_s3,
@@ -19,17 +20,14 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from components.config_rules import ControlBrokerConfigRule
+from utils.mixins import SecretConfigStackMixin
 
 
-class ControlBrokerStack(Stack):
+class ControlBrokerStack(Stack, SecretConfigStackMixin):
     def __init__(
         self,
         scope: Construct,
         construct_id: str,
-        application_team_cdk_app: dict,
-        config_rule_enabled: bool = False,
-        config_rule_scope: aws_config.RuleScope = None,
         **kwargs,
     ) -> None:
         """A full Control Broker installation.
@@ -38,12 +36,6 @@ class ControlBrokerStack(Stack):
         :type scope: Construct
         :param construct_id:
         :type construct_id: str
-        :param application_team_cdk_app: (_DEPRECATED_)
-        :type application_team_cdk_app: dict
-        :param config_rule_enabled: Whether to create a custom config rule that sends config events to the control broker to obtain Config compliance status, defaults to False
-        :type config_rule_enabled: bool, optional
-        :param config_rule_scope: What Config scope to use with the config rule, if enabled., defaults to None
-        :type config_rule_scope: aws_config.RuleScope, optional
         :param continously_deployed: Whether to launch the Control Broker via a CDK Pipeline and deploy on code changes, defaults to True
         :type continously_deployed: bool, optional
         :param github_repo_name: Required if continously_deployed is True
@@ -58,14 +50,6 @@ class ControlBrokerStack(Stack):
         """
         super().__init__(scope, construct_id, **kwargs)
 
-        self.application_team_cdk_app = application_team_cdk_app
-
-        self.pipeline_ownership_metadata = {}
-        (
-            self.pipeline_ownership_metadata["Directory"],
-            self.pipeline_ownership_metadata["Suffix"],
-        ) = os.path.split(application_team_cdk_app["PipelineOwnershipMetadata"])
-
         self.deploy_utils()
         self.s3_deploy_local_assets()
         self.deploy_inner_sfn_lambdas()
@@ -73,39 +57,29 @@ class ControlBrokerStack(Stack):
         self.deploy_outer_sfn_lambdas()
         self.deploy_outer_sfn()
 
-        self.config_rule = None
-        if config_rule_enabled:
-            if not config_rule_scope:
-                raise ValueError(
-                    "Expected config_rule_scope to be set since config rule is enabled"
-                )
-            self.config_rule = ControlBrokerConfigRule(
-                self,
-                "ControlBrokerConfigRule",
-                rule_scope=config_rule_scope,
-                control_broker_statemachine=aws_stepfunctions.StateMachine.from_state_machine_arn(
-                    self,
-                    "ControlBrokerStateMachine",
-                    self.sfn_outer_eval_engine.attr_arn,
-                ),
-            )
-
         self.Input_reader_roles: List[aws_iam.Role] = [
-            self.lambda_opa_eval_python_subprocess_single_threaded.role,
-            self.role_inner_eval_engine_sfn
+            self.lambda_opa_eval_python_subprocess.role,
         ]
 
-        self.outer_eval_engine_state_machine = aws_stepfunctions.StateMachine.from_state_machine_arn(self, "OuterEvalEngineStateMachineObj", self.sfn_outer_eval_engine.attr_arn)
-        
-        self.eval_results_reports_bucket = aws_s3.Bucket.from_bucket_name(self,
-            "EvalResultsReportsBucketObj", self.bucket_eval_results_reports.bucket_name)
-        
+        self.outer_eval_engine_state_machine = (
+            aws_stepfunctions.StateMachine.from_state_machine_arn(
+                self,
+                "OuterEvalEngineStateMachineObj",
+                self.sfn_outer_eval_engine.attr_arn,
+            )
+        )
+
+        self.eval_results_reports_bucket = aws_s3.Bucket.from_bucket_name(
+            self,
+            "EvalResultsReportsBucketObj",
+            self.bucket_eval_results_reports.bucket_name,
+        )
+
         CfnOutput(
             self,
             "InputReaderArns",
             value=json.dumps([r.role_arn for r in self.Input_reader_roles]),
         )
-        CfnOutput(self, "SfnInvokeArn", value=self.sfn_outer_eval_engine.attr_arn)
 
     def deploy_utils(self):
 
@@ -150,69 +124,43 @@ class ControlBrokerStack(Stack):
             ],
         )
 
-        # result reports
+        # results reports
 
         self.bucket_eval_results_reports = aws_s3.Bucket(
             self,
             "EvalResultsReports",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
         )
-        
-        # self.bucket_eval_results_reports.add_to_resource_policy(
-        #     aws_iam.PolicyStatement(
-        #         principals=[
-        #             aws_iam.AnyPrincipal()
-        #         ],
-        #         actions=[
-        #             "s3:GetObject",
-        #             "s3:ListBucket",
-        #         ],
-        #         resources=["*"],
-        #         # conditions= [
-        #         #     {
-        #         #         "StringEquals": {
-        #         #             "aws:PrincipalOrgID": [
-        #         #                 aws_iam.OrganizationPrincipal.organization_id
-        #         #             ]
-        #         #         }
-        #         #     }
-        #         # ]
-        #     )
-        # )
+
+        self.bucket_eval_results_reports.add_to_resource_policy(
+            aws_iam.PolicyStatement(
+                principals=[
+                    aws_iam.AnyPrincipal().with_conditions(
+                        {
+                            "ForAnyValue:StringLike": {
+                                "aws:PrincipalOrgPaths": [self.secrets.allowed_org_path]
+                            }
+                        }
+                    )
+                ],
+                actions=[
+                    "s3:GetObject",
+                ],
+                resources=[
+                    self.bucket_eval_results_reports.bucket_arn,
+                    self.bucket_eval_results_reports.arn_for_objects("*"),
+                ],
+            )
+        )
 
     def s3_deploy_local_assets(self):
-
-        # CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneSSH",
-        #     value = self.repo_app_team_cdk.repository_clone_url_ssh
-        # )
-
-        # CfnOutput(self, "ApplicationTeamExampleAppRepositoryCloneHTTP",
-        #     value = self.repo_app_team_cdk.repository_clone_url_http
-        # )
-
-        # pipeline ownership metadata
-
-        self.bucket_pipeline_ownership_metadata = aws_s3.Bucket(
-            self,
-            "PipelineOwnershipMetadata",
-            block_public_access=aws_s3.BlockPublicAccess.BLOCK_ALL,
-            removal_policy=RemovalPolicy.DESTROY,
-            auto_delete_objects=True,
-        )
-
-        aws_s3_deployment.BucketDeployment(
-            self,
-            "PipelineOwnershipMetadataDir",
-            sources=[
-                aws_s3_deployment.Source.asset(
-                    self.pipeline_ownership_metadata["Directory"]
-                )
-            ],
-            destination_bucket=self.bucket_pipeline_ownership_metadata,
-            retain_on_delete=False,
-        )
 
         # opa policies
 
@@ -238,7 +186,7 @@ class ControlBrokerStack(Stack):
 
         # opa eval - python subprocess - single threaded
 
-        self.lambda_opa_eval_python_subprocess_single_threaded = aws_lambda.Function(
+        self.lambda_opa_eval_python_subprocess = aws_lambda.Function(
             self,
             "OpaEvalPythonSubprocessSingleThreaded",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
@@ -246,11 +194,11 @@ class ControlBrokerStack(Stack):
             timeout=Duration.seconds(60),
             memory_size=10240,  # todo power-tune
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas/opa-eval/python-subprocess/single-threaded"
+                "./supplementary_files/lambdas/opa_eval/python_subprocess"
             ),
         )
 
-        self.lambda_opa_eval_python_subprocess_single_threaded.role.add_to_policy(
+        self.lambda_opa_eval_python_subprocess.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:HeadObject",
@@ -259,38 +207,11 @@ class ControlBrokerStack(Stack):
                 ],
                 resources=[
                     self.bucket_opa_policies.bucket_arn,
-                    f"{self.bucket_opa_policies.bucket_arn}/*",
+                    self.bucket_opa_policies.arn_for_objects("*"),
                 ],
             )
         )
 
-        # s3 select
-
-        self.lambda_s3_select = aws_lambda.Function(
-            self,
-            "S3Select",
-            runtime=aws_lambda.Runtime.PYTHON_3_9,
-            handler="lambda_function.lambda_handler",
-            timeout=Duration.seconds(60),
-            memory_size=1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/s3_select"),
-        )
-
-        self.lambda_s3_select.role.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    "s3:HeadObject",
-                    "s3:GetObject",
-                    "s3:List*",
-                    "s3:SelectObjectContent",
-                ],
-                resources=[
-                    self.bucket_pipeline_ownership_metadata.bucket_arn,
-                    f"{self.bucket_pipeline_ownership_metadata.bucket_arn}/*",
-                ],
-            )
-        )
-        
         # gather infractions
 
         self.lambda_gather_infractions = aws_lambda.Function(
@@ -300,7 +221,9 @@ class ControlBrokerStack(Stack):
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/gather_infractions"),
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/gather_infractions"
+            ),
         )
 
         # handle infraction
@@ -312,13 +235,15 @@ class ControlBrokerStack(Stack):
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
-            code=aws_lambda.Code.from_asset("./supplementary_files/lambdas/handle_infraction"),
-            environment = {
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/handle_infraction"
+            ),
+            environment={
                 "TableName": self.table_eval_results.table_name,
-                "EventBusName": self.event_bus_infractions.event_bus_name
-            }
+                "EventBusName": self.event_bus_infractions.event_bus_name,
+            },
         )
-        
+
         self.lambda_handle_infraction.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
@@ -331,7 +256,7 @@ class ControlBrokerStack(Stack):
                 ],
             )
         )
-        
+
         self.lambda_handle_infraction.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
@@ -383,8 +308,7 @@ class ControlBrokerStack(Stack):
             aws_iam.PolicyStatement(
                 actions=["lambda:InvokeFunction"],
                 resources=[
-                    self.lambda_opa_eval_python_subprocess_single_threaded.function_arn,
-                    self.lambda_s3_select.function_arn,
+                    self.lambda_opa_eval_python_subprocess.function_arn,
                     self.lambda_gather_infractions.function_arn,
                     self.lambda_handle_infraction.function_arn,
                 ],
@@ -430,7 +354,7 @@ class ControlBrokerStack(Stack):
                 # include_execution_data=False,
                 # level="ERROR",
                 include_execution_data=True,
-                level="ALL"
+                level="ALL",
             ),
             definition_string=json.dumps(
                 {
@@ -438,30 +362,16 @@ class ControlBrokerStack(Stack):
                     "States": {
                         "ParseInput": {
                             "Type": "Pass",
-                            "Next": "GetMetadata",
+                            "Next": "OpaEval",
                             "Parameters": {
                                 "JsonInput": {
                                     "Bucket.$": "$.Input.Bucket",
                                     "Key.$": "$.Input.Key",
                                 },
                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfn.ExecutionId",
+                                "ConsumerMetadata.$":"$.ConsumerMetadata",
                             },
                             "ResultPath": "$",
-                        },
-                        "GetMetadata": {
-                            "Type": "Task",
-                            "Next": "OpaEval",
-                            "ResultPath": "$.GetMetadata",
-                            "Resource": "arn:aws:states:::lambda:invoke",
-                            "Parameters": {
-                                "FunctionName": self.lambda_s3_select.function_name,
-                                "Payload": {
-                                    "Bucket": self.bucket_pipeline_ownership_metadata.bucket_name,
-                                    "Key": self.pipeline_ownership_metadata["Suffix"],
-                                    "Expression": "SELECT * from S3Object s",
-                                },
-                            },
-                            "ResultSelector": {"Metadata.$": "$.Payload.Selected"},
                         },
                         "OpaEval": {
                             "Type": "Task",
@@ -469,7 +379,7 @@ class ControlBrokerStack(Stack):
                             "ResultPath": "$.OpaEval",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
-                                "FunctionName": self.lambda_opa_eval_python_subprocess_single_threaded.function_name,
+                                "FunctionName": self.lambda_opa_eval_python_subprocess.function_name,
                                 "Payload": {
                                     "JsonInput.$": "$.JsonInput",
                                     "OpaPolicies": {
@@ -477,7 +387,9 @@ class ControlBrokerStack(Stack):
                                     },
                                 },
                             },
-                            "ResultSelector": {"OpaEvalResults.$": "$.Payload.OpaEvalResults"},
+                            "ResultSelector": {
+                                "OpaEvalResults.$": "$.Payload.OpaEvalResults"
+                            },
                         },
                         "GatherInfractions": {
                             "Type": "Task",
@@ -486,9 +398,11 @@ class ControlBrokerStack(Stack):
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
                                 "FunctionName": self.lambda_gather_infractions.function_name,
-                                "Payload.$": "$.OpaEval.OpaEvalResults"
+                                "Payload.$": "$.OpaEval.OpaEvalResults",
                             },
-                            "ResultSelector": {"Infractions.$": "$.Payload.Infractions"},
+                            "ResultSelector": {
+                                "Infractions.$": "$.Payload.Infractions"
+                            },
                         },
                         "ChoiceInfractionsExist": {
                             "Type": "Choice",
@@ -497,7 +411,7 @@ class ControlBrokerStack(Stack):
                                 {
                                     "Variable": "$.GatherInfractions.Infractions[0]",
                                     "IsPresent": False,
-                                    "Next": "NoInfractions"
+                                    "Next": "NoInfractions",
                                 }
                             ],
                         },
@@ -513,7 +427,7 @@ class ControlBrokerStack(Stack):
                                 "Infraction.$": "$$.Map.Item.Value",
                                 "JsonInput.$": "$.JsonInput",
                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                "Metadata.$": "$.GetMetadata.Metadata",
+                                "ConsumerMetadata.$": "$.ConsumerMetadata",
                             },
                             "Iterator": {
                                 "StartAt": "HandleInfraction",
@@ -529,28 +443,28 @@ class ControlBrokerStack(Stack):
                                                 "Infraction.$": "$.Infraction",
                                                 "JsonInput.$": "$.JsonInput",
                                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                                "Metadata.$": "$.Metadata",
+                                                "ConsumerMetadata.$": "$.ConsumerMetadata",
                                             }
                                         },
                                         "ResultSelector": {"Payload.$": "$.Payload"},
                                     },
-                                }
-                            }
+                                },
+                            },
                         },
                         "InfractionsExist": {
                             "Type": "Fail",
-                        }
-                    }
+                        },
+                    },
                 }
-            )
+            ),
         )
 
         self.sfn_inner_eval_engine.node.add_dependency(self.role_inner_eval_engine_sfn)
 
-        CfnOutput(self, "InnerSfnArn", value=self.sfn_inner_eval_engine.attr_arn)
+        # CfnOutput(self, "InnerSfnArn", value=self.sfn_inner_eval_engine.attr_arn)
 
     def deploy_outer_sfn_lambdas(self):
-        
+
         # write results report
 
         self.lambda_write_results_report = aws_lambda.Function(
@@ -563,9 +477,7 @@ class ControlBrokerStack(Stack):
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/lambdas/write_results_report"
             ),
-            environment = {
-                "EvalResultsTable": self.table_eval_results.table_name
-            }
+            environment={"EvalResultsTable": self.table_eval_results.table_name},
         )
 
         self.lambda_write_results_report.role.add_to_policy(
@@ -584,9 +496,7 @@ class ControlBrokerStack(Stack):
                 actions=[
                     "s3:List*",
                 ],
-                resources=[
-                    self.bucket_eval_results_reports.bucket_arn
-                ],
+                resources=[self.bucket_eval_results_reports.bucket_arn],
             )
         )
         self.lambda_write_results_report.role.add_to_policy(
@@ -595,11 +505,11 @@ class ControlBrokerStack(Stack):
                     "s3:PutObject",
                 ],
                 resources=[
-                    f"{self.bucket_eval_results_reports.bucket_arn}*",
+                    self.bucket_eval_results_reports.arn_for_objects("*"),
                 ],
             )
         )
-        
+
     def deploy_outer_sfn(self):
 
         log_group_outer_eval_engine_sfn = aws_logs.LogGroup(
@@ -718,6 +628,7 @@ class ControlBrokerStack(Stack):
                                                 "OuterEvalEngineSfn": {
                                                     "ExecutionId.$": "$$.Execution.Id"
                                                 },
+                                                "ConsumerMetadata.$": "$.ConsumerMetadata",
                                             },
                                         },
                                     },
@@ -732,14 +643,8 @@ class ControlBrokerStack(Stack):
                                             }
                                         ],
                                     },
-                                    "InnerSfnFailed": {
-                                        "Type": "Pass",
-                                        "End": True
-                                    },
-                                    "InnerSfnSucceeded": {
-                                        "Type": "Pass",
-                                        "End": True
-                                    },
+                                    "InnerSfnFailed": {"Type": "Pass", "End": True},
+                                    "InnerSfnSucceeded": {"Type": "Pass", "End": True},
                                 },
                             },
                         },
@@ -752,7 +657,8 @@ class ControlBrokerStack(Stack):
                                 "FunctionName": self.lambda_write_results_report.function_name,
                                 "Payload": {
                                     "OuterEvalEngineSfnExecutionId.$": "$$.Execution.Id",
-                                    "ResultsReportS3Uri.$":"$.ResultsReportS3Uri"
+                                    "ResultsReportS3Uri.$":"$.ResultsReportS3Uri",
+                                    "ForEachInput.$":"$.ForEachInput",
                                 }
                             },
                             "ResultSelector": {"Payload.$": "$.Payload"},
