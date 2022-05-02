@@ -20,7 +20,6 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from components.config_rules import ControlBrokerConfigRule
 from utils.mixins import SecretConfigStackMixin
 
 
@@ -81,7 +80,6 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             "InputReaderArns",
             value=json.dumps([r.role_arn for r in self.Input_reader_roles]),
         )
-        CfnOutput(self, "SfnInvokeArn", value=self.sfn_outer_eval_engine.attr_arn)
 
     def deploy_utils(self):
 
@@ -463,7 +461,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
 
         self.sfn_inner_eval_engine.node.add_dependency(self.role_inner_eval_engine_sfn)
 
-        CfnOutput(self, "InnerSfnArn", value=self.sfn_inner_eval_engine.attr_arn)
+        # CfnOutput(self, "InnerSfnArn", value=self.sfn_inner_eval_engine.attr_arn)
 
     def deploy_outer_sfn_lambdas(self):
 

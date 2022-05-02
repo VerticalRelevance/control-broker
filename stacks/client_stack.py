@@ -25,8 +25,6 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from components.config_rules import ControlBrokerConfigRule
-
 
 class ClientStack(Stack):
     """Client Layer"""
