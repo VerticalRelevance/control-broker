@@ -30,7 +30,9 @@ def lambda_handler(event=None, context=None):
     )
     control_broker_input_object = json.dumps(
         {
-            "CFN": {
+            "CFN": { 
+                # FIXME: see this issue for latest on API contract, required input schema
+                # https://github.com/VerticalRelevance/control-broker/issues/4
                 "Bucket": control_broker_readable_input_bucket,
                 "Keys": [test_file_s3_key],
             }

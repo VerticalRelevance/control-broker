@@ -194,7 +194,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             timeout=Duration.seconds(60),
             memory_size=10240,  # todo power-tune
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas/process_input_type"
+                "./supplementary_files/lambdas/pac_evaluation_router"
             ),
         )
 
@@ -398,7 +398,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                         },
                         "PaCEvaluationRouter": {
                             "Type": "Task",
-                            "Next": "GatherInfractions",
+                            "Next": "ChoicePaCEvaluationRouting",
                             "ResultPath": "$.InputTypeCloudFormationPaCFrameworkOPA",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
@@ -438,7 +438,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                 },
                             },
                             "ResultSelector": {
-                                "InputTypeCloudFormationPaCFrameworkOPAResults.$": "$.Payload.InputTypeCloudFormationPaCFrameworkOPAResults"
+                                "Results.$": "$.Payload.InputTypeCloudFormationPaCFrameworkOPAResults"
                             },
                         },
                         "GatherInfractions": {
@@ -448,7 +448,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
                                 "FunctionName": self.lambda_gather_infractions.function_name,
-                                "Payload.$": "$.InputTypeCloudFormationPaCFrameworkOPA.InputTypeCloudFormationPaCFrameworkOPAResults",
+                                "Payload.$": "$.InputTypeCloudFormationPaCFrameworkOPA.Results",
                             },
                             "ResultSelector": {
                                 "Infractions.$": "$.Payload.Infractions"
@@ -673,9 +673,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                             "Input": {
                                                 "ControlBrokerConsumerInputKey.$":"$.ControlBrokerConsumerInputKey",
                                                 "ControlBrokerConsumerInputs.$": "$.InvokedByApigw.ControlBrokerConsumerInputs",
-                                                "OuterEvalEngineSfn": {
-                                                    "ExecutionId.$": "$$.Execution.Id"
-                                                },
+                                                "OuterEvalEngineSfnExecutionId.$":"$$.Execution.Id",
                                             },
                                         },
                                     },
