@@ -10,20 +10,25 @@ cfn = boto3.client('cloudformation')
 cloudcontrol = boto3.client('cloudcontrol')
 
 def get_object(*,bucket,key):
+    
     try:
         r = s3.get_object(
             Bucket = bucket,
             Key = key
         )
     except ClientError as e:
-        print(f'ClientError:\n{e}')
+        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
         raise
     else:
+        print(f'no ClientError get_object:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
         body = r['Body']
         content = json.loads(body.read().decode('utf-8'))
         return content
         
 def put_object(*,bucket,key,object_:dict):
+    
+    print(f'begin put_object\nbucket:\n{bucket}\nkey:\n{key}')
+    
     try:
         r = s3.put_object(
             Bucket = bucket,
@@ -31,9 +36,10 @@ def put_object(*,bucket,key,object_:dict):
             Body = json.dumps(object_)
         )
     except ClientError as e:
-        print(f'ClientError:\n{e}')
+        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
         raise
     else:
+        print(f'no ClientError put_object:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
         return True
 
 class CloudControl():
@@ -309,7 +315,7 @@ class PacEvaluationRouter():
                     input_conversion_object = self.convert_config_event_to_cfn
                 ),
                 "InvokingSfnNextState": self.get_invoking_sfn_next_state(
-                    input_type = "CloudFormationTemplate",
+                    input_type = "CloudFormationTemplate", # ConvertedTo
                     pac_framework = pac_framework,
                 )
             }
