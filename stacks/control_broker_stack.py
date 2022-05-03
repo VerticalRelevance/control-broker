@@ -58,7 +58,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
         self.deploy_outer_sfn()
 
         self.Input_reader_roles: List[aws_iam.Role] = [
-            self.lambda_opa_eval_python_subprocess.role,
+            self.lambda_input_type_cloudformation_pac_framework_opa.role,
         ]
 
         self.outer_eval_engine_state_machine = (
@@ -184,21 +184,44 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
 
     def deploy_inner_sfn_lambdas(self):
 
-        # opa eval - python subprocess - single threaded
+        # pac evaluation router
 
-        self.lambda_opa_eval_python_subprocess = aws_lambda.Function(
+        self.lambda_pac_evaluation_router = aws_lambda.Function(
             self,
-            "OpaEvalPythonSubprocessSingleThreaded",
+            "PaCEvaluationRouter",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=10240,  # todo power-tune
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas/opa_eval/python_subprocess"
+                "./supplementary_files/lambdas/process_input_type"
             ),
         )
 
-        self.lambda_opa_eval_python_subprocess.role.add_to_policy(
+        self.lambda_pac_evaluation_router.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "cloudformation:ValidateTemplate",
+                ],
+                resources=["*"],
+            )
+        )
+        
+        # InputType CloudFormation - PaCFramework OPA - PythonSubprocess
+
+        self.lambda_input_type_cloudformation_pac_framework_opa = aws_lambda.Function(
+            self,
+            "InputTypeCloudFormationPaCFrameworkOPAPythonSubprocess",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=10240,  # todo power-tune
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/pac_evaluation/input_type_cloudformation/pac_framework_opa/python_subprocess"
+            ),
+        )
+
+        self.lambda_input_type_cloudformation_pac_framework_opa.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:HeadObject",
@@ -308,7 +331,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             aws_iam.PolicyStatement(
                 actions=["lambda:InvokeFunction"],
                 resources=[
-                    self.lambda_opa_eval_python_subprocess.function_arn,
+                    self.lambda_input_type_cloudformation_pac_framework_opa.function_arn,
                     self.lambda_gather_infractions.function_arn,
                     self.lambda_handle_infraction.function_arn,
                 ],
@@ -362,7 +385,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                     "States": {
                         "ParseInput": {
                             "Type": "Pass",
-                            "Next": "OpaEval",
+                            "Next": "PaCEvaluationRouter",
                             "Parameters": {
                                 "JsonInput": {
                                     "Bucket.$": "$.ControlBrokerConsumerInputs.Bucket",
@@ -373,13 +396,40 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             },
                             "ResultPath": "$",
                         },
-                        "OpaEval": {
+                        "PaCEvaluationRouter": {
                             "Type": "Task",
                             "Next": "GatherInfractions",
-                            "ResultPath": "$.OpaEval",
+                            "ResultPath": "$.InputTypeCloudFormationPaCFrameworkOPA",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
-                                "FunctionName": self.lambda_opa_eval_python_subprocess.function_name,
+                                "FunctionName": self.lambda_pac_evaluation_router.function_name,
+                                "Payload.$": "$"
+                            },
+                            "ResultSelector": {
+                                "Payload.$": "$.Payload"
+                            },
+                        },
+                        "ChoicePaCEvaluationRouting": {
+                            "Type": "Choice",
+                            "Default": "PaCEvaluationRouterDeterminedNoValidRoute",
+                            "Choices": [
+                                {
+                                    "Variable": "$.PaCEvaluationRouter.Routing",
+                                    "StringEquals": "InputTypeCloudFormationPaCFrameworkOPA",
+                                    "Next": "InputTypeCloudFormationPaCFrameworkOPA",
+                                }
+                            ],
+                        },
+                        "PaCEvaluationRouterDeterminedNoValidRoute": {
+                            "Type": "Fail",
+                        },
+                        "InputTypeCloudFormationPaCFrameworkOPA": {
+                            "Type": "Task",
+                            "Next": "GatherInfractions",
+                            "ResultPath": "$.InputTypeCloudFormationPaCFrameworkOPA",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Parameters": {
+                                "FunctionName": self.lambda_input_type_cloudformation_pac_framework_opa.function_name,
                                 "Payload": {
                                     "JsonInput.$": "$.JsonInput",
                                     "OpaPolicies": {
@@ -388,7 +438,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                 },
                             },
                             "ResultSelector": {
-                                "OpaEvalResults.$": "$.Payload.OpaEvalResults"
+                                "InputTypeCloudFormationPaCFrameworkOPAResults.$": "$.Payload.InputTypeCloudFormationPaCFrameworkOPAResults"
                             },
                         },
                         "GatherInfractions": {
@@ -398,7 +448,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
                                 "FunctionName": self.lambda_gather_infractions.function_name,
-                                "Payload.$": "$.OpaEval.OpaEvalResults",
+                                "Payload.$": "$.InputTypeCloudFormationPaCFrameworkOPA.InputTypeCloudFormationPaCFrameworkOPAResults",
                             },
                             "ResultSelector": {
                                 "Infractions.$": "$.Payload.Infractions"
