@@ -151,7 +151,7 @@ class ConfigEventToCloudFormationConverter():
             print(f'resource_configuration_keys:\n{resource_configuration_keys}')
         
         self.resource_id = configuration_item['resourceId']
-        print(f'resource_id:\n{self.resource_type}')
+        print(f'resource_id:\n{self.resource_id}')
     
     def get_converted_cloudformation(self):
         
