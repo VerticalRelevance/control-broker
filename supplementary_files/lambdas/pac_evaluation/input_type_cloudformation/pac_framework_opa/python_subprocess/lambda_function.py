@@ -85,7 +85,7 @@ def lambda_handler(event, context):
     
     print(event)
     
-    opa_policies_bucket = event['OpaPolicies']['Bucket']
+    opa_policies_bucket = event['PaC']['Bucket']
     
     json_input = event['JsonInput']
     
