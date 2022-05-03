@@ -1,35 +1,37 @@
-# class PacEvaluationRouter():
-#     def __init__(
-#         self,
-#         input_type
-#     ):
-#         self.input_type = input_type
+class PacEvaluationRouter():
+    def __init__(
+        self,
+        input_type
+    ):
+        self.input_type = input_type
 
-#     def convert_config_to_cfn(self):
-#         pass
+    def get_routing_decision(self):
     
+        routing_decision_matrix = {
+            "CloudFormationTemplate":"InputTypeCloudFormationPaCFrameworkOPA"
+        }
     
-#     def main(self):
-#         # convert : {
-#         #     "ConfigEvent":self.convert_config_to_cfn,
-#         #     # "SAM": convert_sam_to_cfn#TODO
-#         #     # "HelmChart": #TODO
-#         #     # "Terraform": #TODO
-#         # }
-#         pass
+        return routing_decision_matrix[self.input_type]
+        
 
 def lambda_handler(event, context):
 
     print(event)
     
-    # p = PacEvaluationRouter(
-    #     input_type = event['input_type']
-    # )
+    control_broker_consumer_inputs = event['ControlBrokerConsumerInputs']
     
-    # p.main()
+    print(f"control_broker_consumer_inputs:\n{control_broker_consumer_inputs}")
+    
+    input_type = control_broker_consumer_inputs['InputType']
+
+    p = PacEvaluationRouter(
+        input_type = input_type
+    )
+    
+    routing_decision = p.get_routing_decision()
     
     routing = {
-        "Routing": "InputTypeCloudFormationPaCFrameworkOPA"
+        "Routing": routing_decision
     }
     
     return routing

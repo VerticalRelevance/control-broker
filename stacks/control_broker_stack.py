@@ -394,6 +394,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                 },
                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
                                 "ConsumerMetadata.$":"$.ControlBrokerConsumerInputs.ConsumerMetadata",
+                                "ControlBrokerConsumerInputs.$":"$.ControlBrokerConsumerInputs",
                             },
                             "ResultPath": "$",
                         },
