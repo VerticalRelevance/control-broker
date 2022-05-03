@@ -211,7 +211,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
 
         self.lambda_input_type_cloudformation_pac_framework_opa = aws_lambda.Function(
             self,
-            "InputTypeCloudFormationPaCFrameworkOPAPythonSubprocess",
+            "EvaluateCloudFormationTemplateByOPAPythonSubprocess",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
@@ -382,22 +382,8 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             ),
             definition_string=json.dumps(
                 {
-                    "StartAt": "ParseInput",
+                    "StartAt": "PaCEvaluationRouter",
                     "States": {
-                        "ParseInput": {
-                            "Type": "Pass",
-                            "Next": "PaCEvaluationRouter",
-                            "Parameters": {
-                                "JsonInput": {
-                                    "Bucket.$": "$.ControlBrokerConsumerInputs.Bucket",
-                                    "Key.$": "$.ControlBrokerConsumerInputKey",
-                                },
-                                "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                "ConsumerMetadata.$":"$.ControlBrokerConsumerInputs.ConsumerMetadata",
-                                "ControlBrokerConsumerInputs.$":"$.ControlBrokerConsumerInputs",
-                            },
-                            "ResultPath": "$",
-                        },
                         "PaCEvaluationRouter": {
                             "Type": "Task",
                             "Next": "ChoicePaCEvaluationRouting",
@@ -413,99 +399,102 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                         },
                         "ChoicePaCEvaluationRouting": {
                             "Type": "Choice",
-                            "Default": "PaCEvaluationRouterDeterminedNoValidRoute",
+                            "Default": "NoValidRoute",
                             "Choices": [
                                 {
                                     "Variable": "$.PaCEvaluationRouter.Routing",
-                                    "StringEquals": "InputTypeCloudFormationPaCFrameworkOPA",
-                                    "Next": "InputTypeCloudFormationPaCFrameworkOPA",
+                                    "StringEquals": "EvaluateCloudFormationTemplateByOPA",
+                                    "Next": "EvaluateCloudFormationTemplateByOPA",
                                 }
                             ],
                         },
-                        "PaCEvaluationRouterDeterminedNoValidRoute": {
+                        "NoValidRoute": {
                             "Type": "Fail",
                         },
-                        "InputTypeCloudFormationPaCFrameworkOPA": {
-                            "Type": "Task",
-                            "Next": "GatherInfractions",
-                            "ResultPath": "$.InputTypeCloudFormationPaCFrameworkOPA",
-                            "Resource": "arn:aws:states:::lambda:invoke",
-                            "Parameters": {
-                                "FunctionName": self.lambda_input_type_cloudformation_pac_framework_opa.function_name,
-                                "Payload": {
-                                    "JsonInput.$": "$.JsonInput",
-                                    "OpaPolicies": {
-                                        "Bucket": self.bucket_opa_policies.bucket_name
-                                    },
-                                },
-                            },
-                            "ResultSelector": {
-                                "Results.$": "$.Payload.InputTypeCloudFormationPaCFrameworkOPAResults"
-                            },
-                        },
-                        "GatherInfractions": {
-                            "Type": "Task",
-                            "Next": "ChoiceInfractionsExist",
-                            "ResultPath": "$.GatherInfractions",
-                            "Resource": "arn:aws:states:::lambda:invoke",
-                            "Parameters": {
-                                "FunctionName": self.lambda_gather_infractions.function_name,
-                                "Payload.$": "$.InputTypeCloudFormationPaCFrameworkOPA.Results",
-                            },
-                            "ResultSelector": {
-                                "Infractions.$": "$.Payload.Infractions"
-                            },
-                        },
-                        "ChoiceInfractionsExist": {
-                            "Type": "Choice",
-                            "Default": "ForEachInfraction",
-                            "Choices": [
-                                {
-                                    "Variable": "$.GatherInfractions.Infractions[0]",
-                                    "IsPresent": False,
-                                    "Next": "NoInfractions",
-                                }
-                            ],
-                        },
-                        "NoInfractions": {
+                        "EvaluateCloudFormationTemplateByOPA": {
                             "Type": "Succeed",
                         },
-                        "ForEachInfraction": {
-                            "Type": "Map",
-                            "Next": "InfractionsExist",
-                            "ResultPath": "$.ForEachInfraction",
-                            "ItemsPath": "$.GatherInfractions.Infractions",
-                            "Parameters": {
-                                "Infraction.$": "$$.Map.Item.Value",
-                                "JsonInput.$": "$.JsonInput",
-                                "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                "ConsumerMetadata.$": "$.ConsumerMetadata",
-                            },
-                            "Iterator": {
-                                "StartAt": "HandleInfraction",
-                                "States": {
-                                    "HandleInfraction": {
-                                        "Type": "Task",
-                                        "End": True,
-                                        "ResultPath": "$.HandleInfraction",
-                                        "Resource": "arn:aws:states:::lambda:invoke",
-                                        "Parameters": {
-                                            "FunctionName": self.lambda_handle_infraction.function_name,
-                                            "Payload": {
-                                                "Infraction.$": "$.Infraction",
-                                                "JsonInput.$": "$.JsonInput",
-                                                "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                                "ConsumerMetadata.$": "$.ConsumerMetadata",
-                                            }
-                                        },
-                                        "ResultSelector": {"Payload.$": "$.Payload"},
-                                    },
-                                },
-                            },
-                        },
-                        "InfractionsExist": {
-                            "Type": "Fail",
-                        },
+                        # "EvaluateCloudFormationTemplateByOPA": {
+                        #     "Type": "Task",
+                        #     "Next": "GatherInfractions",
+                        #     "ResultPath": "$.EvaluateCloudFormationTemplateByOPA",
+                        #     "Resource": "arn:aws:states:::lambda:invoke",
+                        #     "Parameters": {
+                        #         "FunctionName": self.lambda_input_type_cloudformation_pac_framework_opa.function_name,
+                        #         "Payload": {
+                        #             "JsonInput.$": "$.JsonInput",
+                        #             "OpaPolicies": {
+                        #                 "Bucket": self.bucket_opa_policies.bucket_name
+                        #             },
+                        #         },
+                        #     },
+                        #     "ResultSelector": {
+                        #         "Results.$": "$.Payload.EvaluateCloudFormationTemplateByOPAResults"
+                        #     },
+                        # },
+                        # "GatherInfractions": {
+                        #     "Type": "Task",
+                        #     "Next": "ChoiceInfractionsExist",
+                        #     "ResultPath": "$.GatherInfractions",
+                        #     "Resource": "arn:aws:states:::lambda:invoke",
+                        #     "Parameters": {
+                        #         "FunctionName": self.lambda_gather_infractions.function_name,
+                        #         "Payload.$": "$.EvaluateCloudFormationTemplateByOPA.Results",
+                        #     },
+                        #     "ResultSelector": {
+                        #         "Infractions.$": "$.Payload.Infractions"
+                        #     },
+                        # },
+                        # "ChoiceInfractionsExist": {
+                        #     "Type": "Choice",
+                        #     "Default": "ForEachInfraction",
+                        #     "Choices": [
+                        #         {
+                        #             "Variable": "$.GatherInfractions.Infractions[0]",
+                        #             "IsPresent": False,
+                        #             "Next": "NoInfractions",
+                        #         }
+                        #     ],
+                        # },
+                        # "NoInfractions": {
+                        #     "Type": "Succeed",
+                        # },
+                        # "ForEachInfraction": {
+                        #     "Type": "Map",
+                        #     "Next": "InfractionsExist",
+                        #     "ResultPath": "$.ForEachInfraction",
+                        #     "ItemsPath": "$.GatherInfractions.Infractions",
+                        #     "Parameters": {
+                        #         "Infraction.$": "$$.Map.Item.Value",
+                        #         "JsonInput.$": "$.JsonInput",
+                        #         "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
+                        #         "ConsumerMetadata.$": "$.ConsumerMetadata",
+                        #     },
+                        #     "Iterator": {
+                        #         "StartAt": "HandleInfraction",
+                        #         "States": {
+                        #             "HandleInfraction": {
+                        #                 "Type": "Task",
+                        #                 "End": True,
+                        #                 "ResultPath": "$.HandleInfraction",
+                        #                 "Resource": "arn:aws:states:::lambda:invoke",
+                        #                 "Parameters": {
+                        #                     "FunctionName": self.lambda_handle_infraction.function_name,
+                        #                     "Payload": {
+                        #                         "Infraction.$": "$.Infraction",
+                        #                         "JsonInput.$": "$.JsonInput",
+                        #                         "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
+                        #                         "ConsumerMetadata.$": "$.ConsumerMetadata",
+                        #                     }
+                        #                 },
+                        #                 "ResultSelector": {"Payload.$": "$.Payload"},
+                        #             },
+                        #         },
+                        #     },
+                        # },
+                        # "InfractionsExist": {
+                        #     "Type": "Fail",
+                        # },
                     },
                 }
             ),
