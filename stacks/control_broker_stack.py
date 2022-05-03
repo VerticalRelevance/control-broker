@@ -58,7 +58,8 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
         self.deploy_outer_sfn()
 
         self.Input_reader_roles: List[aws_iam.Role] = [
-            self.lambda_input_type_cloudformation_pac_framework_opa.role,
+            self.lambda_evaluate_cloudformation_by_opa.role,
+            self.lambda_pac_evaluation_router.role,
         ]
 
         self.outer_eval_engine_state_machine = (
@@ -124,6 +125,21 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             ],
         )
 
+        # converted inputs
+
+        self.bucket_converted_inputs = aws_s3.Bucket(
+            self,
+            "ConvertedInputs",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+        
         # results reports
 
         self.bucket_eval_results_reports = aws_s3.Bucket(
@@ -196,6 +212,12 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/lambdas/pac_evaluation_router"
             ),
+            environment = {
+                "PaCBucketRouting": json.dumps({
+                    "OPA":self.bucket_opa_policies.bucket_name
+                }),
+                "ConvertedInputsBucket": self.bucket_converted_inputs.bucket_name
+            }
         )
 
         self.lambda_pac_evaluation_router.role.add_to_policy(
@@ -206,10 +228,20 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                 resources=["*"],
             )
         )
+        self.lambda_pac_evaluation_router.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                ],
+                resources=[
+                    self.bucket_converted_inputs.arn_for_objects("*"),
+                ],
+            )
+        )
         
         # InputType CloudFormation - PaCFramework OPA - PythonSubprocess
 
-        self.lambda_input_type_cloudformation_pac_framework_opa = aws_lambda.Function(
+        self.lambda_evaluate_cloudformation_by_opa = aws_lambda.Function(
             self,
             "EvaluateCloudFormationTemplateByOPAPythonSubprocess",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
@@ -221,7 +253,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             ),
         )
 
-        self.lambda_input_type_cloudformation_pac_framework_opa.role.add_to_policy(
+        self.lambda_evaluate_cloudformation_by_opa.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:HeadObject",
@@ -231,6 +263,8 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                 resources=[
                     self.bucket_opa_policies.bucket_arn,
                     self.bucket_opa_policies.arn_for_objects("*"),
+                    self.bucket_converted_inputs.bucket_arn,
+                    self.bucket_converted_inputs.arn_for_objects("*"),
                 ],
             )
         )
@@ -332,7 +366,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                 actions=["lambda:InvokeFunction"],
                 resources=[
                     self.lambda_pac_evaluation_router.function_arn,
-                    self.lambda_input_type_cloudformation_pac_framework_opa.function_arn,
+                    self.lambda_evaluate_cloudformation_by_opa.function_arn,
                     self.lambda_gather_infractions.function_arn,
                     self.lambda_handle_infraction.function_arn,
                 ],
@@ -420,7 +454,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                         #     "ResultPath": "$.EvaluateCloudFormationTemplateByOPA",
                         #     "Resource": "arn:aws:states:::lambda:invoke",
                         #     "Parameters": {
-                        #         "FunctionName": self.lambda_input_type_cloudformation_pac_framework_opa.function_name,
+                        #         "FunctionName": self.lambda_evaluate_cloudformation_by_opa.function_name,
                         #         "Payload": {
                         #             "JsonInput.$": "$.JsonInput",
                         #             "OpaPolicies": {
