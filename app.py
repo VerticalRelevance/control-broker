@@ -13,7 +13,7 @@ from stacks.pipeline_stack import GitHubCDKPipelineStack
 from stacks.test_stack import TestStack
 from stacks.endpoint_stack import EndpointStack
 
-STACK_VERSION = "V0x6x3"
+STACK_VERSION = "V0x7x0"
 
 app = cdk.App()
 continuously_deployed = app.node.try_get_context(

@@ -133,5 +133,5 @@ def lambda_handler(event, context):
     print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
     
     return {
-        "InputTypeCloudFormationPaCFrameworkOPAResults": opa_eval_results
+        "EvaluateCloudFormationTemplateByOPAResults": opa_eval_results
     }
