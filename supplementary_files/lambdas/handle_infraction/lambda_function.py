@@ -98,7 +98,7 @@ def lambda_handler(event, context):
     # to ddb
     
     update = update_item(
-        table = os.environ['tableName'],
+        table = os.environ['TableName'],
         pk = outer_eval_enginge_sfn_execution_id,
         sk = sk,
         attributes = consumer_metadata
@@ -107,7 +107,7 @@ def lambda_handler(event, context):
     # to eb
     
     put = put_event_entry(
-        event_bus_name = os.environ.get('event_bus_name'),
+        event_bus_name = os.environ['EventBusName'],
         source = outer_eval_enginge_sfn_execution_id,
         detail = {
             'Infraction':event.get('Infraction'),
