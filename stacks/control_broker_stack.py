@@ -458,7 +458,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                         "Bucket.$":"$.PaCEvaluationRouter.Routing.ModifiedInput.Bucket",
                                         "Key.$":"$.PaCEvaluationRouter.Routing.ModifiedInput.Key",
                                     },
-                                    "OpaPolicies": {
+                                    "PaC": {
                                         "Bucket.$": "$.PaCEvaluationRouter.Routing.PaC.Bucket"
                                     },
                                 },
