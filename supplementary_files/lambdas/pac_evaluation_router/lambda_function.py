@@ -157,9 +157,14 @@ class ConfigEventToCloudFormationConverter():
         
     def put_converted_cloudformation(self):
         
+        self.converted_s3_path = {
+            'Bucket' : os.environ['ConvertedInputsBucket'],
+            'Key' : self.config_event_s3_path['Key'],
+        }
+        
         put_object(
-            bucket = os.environ['ConvertedInputsBucket'],
-            key = self.config_event_s3_path['Key'],
+            bucket = self.converted_s3_path['Bucket'],
+            key = self.converted_s3_path['Key'],
             object_ = self.cfn
         )
     
@@ -167,13 +172,9 @@ class ConfigEventToCloudFormationConverter():
         
         self.parse_config_event()
         self.get_converted_cloudformation()
+        self.put_converted_cloudformation()
         
-        
-        
-        return {
-            "Bucket":"CONVERTED-BUCKET",
-            "Key":"CONVERTED-KEY",
-        }
+        return self.converted_s3_path
 
 class PacEvaluationRouter():
     def __init__(
