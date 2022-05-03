@@ -365,11 +365,11 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "Next": "OpaEval",
                             "Parameters": {
                                 "JsonInput": {
-                                    "Bucket.$": "$.Input.Bucket",
-                                    "Key.$": "$.Input.Key",
+                                    "Bucket.$": "$.ControlBrokerConsumerInputs.Bucket",
+                                    "Key.$": "$.ControlBrokerConsumerInputKey",
                                 },
-                                "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfn.ExecutionId",
-                                "ConsumerMetadata.$":"$.ConsumerMetadata",
+                                "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
+                                "ConsumerMetadata.$":"$.ControlBrokerConsumerInputs.ConsumerMetadata",
                             },
                             "ResultPath": "$",
                         },
@@ -607,11 +607,8 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "ResultPath": "$.ForEachInput",
                             "ItemsPath": "$.InvokedByApigw.ControlBrokerConsumerInputs.InputKeys",
                             "Parameters": {
-                                "Input": {
-                                    "Bucket.$": "$.InvokedByApigw.ControlBrokerConsumerInputs.Bucket",
-                                    "Key.$": "$$.Map.Item.Value",
-                                },
-                                "ConsumerMetadata.$": "$.InvokedByApigw.ControlBrokerConsumerInputs.ConsumerMetadata",
+                                "InvokedByApigw.$":"$.InvokedByApigw",
+                                "ControlBrokerConsumerInputKey.$": "$$.Map.Item.Value",
                             },
                             "Iterator": {
                                 "StartAt": "InvokeInnerEvalEngineSfn",
@@ -624,11 +621,11 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                         "Parameters": {
                                             "StateMachineArn": self.sfn_inner_eval_engine.attr_arn,
                                             "Input": {
-                                                "Input.$": "$.Input",
+                                                "ControlBrokerConsumerInputKey.$":"$.ControlBrokerConsumerInputKey",
+                                                "ControlBrokerConsumerInputs.$": "$.InvokedByApigw.ControlBrokerConsumerInputs",
                                                 "OuterEvalEngineSfn": {
                                                     "ExecutionId.$": "$$.Execution.Id"
                                                 },
-                                                "ConsumerMetadata.$": "$.ConsumerMetadata",
                                             },
                                         },
                                     },
