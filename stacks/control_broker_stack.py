@@ -436,7 +436,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "Default": "NoValidRoute",
                             "Choices": [
                                 {
-                                    "Variable": "$.PaCEvaluationRouter.Routing",
+                                    "Variable": "$.PaCEvaluationRouter.Routing.InvokingSfnNextState",
                                     "StringEquals": "EvaluateCloudFormationTemplateByOPA",
                                     "Next": "EvaluateCloudFormationTemplateByOPA",
                                 }
@@ -446,26 +446,27 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "Type": "Fail",
                         },
                         "EvaluateCloudFormationTemplateByOPA": {
-                            "Type": "Succeed",
+                            "Type": "Task",
+                            # "Next": "GatherInfractions",
+                            "End": True,
+                            "ResultPath": "$.EvaluateCloudFormationTemplateByOPA",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Parameters": {
+                                "FunctionName": self.lambda_evaluate_cloudformation_by_opa.function_name,
+                                "Payload": {
+                                    "JsonInput": {
+                                        "Bucket.$":"$.PaCEvaluationRouter.Routing.ModifiedInput.Bucket",
+                                        "Key.$":"$.PaCEvaluationRouter.Routing.ModifiedInput.Key",
+                                    },
+                                    "OpaPolicies": {
+                                        "Bucket.$": "$.PaCEvaluationRouter.Routing.PaC.Bucket"
+                                    },
+                                },
+                            },
+                            "ResultSelector": {
+                                "Results.$": "$.Payload.EvaluateCloudFormationTemplateByOPAResults"
+                            },
                         },
-                        # "EvaluateCloudFormationTemplateByOPA": {
-                        #     "Type": "Task",
-                        #     "Next": "GatherInfractions",
-                        #     "ResultPath": "$.EvaluateCloudFormationTemplateByOPA",
-                        #     "Resource": "arn:aws:states:::lambda:invoke",
-                        #     "Parameters": {
-                        #         "FunctionName": self.lambda_evaluate_cloudformation_by_opa.function_name,
-                        #         "Payload": {
-                        #             "JsonInput.$": "$.JsonInput",
-                        #             "OpaPolicies": {
-                        #                 "Bucket": self.bucket_opa_policies.bucket_name
-                        #             },
-                        #         },
-                        #     },
-                        #     "ResultSelector": {
-                        #         "Results.$": "$.Payload.EvaluateCloudFormationTemplateByOPAResults"
-                        #     },
-                        # },
                         # "GatherInfractions": {
                         #     "Type": "Task",
                         #     "Next": "ChoiceInfractionsExist",
