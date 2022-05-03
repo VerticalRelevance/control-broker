@@ -8,9 +8,9 @@ ddb = boto3.resource('dynamodb')
 eb = boto3.client('events')
 
 def update_item(*,
-    table,
-    pk,
-    sk,
+    table:str,
+    pk:str,
+    sk:str,
     attributes:dict[str,str]
 ):
     
@@ -56,8 +56,8 @@ def update_item(*,
         return True
 
 def put_event_entry(*,
-    event_bus_name,
-    source,
+    event_bus_name:str,
+    source:str,
     detail:dict
 ):
     try:
@@ -67,7 +67,7 @@ def put_event_entry(*,
                     'EventBusName':event_bus_name,
                     'Detail':json.dumps(detail),
                     'DetailType':os.environ.get('AWS_LAMBDA_FUNCTION_NAME'),
-                    'source':source,
+                    'Source':source,
                 }
             ]
         )
