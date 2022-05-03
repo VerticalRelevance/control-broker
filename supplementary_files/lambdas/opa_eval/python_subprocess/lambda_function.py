@@ -19,7 +19,7 @@ def s3_download(*,bucket,key,local_path):
             local_path
         )
     except ClientError as e:
-        print(f'ClientError:\nbucket: {bucket}\nkey: {key}\n{e}')
+        print(f'ClientError:\nbucket: {bucket}\nkey:\n{key}\n{e}')
         raise
     else:
         print(f'No ClientError download_file\nbucket:\n{bucket}\nkey:\n{key}')
