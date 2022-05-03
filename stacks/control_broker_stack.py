@@ -57,7 +57,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
         self.deploy_outer_sfn_lambdas()
         self.deploy_outer_sfn()
 
-        self.input_reader_roles: List[aws_iam.Role] = [
+        self.Input_reader_roles: List[aws_iam.Role] = [
             self.lambda_evaluate_cloudformation_by_opa.role,
             self.lambda_pac_evaluation_router.role,
         ]
@@ -79,7 +79,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
         CfnOutput(
             self,
             "InputReaderArns",
-            value=json.dumps([r.role_arn for r in self.input_reader_roles]),
+            value=json.dumps([r.role_arn for r in self.Input_reader_roles]),
         )
 
     def deploy_utils(self):

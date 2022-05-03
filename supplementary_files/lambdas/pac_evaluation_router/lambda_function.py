@@ -20,7 +20,7 @@ def get_object(*,bucket,key):
         print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
         raise
     else:
-        print(f'no ClientError get_object:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
+        print(f'no ClientError get_object:\nbucket:\n{bucket}\nkey:\n{key}')
         body = r['Body']
         content = json.loads(body.read().decode('utf-8'))
         return content
@@ -39,7 +39,7 @@ def put_object(*,bucket,key,object_:dict):
         print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
         raise
     else:
-        print(f'no ClientError put_object:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
+        print(f'no ClientError put_object:\nbucket:\n{bucket}\nkey:\n{key}')
         return True
 
 class CloudControl():
