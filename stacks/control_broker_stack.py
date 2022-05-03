@@ -331,6 +331,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             aws_iam.PolicyStatement(
                 actions=["lambda:InvokeFunction"],
                 resources=[
+                    self.lambda_pac_evaluation_router.function_arn,
                     self.lambda_input_type_cloudformation_pac_framework_opa.function_arn,
                     self.lambda_gather_infractions.function_arn,
                     self.lambda_handle_infraction.function_arn,
@@ -399,14 +400,14 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                         "PaCEvaluationRouter": {
                             "Type": "Task",
                             "Next": "ChoicePaCEvaluationRouting",
-                            "ResultPath": "$.InputTypeCloudFormationPaCFrameworkOPA",
+                            "ResultPath": "$.PaCEvaluationRouter",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
                                 "FunctionName": self.lambda_pac_evaluation_router.function_name,
                                 "Payload.$": "$"
                             },
                             "ResultSelector": {
-                                "Payload.$": "$.Payload"
+                                "Routing.$": "$.Payload.Routing"
                             },
                         },
                         "ChoicePaCEvaluationRouting": {
