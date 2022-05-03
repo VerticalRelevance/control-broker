@@ -52,7 +52,7 @@ class CloudControl():
         try:
             r = cfn.describe_type(
                 Type = 'RESOURCE',
-                type_name = resource_type,
+                TypeName = resource_type,
             )
         except cfn.exceptions.TypeNotFoundException:
             print(f'TypeNotFoundException: {resource_type}')
@@ -67,8 +67,8 @@ class CloudControl():
     def cloudcontrol_get(self,*,type_name,identifier):   
         try:
             r = cloudcontrol.get_resource(
-                type_name = type_name,
-                identifier = identifier
+                TypeName = type_name,
+                Identifier = identifier
             )
         except ClientError as e:
             print(f'ClientError\n{e}')
@@ -140,7 +140,7 @@ class ConfigEventToCloudFormationConverter():
         item_status = configuration_item["configurationItemStatus"]
         print(f'item_status:\n{item_status}')
         
-        self.resource_type = configuration_item['resource_type']
+        self.resource_type = configuration_item['resourceType']
         print(f'resource_type:\n{self.resource_type}')
         
         resource_configuration = configuration_item['configuration']
