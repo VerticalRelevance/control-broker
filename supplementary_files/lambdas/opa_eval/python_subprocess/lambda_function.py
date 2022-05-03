@@ -36,7 +36,7 @@ def s3_download_dir(*,bucket, prefix=None, local_path):
             
     for result in pagination:
         if result.get('CommonPrefixes') is not None:
-            for subdir in result.get('Commonprefixes'):
+            for subdir in result.get('CommonPrefixes'):
                 s3_download_dir(
                     prefix = subdir.get('Prefix'),
                     local_path = local_path,
@@ -81,7 +81,6 @@ def mkdir(dir_):
     p.mkdir(parents=True,exist_ok=True)
     return str(p)
     
-        
 def lambda_handler(event, context):
     
     print(event)
