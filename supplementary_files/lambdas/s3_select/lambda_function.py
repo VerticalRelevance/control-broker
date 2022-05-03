@@ -6,19 +6,19 @@ from botocore.exceptions import ClientError
 s3 = boto3.client('s3')
 
 def s3_select_to_file(
-    Bucket,
-    Key,
-    Expression,
-    Outfile
+    bucket,
+    key,
+    expression,
+    outfile
 ):
     
-    print(f'select_object_content\nBucket:\n{Bucket}\nKey:\n{Key}')
+    print(f'select_object_content\nbucket:\n{bucket}\nkey:\n{key}')
 
     try:
         r = s3.select_object_content(
-            Bucket=Bucket,
-            Key=Key,
-            Expression=Expression,
+            Bucket=bucket,
+            Key=key,
+            Expression=expression,
             ExpressionType='SQL',
             InputSerialization={
                 'JSON': {
@@ -37,7 +37,7 @@ def s3_select_to_file(
     else:
         event_stream = r['Payload']
         end_event_received = False
-        with open(Outfile, 'wb') as f:
+        with open(outfile, 'wb') as f:
             # Iterate over events in the event stream as they come
             for event in event_stream:
                 # If we received a records event, write the data to a file
@@ -73,10 +73,10 @@ def lambda_handler(event,context):
         bucket, key = s3_uri_to_bucket_key(Uri=event['S3Uri'])
 
     s3_select_to_file(
-        Bucket = bucket,
-        Key = key,
-        Expression = event['Expression'],
-        Outfile = select_outfile
+        bucket = bucket,
+        key = key,
+        expression = event['Expression'],
+        outfile = select_outfile
     )
     
     with open(select_outfile,'r') as f:

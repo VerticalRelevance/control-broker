@@ -1,6 +1,7 @@
 import os
 import json
 from typing import List, Sequence
+from os import path
 
 from aws_cdk import (
     Duration,
@@ -25,8 +26,6 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from components.config_rules import ControlBrokerConfigRule
-
 
 class ClientStack(Stack):
     """Client Layer"""
@@ -45,6 +44,8 @@ class ClientStack(Stack):
         :type control_broker_outer_state_machine: aws_stepfunctions.StateMachine
         :param control_broker_principals: The principals to which we need to give S3 access for our input bucket.
         :type control_broker_principals: List[aws_iam.IPrincipal]
+        :param control_broker_eval_results_bucket: The bucket owned by ControlBroker to host Evaluation ResultsReports.
+        :type control_broker_eval_results_bucket: aws_s3.Bcuket
         """
         super().__init__(*args, **kwargs)
     
@@ -52,7 +53,7 @@ class ClientStack(Stack):
         self.control_broker_eval_results_bucket = control_broker_eval_results_bucket
     
         self.apigw()
-        self.consumer_client_retry()
+        # self.consumer_client_retry()
         
     def apigw(self):
         
@@ -76,11 +77,9 @@ class ClientStack(Stack):
             response_types=[aws_apigatewayv2_authorizers_alpha.HttpLambdaResponseType.SIMPLE],
             results_cache_ttl = Duration.seconds(0),
             identity_source = [
-                "$request.header.Authorization", # request must match or 401: requests.get(invoke_url,headers={'Authorization':'foo'})
-                # "$context.identity.principalOrgId",
+                "$request.header.Authorization", # Authorization must be present in headers or 401, e.g. r = requests.post(url,auth = auth, ...)
             ]
         )
-        
         
         # auth - iam
         
@@ -140,8 +139,10 @@ class ClientStack(Stack):
             # authorizer=authorizer_iam
         )
         
-        self.apigw_full_invoke_url = f'{self.http_api.url}{self.path}'
+        self.apigw_full_invoke_url = path.join(self.http_api.url.rstrip("/"),self.path.strip('/'))
         
+        CfnOutput(self, "ApigwInvokeUrl", value=self.apigw_full_invoke_url)
+
     def consumer_client_retry(self):
         
         # object exists
@@ -176,7 +177,7 @@ class ClientStack(Stack):
 
         self.lambda_sign_apigw_request = aws_lambda_python_alpha.PythonFunction(
             self,
-            "SignApigwRequestVAlpha",
+            "SignApigwRequest",
             entry="./supplementary_files/lambdas/sign_apigw_request",
             runtime= aws_lambda.Runtime.PYTHON_3_9,
             index="lambda_function.py",

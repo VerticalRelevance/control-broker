@@ -23,11 +23,6 @@ deploy_stage = None
 if continuously_deployed:
     deploy_stage = cdk.Stage(app, "Deploy")
 
-# TODO: DEPRECATED - define team metadata storage strategy
-application_team_cdk_app = {
-    "PipelineOwnershipMetadata": "./supplementary_files/pipeline-ownership-metadata/business-unit-a/eval-engine-metadata.json",
-}
-
 env = cdk.Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT"), region=os.getenv("CDK_DEFAULT_REGION")
 )
@@ -36,11 +31,6 @@ control_broker_stack = ControlBrokerStack(
     deploy_stage or app,
     f"ControlBrokerEvalEngineCdkStack{STACK_VERSION}",
     env=env,
-    application_team_cdk_app=application_team_cdk_app,
-    config_rule_enabled=app.node.try_get_context("control-broker/config-rule/enabled"),
-    config_rule_scope=aws_config.RuleScope.from_resources(
-        resource_types=[aws_config.ResourceType.SQS_QUEUE]
-    ),
 )
 
 if app.node.try_get_context("control-broker/post-deployment-testing/enabled"):
