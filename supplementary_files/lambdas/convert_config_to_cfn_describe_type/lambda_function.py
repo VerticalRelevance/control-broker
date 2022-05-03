@@ -26,9 +26,9 @@ cfn = boto3.client('cloudformation', config=config)
 
 
 class AwsResource():
-    def __init__(self,ResourceType,ResourceId):
-        self.resource_type = ResourceType
-        self.resource_id = ResourceId
+    def __init__(self,resource_type,resource_id):
+        self.resource_type = resource_type
+        self.resource_id = resource_id
         
         self.api_calls = {
             "AWS::SNS::Topic": {
@@ -46,20 +46,20 @@ class AwsResource():
 
 
 class DescribeType():
-    def __init__(self,TypeName,ResourceConfiguration,ResourceId):
-        self.type_name = TypeName
-        self.resource_configuration = ResourceConfiguration
-        self.resource_id = ResourceId
+    def __init__(self,type_name,resource_configuration,resource_id):
+        self.type_name = type_name
+        self.resource_configuration = resource_configuration
+        self.resource_id = resource_id
     
-    def get_resource_schema(self,*,TypeName):
+    def get_resource_schema(self,*,type_name):
     
         try:
             r = cfn.describe_type(
                 Type = 'RESOURCE',
-                TypeName = TypeName,
+                type_name = type_name,
             )
         except cfn.exceptions.TypeNotFoundException:
-            print(f'\nTypeNotFoundException: {TypeName}')
+            print(f'\nTypeNotFoundException: {type_name}')
             return None
         except ClientError as e:
             raise
@@ -81,7 +81,7 @@ class DescribeType():
             else:
                 return Input
                 
-        resource_schema = self.get_resource_schema(TypeName=self.type_name)
+        resource_schema = self.get_resource_schema(type_name=self.type_name)
         print(f'\nresource_schema:\n')
         pp(resource_schema)
         
@@ -178,12 +178,12 @@ def lambda_handler(event, context):
     print(f'\nresource_configuration_keys:\n')
     pp(resource_configuration_keys)
     
-    resource_type = configuration_item['resourceType']
-    resource_id = configuration_item['resourceId']
+    resource_type = configuration_item['resource_type']
+    resource_id = configuration_item['resource_id']
 
     # only 506/874 resources can use CloudControl, by a recent count of NON_PROVISIONABLE status
     
-    # d = DescribeType(TypeName=resource_type,ResourceConfiguration=resource_configuration,ResourceId=resource_id)
+    # d = DescribeType(type_name=resource_type,resource_configuration=resource_configuration,resource_id=resource_id)
     
     # cfn = d.get_cfn()
     
@@ -194,7 +194,7 @@ def lambda_handler(event, context):
     #     "Cfn": cfn
     # }
 
-    a = AwsResource(ResourceType=resource_type,ResourceId=resource_id)
+    a = AwsResource(resource_type=resource_type,resource_id=resource_id)
     a.main()
 
 ########################################################
