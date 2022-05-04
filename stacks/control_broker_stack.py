@@ -799,9 +799,12 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "ItemsPath": "$.GatherInfractions.Infractions",
                             "Parameters": {
                                 "Infraction.$": "$$.Map.Item.Value",
-                                "JsonInput.$": "$.JsonInput",
+                                "JsonInput": {
+                                    "Bucket.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Bucket",
+                                    "Key.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Key",
+                                },
                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                "ConsumerMetadata.$": "$.ConsumerMetadata",
+                                "ConsumerMetadata.$": "$.InvokedByApigw.ControlBrokerConsumerInputs.ConsumerMetadata",
                             },
                             "Iterator": {
                                 "StartAt": "HandleInfraction",
@@ -815,12 +818,9 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                             "FunctionName": self.lambda_handle_infraction.function_name,
                                             "Payload": {
                                                 "Infraction.$": "$.Infraction",
-                                                "JsonInput": {
-                                                    "Bucket.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Bucket",
-                                                    "Key.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Key",
-                                                },
+                                                "JsonInput.$":"$.JsonInput",
                                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                                "ConsumerMetadata.$": "$.InvokedByApigw.ControlBrokerConsumerInputs.ConsumerMetadata",
+                                                "ConsumerMetadata.$": "$.ConsumerMetadata",
                                             },
                                         },
                                         "ResultSelector": {"Payload.$": "$.Payload"},
