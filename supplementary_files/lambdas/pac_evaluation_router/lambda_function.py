@@ -231,53 +231,6 @@ class PacEvaluationRouter():
         
         return f'Evaluate{input_type}By{pac_framework}'
     
-        
-    # def get_invoking_sfn_next_state(self,*,RoutingConfig):
-        
-    #     return f'Evaluate{RoutingConfig["InputType"]}By{RoutingConfig["PaCFramework"]}'
-        
-    # def format_routing_decision(self,routing_config):
-        
-    #     routing_decision = {
-    #         "InvokingSfnNextState" : self.get_invoking_sfn_next_state(
-    #             routing_config = routing_config
-    #         ),
-    #         "PaC": self.get_pac_bucket(
-    #             pac_framework = routing_config['PaCFramework']
-    #         ),
-    #         "ModifiedInput": self.get_modified_input_s3_path(
-    #             input_conversion_object = routing_config['InputConversionObject']
-    #         )
-    #     }
-        
-    #     return routing_decision
-    
-    # def get_routing_decision(self):
-    
-    #     control_broker_consumer_inputs = self.event['ControlBrokerConsumerInputs']
-        
-    #     control_broker_consumer_input_key = self.event['ControlBrokerConsumerInputKey']
-        
-    #     input_type = control_broker_consumer_inputs['InputType']
-        
-    #     routing_decision_matrix = {
-    #         "CloudFormationTemplate": {
-    #             "InputType": "CloudFormationTemplate",
-    #             "PaCFramework": "OPA",
-    #             "InputConversionObject":None
-    #         },
-    #         "ConfigEvent": {
-    #             "InputType": "ConfigEvent",
-    #             "PaCFramework": "OPA",
-    #             "InputConversionObject":self.convert_config_event_to_cfn
-    #         }
-    #     }
-        
-    #     routing_decision = self.format_routing_decision(routing_decision_matrix[input_type])
-    
-    #     return routing_decision
-    
-    
     def get_routing_decision(self):
     
         control_broker_consumer_inputs = self.event['ControlBrokerConsumerInputs']
