@@ -112,6 +112,7 @@ class GitHubCDKPipelineStack(Stack):
                 "pip install -r requirements.txt",  # Instructs Codebuild to install required packages
                 "npx cdk synth",
             ],
+            env={"PIPELINE_SYNTH": "true"}
         )
 
         self.pipeline = pipelines.CodePipeline(
@@ -119,5 +120,5 @@ class GitHubCDKPipelineStack(Stack):
             "Pipeline",
             synth=pipeline_synth_action,
             publish_assets_in_parallel=False,
-            docker_enabled_for_synth=True
+            docker_enabled_for_synth=True,
         )

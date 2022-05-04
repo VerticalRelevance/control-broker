@@ -139,7 +139,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                 restrict_public_buckets=True,
             ),
         )
-        
+
         # results reports
 
         self.bucket_eval_results_reports = aws_s3.Bucket(
@@ -212,12 +212,12 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/lambdas/pac_evaluation_router"
             ),
-            environment = {
-                "PaCBucketRouting": json.dumps({
-                    "OPA":self.bucket_opa_policies.bucket_name
-                }),
-                "ConvertedInputsBucket": self.bucket_converted_inputs.bucket_name
-            }
+            environment={
+                "PaCBucketRouting": json.dumps(
+                    {"OPA": self.bucket_opa_policies.bucket_name}
+                ),
+                "ConvertedInputsBucket": self.bucket_converted_inputs.bucket_name,
+            },
         )
 
         self.lambda_pac_evaluation_router.role.add_to_policy(
@@ -225,8 +225,8 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                 actions=[
                     "cloudformation:ValidateTemplate",
                     "cloudformation:DescribeType",
-                    "cloudformation:Get*", #FIXME
-                    "cloudformation:Describe*", #FIXME
+                    "cloudformation:Get*",  # FIXME
+                    "cloudformation:Describe*",  # FIXME
                 ],
                 resources=["*"],
             )
@@ -235,7 +235,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             aws_iam.PolicyStatement(
                 actions=[
                     "cloudcontrol:GetResource",
-                    "cloudcontrol:*", #FIXME
+                    "cloudcontrol:*",  # FIXME
                 ],
                 resources=["*"],
             )
@@ -252,7 +252,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
         )
         self.lambda_pac_evaluation_router.role.add_to_policy(
             aws_iam.PolicyStatement(
-                 # Get*, List* for all services with a cloudcontrol provisionable resource
+                # Get*, List* for all services with a cloudcontrol provisionable resource
                 # required fro cloudcontrol.get_resource()
                 actions=[
                     "acmpca:Get*",
@@ -539,7 +539,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                 resources=["*"],
             )
         )
-        
+
         # InputType CloudFormation - PaCFramework OPA - PythonSubprocess
 
         self.lambda_evaluate_cloudformation_by_opa = aws_lambda.Function(
@@ -726,11 +726,9 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
                                 "FunctionName": self.lambda_pac_evaluation_router.function_name,
-                                "Payload.$": "$"
+                                "Payload.$": "$",
                             },
-                            "ResultSelector": {
-                                "Routing.$": "$.Payload.Routing"
-                            },
+                            "ResultSelector": {"Routing.$": "$.Payload.Routing"},
                         },
                         "ChoicePaCEvaluationRouting": {
                             "Type": "Choice",
@@ -755,8 +753,8 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                 "FunctionName": self.lambda_evaluate_cloudformation_by_opa.function_name,
                                 "Payload": {
                                     "JsonInput": {
-                                        "Bucket.$":"$.PaCEvaluationRouter.Routing.ModifiedInput.Bucket",
-                                        "Key.$":"$.PaCEvaluationRouter.Routing.ModifiedInput.Key",
+                                        "Bucket.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Bucket",
+                                        "Key.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Key",
                                     },
                                     "PaC": {
                                         "Bucket.$": "$.PaCEvaluationRouter.Routing.PaC.Bucket"
@@ -818,12 +816,12 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                             "Payload": {
                                                 "Infraction.$": "$.Infraction",
                                                 "JsonInput": {
-                                                    "Bucket.$":"$.PaCEvaluationRouter.Routing.ModifiedInput.Bucket",
-                                                    "Key.$":"$.PaCEvaluationRouter.Routing.ModifiedInput.Key",
+                                                    "Bucket.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Bucket",
+                                                    "Key.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Key",
                                                 },
                                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
                                                 "ConsumerMetadata.$": "$.InvokedByApigw.ControlBrokerConsumerInputs.ConsumerMetadata",
-                                            }
+                                            },
                                         },
                                         "ResultSelector": {"Payload.$": "$.Payload"},
                                     },
@@ -986,7 +984,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "ResultPath": "$.ForEachInput",
                             "ItemsPath": "$.InvokedByApigw.ControlBrokerConsumerInputs.InputKeys",
                             "Parameters": {
-                                "InvokedByApigw.$":"$.InvokedByApigw",
+                                "InvokedByApigw.$": "$.InvokedByApigw",
                                 "ControlBrokerConsumerInputKey.$": "$$.Map.Item.Value",
                             },
                             "Iterator": {
@@ -1000,9 +998,9 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                         "Parameters": {
                                             "StateMachineArn": self.sfn_inner_eval_engine.attr_arn,
                                             "Input": {
-                                                "ControlBrokerConsumerInputKey.$":"$.ControlBrokerConsumerInputKey",
+                                                "ControlBrokerConsumerInputKey.$": "$.ControlBrokerConsumerInputKey",
                                                 "ControlBrokerConsumerInputs.$": "$.InvokedByApigw.ControlBrokerConsumerInputs",
-                                                "OuterEvalEngineSfnExecutionId.$":"$$.Execution.Id",
+                                                "OuterEvalEngineSfnExecutionId.$": "$$.Execution.Id",
                                             },
                                         },
                                     },
@@ -1031,9 +1029,9 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                 "FunctionName": self.lambda_write_results_report.function_name,
                                 "Payload": {
                                     "OuterEvalEngineSfnExecutionId.$": "$$.Execution.Id",
-                                    "ResultsReportS3Uri.$":"$.ResultsReportS3Uri",
-                                    "ForEachInput.$":"$.ForEachInput",
-                                }
+                                    "ResultsReportS3Uri.$": "$.ResultsReportS3Uri",
+                                    "ForEachInput.$": "$.ForEachInput",
+                                },
                             },
                             "ResultSelector": {"Payload.$": "$.Payload"},
                         },

@@ -38,7 +38,10 @@ class TestStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
         )
         for principal in control_broker_roles:
-            canary_bucket.grant_read(aws_iam.ArnPrincipal(principal.role_arn), f"{CANARY_TEST_TEMPLATE_DEST}/*")
+            canary_bucket.grant_read(
+                aws_iam.ArnPrincipal(principal.role_arn),
+                f"{CANARY_TEST_TEMPLATE_DEST}/*",
+            )
         control_broker_consumer_policy = aws_iam.ManagedPolicy(
             self,
             "ControlBrokerConsumerPolicy",
@@ -134,8 +137,6 @@ class TestStack(Stack):
             ),
         )
 
-
-        
         """
         TODO.1
         

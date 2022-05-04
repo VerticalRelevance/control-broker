@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 import os
-from pathlib import Path
-from typing import List
 
 import aws_cdk as cdk
-from aws_cdk import aws_config, aws_stepfunctions
 
 from stacks.control_broker_stack import (
     ControlBrokerStack,
@@ -12,12 +9,14 @@ from stacks.control_broker_stack import (
 from stacks.pipeline_stack import GitHubCDKPipelineStack
 from stacks.test_stack import TestStack
 from stacks.endpoint_stack import EndpointStack
+from utils.environment import is_pipeline_synth
 
 STACK_VERSION = "V0x7x0"
 
 app = cdk.App()
-continuously_deployed = app.node.try_get_context(
-    "control-broker/continuous-deployment/enabled"
+continuously_deployed = (
+    app.node.try_get_context("control-broker/continuous-deployment/enabled")
+    or is_pipeline_synth()
 )
 deploy_stage = None
 if continuously_deployed:
@@ -39,7 +38,7 @@ if app.node.try_get_context("control-broker/post-deployment-testing/enabled"):
         f"ControlBrokerTestStack{STACK_VERSION}",
         control_broker_outer_state_machine=control_broker_stack.outer_eval_engine_state_machine,
         control_broker_roles=control_broker_stack.Input_reader_roles,
-        env=env
+        env=env,
     )
 if app.node.try_get_context("control-broker/client/enabled"):
     EndpointStack(
@@ -48,7 +47,7 @@ if app.node.try_get_context("control-broker/client/enabled"):
         control_broker_outer_state_machine=control_broker_stack.outer_eval_engine_state_machine,
         control_broker_roles=control_broker_stack.Input_reader_roles,
         control_broker_eval_results_bucket=control_broker_stack.eval_results_reports_bucket,
-        env=env
+        env=env,
     )
 
 if continuously_deployed:
