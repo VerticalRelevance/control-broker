@@ -804,7 +804,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                     "Key.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Key",
                                 },
                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                "ConsumerMetadata.$": "$.InvokedByApigw.ControlBrokerConsumerInputs.ConsumerMetadata",
+                                "ConsumerMetadata.$": "$.ControlBrokerConsumerInputs.ConsumerMetadata",
                             },
                             "Iterator": {
                                 "StartAt": "HandleInfraction",
