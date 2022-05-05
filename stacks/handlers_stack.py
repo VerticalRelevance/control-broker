@@ -26,3 +26,32 @@ class HandlersStack(Stack):
     ):
         
         super().__init__(*args, **kwargs)
+
+        self.endpoint()
+
+    def endpoint(self):
+        
+        # api
+
+        self.http_api = aws_apigatewayv2_alpha.HttpApi(
+            self,
+            "ControlBrokerEndpoint",
+        )
+        
+        self.paths = {
+            "CloudFormation":"/CloudFormation"
+        }
+        
+        routes = self.http_api.add_routes(
+            path=self.paths['CloudFormation'],
+            methods=[aws_apigatewayv2_alpha.HttpMethod.POST],
+            # integration=integration,
+            # authorizer=authorizer_lambda
+            # authorizer=authorizer_iam
+        )
+        
+        self.invoke_cloudformation = path.join(
+            self.http_api.url.rstrip("/"), self.paths['CloudFormation'].strip("/")
+        )
+
+        CfnOutput(self, "ApigwInvokeUrl", value=self.invoke_cloudformation)
