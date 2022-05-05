@@ -31,9 +31,35 @@ class HandlersStack(Stack):
 
     def endpoint(self):
         
+        # auth - lambda
+
+        lambda_authorizer = aws_lambda.Function(
+            self,
+            "CBEndpointAuthorizer",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas_handlers_stack/apigw_authorizer"
+            ),
+        )
+
+        authorizer_lambda = aws_apigatewayv2_authorizers_alpha.HttpLambdaAuthorizer(
+            "CBEndpointAuthorizer",
+            lambda_authorizer,
+            response_types=[
+                aws_apigatewayv2_authorizers_alpha.HttpLambdaResponseType.SIMPLE
+            ],
+            results_cache_ttl=Duration.seconds(0),
+            identity_source=[
+                "$request.header.Authorization",  # Authorization must be present in headers or 401, e.g. r = requests.post(url,auth = auth, ...)
+            ],
+        )
+        
         # integration
         
-        lambda_invoked_by_apigw = aws_lambda.Function(
+        lambda_invoked_by_apigw_cloudformation = aws_lambda.Function(
             self,
             "InvokedByApigw",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
@@ -45,7 +71,7 @@ class HandlersStack(Stack):
             ),
         )
 
-        # lambda_invoked_by_apigw.role.add_to_policy(
+        # lambda_invoked_by_apigw_cloudformation.role.add_to_policy(
         #     aws_iam.PolicyStatement(
         #         actions=[
         #             "states:StartExecution",
@@ -54,8 +80,8 @@ class HandlersStack(Stack):
         #     )
         # )
         
-        integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
-            "ControlBrokerClient", lambda_invoked_by_apigw
+        integration_cloudformation = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
+            "HandlerCloudFormation", lambda_invoked_by_apigw_cloudformation
         )
         
         # api
@@ -72,9 +98,8 @@ class HandlersStack(Stack):
         routes = self.http_api.add_routes(
             path=self.paths['CloudFormation'],
             methods=[aws_apigatewayv2_alpha.HttpMethod.POST],
-            integration=integration,
-            # authorizer=authorizer_lambda
-            # authorizer=authorizer_iam
+            integration=integration_cloudformation,
+            authorizer=authorizer_lambda
         )
         
         self.invoke_cloudformation = path.join(
@@ -82,3 +107,4 @@ class HandlersStack(Stack):
         )
 
         CfnOutput(self, "ApigwInvokeUrl", value=self.invoke_cloudformation)
+        
