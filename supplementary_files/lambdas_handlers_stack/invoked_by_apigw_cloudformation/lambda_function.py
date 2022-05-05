@@ -20,6 +20,10 @@ def lambda_handler(event,context):
     
     print(f'event:\n{event}\ncontext:\n{context}')
     
+    request_json_body = json.loads(event['body'])
+    
+    print(f'request_json_body:\n{request_json_body}')
+
     headers = event['headers']
     
     print(f'headers:\n{headers}')
@@ -38,12 +42,14 @@ def lambda_handler(event,context):
     
     print(f'BotoAWSRequestsAuth:\n{auth}')
     
-    control_broker_consumer_input = event
+    eval_engine_input = request_json_body
+    
+    print(f'eval_engine_input:\n{eval_engine_input}')
     
     r = requests.post(
-        full_invoke_url,
+        eval_engine_invoke_url,
         auth = auth,
-        json = control_broker_consumer_input
+        json = eval_engine_input
     )
     
     print(f'headers:\n{dict(r.request.headers)}')
