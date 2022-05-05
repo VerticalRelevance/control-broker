@@ -7,6 +7,7 @@ from aws_cdk import (
     aws_apigatewayv2_alpha,
     aws_apigatewayv2_integrations_alpha,
     aws_iam,
+    aws_lambda,
     aws_logs,
     aws_s3,
     aws_stepfunctions,
@@ -17,13 +18,13 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
     def __init__(
         self,
         *args,
-        control_broker_state_machine: aws_stepfunctions.StateMachine,
+        control_broker_invocation_lambda_function: aws_lambda.Function,
         control_broker_results_bucket: aws_s3.Bucket,
         access_log_retention: aws_logs.RetentionDays = aws_logs.RetentionDays.ONE_DAY,
         **kwargs
     ):
         super().__init__(self, id, *args, **kwargs)
-        self.control_broker_state_machine = control_broker_state_machine
+        self.control_broker_invocation_lambda_function: str = control_broker_invocation_lambda_function
         self.control_broker_results_bucket = control_broker_results_bucket
         api_log_group = aws_logs.LogGroup(
             self, f"{id}AccessLogs", retention=access_log_retention
@@ -41,6 +42,11 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         )
         self.urls = []
 
+    def _add_control_broker_invocation_route(self):
+        self.add_routes()
+        self.handler_invocation_url_mapping = aws_apigatewayv2_alpha.ParameterMapping()
+        self.handler_invocation_url_mapping.overwrite_header("x-control-broker-invoke-url", )
+
     def add_api_handler(
         self, name: str, lambda_function: aws_cdk.aws_lambda.Function, path: str, **kwargs
     ):
@@ -54,7 +60,7 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         :type path: str
         """
         integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
-            name, lambda_function, 
+            name, lambda_function, parameter_mapping=
         )
         self.add_routes(
             path=path,
