@@ -29,7 +29,7 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
     ):
         super().__init__(scope, name, **kwargs)
         self.control_broker_invocation_lambda_function: str = (
-            control_broker_invocation_lambda_function
+            lambda_invoked_by_apigw_eval_engine_endpoint
         )
 
         self.control_broker_results_bucket = control_broker_results_bucket
