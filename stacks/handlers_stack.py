@@ -31,11 +31,17 @@ class HandlersStack(Stack):
         super().__init__(*args, **kwargs)
 
         self.eval_engine()
-        self.endpoint()
+        self.endpoint_control_broker()
+        # self.endpoint_eval_engine()
 
-        self.api = ControlBrokerApi(self.lambda_eval_engine_lambdalith, None)
+        # self.api = ControlBrokerApi(
+        #     # control_broker_invocation_lambda_function = self.lambda_eval_engine_lambdalith,
+        #     # control_broker_results_bucket = None
+        # )
+        
+        self.api = ControlBrokerApi()
 
-    def endpoint(self):
+    def endpoint_control_broker(self):
 
         # auth - lambda
 
@@ -89,9 +95,9 @@ class HandlersStack(Stack):
             )
         )
 
-        self.api.add_api_handler(
-            "CloudFormation", lambda_invoked_by_apigw_cloudformation, "/CloudFormation"
-        )
+        # self.api.add_api_handler(
+        #     "CloudFormation", lambda_invoked_by_apigw_cloudformation, "/CloudFormation"
+        # )
 
     def eval_engine(self):
 
@@ -106,3 +112,6 @@ class HandlersStack(Stack):
                 "./supplementary_files/lambdas_handlers_stack/eval_engine_lambdalith"
             ),
         )
+    
+    def endpoint_eval_engine(self):
+        pass
