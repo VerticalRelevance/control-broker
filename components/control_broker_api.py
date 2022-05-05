@@ -85,7 +85,7 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         self.urls.append(eval_engine_url)
         self.handler_invocation_url_mapping = aws_apigatewayv2_alpha.ParameterMapping()
         self.handler_invocation_url_mapping.overwrite_header(
-            "x-control-broker-invoke-url",
+            "x-eval-engine-invoke-url",
             aws_apigatewayv2_alpha.MappingValue(eval_engine_url),
         )
         CfnOutput(self, "EvalEngineUrl", value=eval_engine_url)
