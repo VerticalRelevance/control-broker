@@ -12,19 +12,24 @@ from aws_cdk import (
     aws_s3,
     aws_stepfunctions,
 )
+import urllib
 
 
 class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
+    CONTROL_BROKER_EVAL_ENGINE_INVOCATION_PATH = "/EvalEngine"
+
     def __init__(
         self,
         *args,
         control_broker_invocation_lambda_function: aws_lambda.Function,
         control_broker_results_bucket: aws_s3.Bucket,
         access_log_retention: aws_logs.RetentionDays = aws_logs.RetentionDays.ONE_DAY,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(self, id, *args, **kwargs)
-        self.control_broker_invocation_lambda_function: str = control_broker_invocation_lambda_function
+        self.control_broker_invocation_lambda_function: str = (
+            control_broker_invocation_lambda_function
+        )
         self.control_broker_results_bucket = control_broker_results_bucket
         api_log_group = aws_logs.LogGroup(
             self, f"{id}AccessLogs", retention=access_log_retention
@@ -42,13 +47,35 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         )
         self.urls = []
 
-    def _add_control_broker_invocation_route(self):
-        self.add_routes()
+    def _add_control_broker_eval_engine_invocation_route(self):
+        """Adds a route, which only handlers can call, that directly invokes the Control Broker Eval Engine."""
+
+        self.handler_invocation_integration = (
+            aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
+                "ControlBrokerControlPlaneInvocation",
+                handler=self.control_broker_invocation_lambda_function,
+            )
+        )
+        self.add_routes(
+            path=self.CONTROL_BROKER_EVAL_ENGINE_INVOCATION_PATH,
+        )
+        eval_engine_url = urllib.path.join(
+            self.http_api.url.rstrip("/"),
+            self.CONTROL_BROKER_g_INVOCATION_PATH.strip("/"),
+        )
+        self.urls.append(eval_engine_url)
+        self.eval_engine_invocation_url_mapping.overwrite_header(
+            "x-control-broker-invoke-url", eval_engine_url
+        )
+        CfnOutput(self, f"EvalEngineUrl", eval_engine_url)
         self.handler_invocation_url_mapping = aws_apigatewayv2_alpha.ParameterMapping()
-        self.handler_invocation_url_mapping.overwrite_header("x-control-broker-invoke-url", )
 
     def add_api_handler(
-        self, name: str, lambda_function: aws_cdk.aws_lambda.Function, path: str, **kwargs
+        self,
+        name: str,
+        lambda_function: aws_cdk.aws_lambda.Function,
+        path: str,
+        **kwargs,
     ):
         """Add a Control Broker Handler to process requests. Expected to invoke the Control Broker upon successful completion.
 
@@ -59,17 +86,17 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         :param path: _description_
         :type path: str
         """
+
+        # TODO: Test that users cannot inject their own eval engine URL when calling the API with that header
         integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
-            name, lambda_function, parameter_mapping=
+            name, lambda_function, parameter_mapping=self.handler_invocation_url_mapping
         )
         self.add_routes(
             path=path,
             methods=[aws_apigatewayv2_alpha.HttpMethod.POST],
             integration=integration,
-            **kwargs
+            **kwargs,
         )
-        handler_url = path.join(
-            self.http_api.url.rstrip("/"), path.strip("/")
-        )
+        handler_url = urllib.path.join(self.http_api.url.rstrip("/"), path.strip("/"))
         self.urls.append(handler_url)
         CfnOutput(self, f"{name}HandlerUrl", handler_url)
