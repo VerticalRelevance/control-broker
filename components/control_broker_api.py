@@ -22,7 +22,7 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         self,
         scope,
         name,
-        control_broker_invocation_lambda_function: aws_lambda.Function,
+        lambda_invoked_by_apigw_eval_engine_endpoint: aws_lambda.Function,
         control_broker_results_bucket: aws_s3.Bucket,
         access_log_retention: aws_logs.RetentionDays = aws_logs.RetentionDays.ONE_DAY,
         **kwargs,
