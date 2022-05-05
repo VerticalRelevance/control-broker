@@ -27,7 +27,7 @@ def invoke_lambda_async(*,function_name,payload:dict):
             InvocationType='Event',
             # LogType='None'|'Tail',
             # ClientContext='string',
-            Payload=bytes(payload),
+            Payload=bytes(payload, 'utf-8'),
         )
     except ClientError as e:
         print(f'ClientError:\n{e}')
