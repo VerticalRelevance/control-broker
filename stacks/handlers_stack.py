@@ -71,16 +71,19 @@ class HandlersStack(Stack):
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/lambdas_handlers_stack/invoked_by_apigw_cloudformation"
             ),
+            environment = {
+                'EvalEngineLambdalithFunctionName':self.eval_engine_lamdalith.function_name
+            }
         )
 
-        # lambda_invoked_by_apigw_cloudformation.role.add_to_policy(
-        #     aws_iam.PolicyStatement(
-        #         actions=[
-        #             "states:StartExecution",
-        #         ],
-        #         resources=[self.control_broker_outer_state_machine.state_machine_arn],
-        #     )
-        # )
+        lambda_invoked_by_apigw_cloudformation.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "lambda:Invoke",
+                ],
+                resources=[self.lambda_eval_engine_lamdalith.lambda_function_arn],
+            )
+        )
         
         integration_cloudformation = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
             "HandlerCloudFormation", lambda_invoked_by_apigw_cloudformation
@@ -118,4 +121,17 @@ class HandlersStack(Stack):
         )
         
         # CfnOutput(self, "InvokeCloudFormationLogsArn", value=log_group_invoke_cloudformation.log_group_arn)
+    
+    def eval_engine(self):
         
+        self.lambda_eval_engine_lamdalith = aws_lambda.Function(
+            self,
+            "EvalEngineLambdalith",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas_handlers_stack/eval_engine_lamdalith"
+            ),
+        )
