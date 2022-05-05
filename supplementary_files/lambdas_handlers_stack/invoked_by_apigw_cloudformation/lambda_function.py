@@ -19,7 +19,7 @@ def get_result_report_s3_uri(*,eval_results_reports_bucket):
     
     return s3_uri
 
-def invoke_lambda_async(*,function_name,payload):
+def invoke_lambda_async(*,function_name,payload:dict):
 
     try:
         r = lambda_.invoke(
@@ -27,7 +27,7 @@ def invoke_lambda_async(*,function_name,payload):
             InvocationType='Event',
             # LogType='None'|'Tail',
             # ClientContext='string',
-            Payload=payload,
+            Payload=bytes(payload),
         )
     except ClientError as e:
         print(f'ClientError:\n{e}')
