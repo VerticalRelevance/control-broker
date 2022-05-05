@@ -1,4 +1,3 @@
-from cgitb import handler
 import json
 
 import aws_cdk
@@ -12,7 +11,6 @@ from aws_cdk import (
     aws_s3,
     aws_stepfunctions,
 )
-from constructs import Construct
 
 
 class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
