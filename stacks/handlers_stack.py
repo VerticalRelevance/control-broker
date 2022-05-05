@@ -35,7 +35,7 @@ class HandlersStack(Stack):
         self.api = ControlBrokerApi(
             self,
             "ControlBrokerApi",
-            control_broker_invocation_lambda_function=self.lambda_eval_engine_lambdalith,
+            lambda_invoked_by_apigw_eval_engine_endpoint=self.lambda_eval_engine_lambdalith,
             control_broker_results_bucket=None,
         )
         self.endpoint()
