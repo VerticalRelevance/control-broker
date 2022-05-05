@@ -69,7 +69,7 @@ class HandlersStack(Stack):
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas_handlers_stack/invoked_by_apigw"
+                "./supplementary_files/lambdas_handlers_stack/invoked_by_apigw_cloudformation"
             ),
         )
 
@@ -110,9 +110,12 @@ class HandlersStack(Stack):
 
         CfnOutput(self, "InvokeCloudFormation", value=self.invoke_cloudformation)
         
-        log_group_outer_eval_engine_sfn = aws_logs.LogGroup(
+        log_group_invoke_cloudformation = aws_logs.LogGroup(
             self,
             "InvokeCloudFormationLogs",
             log_group_name=f"InvokeCloudFormation",
             removal_policy=RemovalPolicy.DESTROY,
         )
+        
+        # CfnOutput(self, "InvokeCloudFormationLogsArn", value=log_group_invoke_cloudformation.log_group_arn)
+        
