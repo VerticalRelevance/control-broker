@@ -7,17 +7,14 @@ from aws_cdk import (
     Duration,
     Stack,
     CfnOutput,
-    RemovalPolicy,
-    aws_s3,
     aws_lambda,
-    aws_stepfunctions,
     aws_iam,
     aws_logs,
+    aws_apigatewayv2,
     aws_apigatewayv2_alpha,  # experimental as of 4.25.22
-    aws_apigatewayv2_integrations_alpha,  # experimental as of 4.25.22
-    aws_apigatewayv2_authorizers_alpha,  # experimental as of 4.25.22
+    aws_apigatewayv2_integrations_alpha,  # experimental as of 4.25.22,
+    aws_logs,
 )
-from constructs import Construct
 
 
 class HandlersStack(Stack):
@@ -26,7 +23,7 @@ class HandlersStack(Stack):
         *args,
         **kwargs,
     ):
-        
+
         super().__init__(*args, **kwargs)
 
         self.endpoint()
@@ -88,27 +85,41 @@ class HandlersStack(Stack):
         integration_cloudformation = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
             "HandlerCloudFormation", lambda_invoked_by_apigw_cloudformation
         )
-        
+
         # api
 
         self.http_api = aws_apigatewayv2_alpha.HttpApi(
             self,
             "ControlBrokerEndpoint",
         )
-        
-        self.paths = {
-            "CloudFormation":"/CloudFormation"
-        }
-        
+
+        self.paths = {"CloudFormation": "/CloudFormation"}
+
         routes = self.http_api.add_routes(
-            path=self.paths['CloudFormation'],
+            path=self.paths["CloudFormation"],
             methods=[aws_apigatewayv2_alpha.HttpMethod.POST],
             integration=integration_cloudformation,
             authorizer=authorizer_lambda,
         )
-        
+
+        api_log_group = aws_logs.LogGroup(
+            self, "HttpApiLogs", retention=aws_logs.RetentionDays.ONE_DAY
+        )
+        api_log_group.grant_write(aws_iam.ServicePrincipal("apigateway.amazonaws.com"))
+
+        cfn_default_stage: aws_apigatewayv2.CfnStage = self.http_api.default_stage.node
+        cfn_default_stage.add_property_override(
+            "AccessLogSettings",
+            {
+                "DestinationArn": api_log_group.log_group_arn,
+                "Format": json.dumps(
+                    '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength", "$context.integrationErrorMessage"}'
+                ),
+            },
+        )
+
         self.invoke_cloudformation = path.join(
-            self.http_api.url.rstrip("/"), self.paths['CloudFormation'].strip("/")
+            self.http_api.url.rstrip("/"), self.paths["CloudFormation"].strip("/")
         )
 
         CfnOutput(self, "InvokeCloudFormation", value=self.invoke_cloudformation)
