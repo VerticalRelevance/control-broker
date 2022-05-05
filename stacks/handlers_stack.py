@@ -93,9 +93,9 @@ class HandlersStack(Stack):
             )
         )
 
-        # self.api.add_api_handler(
-        #     "CloudFormation", lambda_invoked_by_apigw_cloudformation, "/CloudFormation"
-        # )
+        self.api.add_api_handler(
+            "CloudFormation", lambda_invoked_by_apigw_cloudformation, "/CloudFormation"
+        )
 
     def eval_engine(self):
 
