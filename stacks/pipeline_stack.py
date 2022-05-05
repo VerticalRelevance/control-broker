@@ -10,14 +10,6 @@ from aws_cdk import (
     pipelines as pipelines,
 )
 from constructs import Construct
-from git import Repo
-
-try:
-
-    current_branch = Repo().active_branch.name
-except TypeError:
-    current_branch = None
-
 
 class GitHubCDKPipelineStack(Stack):
     """Create a CDK Pipelines CodePipeline using a GitHub repo via a CodeStar Connection.
