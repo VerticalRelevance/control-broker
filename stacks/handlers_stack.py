@@ -12,9 +12,13 @@ from aws_cdk import (
     aws_logs,
     aws_apigatewayv2,
     aws_apigatewayv2_alpha,  # experimental as of 4.25.22
+    aws_apigatewayv2_authorizers_alpha,
     aws_apigatewayv2_integrations_alpha,  # experimental as of 4.25.22,
     aws_logs,
+    RemovalPolicy
 )
+
+from components.control_broker_api import ControlBrokerApi
 
 
 class HandlersStack(Stack):
@@ -26,10 +30,12 @@ class HandlersStack(Stack):
 
         super().__init__(*args, **kwargs)
 
+        self.api = ControlBrokerApi()
+
         self.endpoint()
 
     def endpoint(self):
-        
+
         # auth - lambda
 
         lambda_authorizer = aws_lambda.Function(
@@ -55,9 +61,9 @@ class HandlersStack(Stack):
                 "$request.header.Authorization",  # Authorization must be present in headers or 401, e.g. r = requests.post(url,auth = auth, ...)
             ],
         )
-        
+
         # integration
-        
+
         lambda_invoked_by_apigw_cloudformation = aws_lambda.Function(
             self,
             "InvokedByApigwCloudFormation",
@@ -68,9 +74,9 @@ class HandlersStack(Stack):
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/lambdas_handlers_stack/invoked_by_apigw_cloudformation"
             ),
-            environment = {
-                'EvalEngineLambdalithFunctionName':self.eval_engine_lamdalith.function_name
-            }
+            environment={
+                "EvalEngineLambdalithFunctionName": self.eval_engine_lamdalith.function_name
+            },
         )
 
         lambda_invoked_by_apigw_cloudformation.role.add_to_policy(
@@ -81,9 +87,11 @@ class HandlersStack(Stack):
                 resources=[self.lambda_eval_engine_lamdalith.lambda_function_arn],
             )
         )
-        
-        integration_cloudformation = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
-            "HandlerCloudFormation", lambda_invoked_by_apigw_cloudformation
+
+        integration_cloudformation = (
+            aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
+                "HandlerCloudFormation", lambda_invoked_by_apigw_cloudformation
+            )
         )
 
         # api
@@ -123,18 +131,18 @@ class HandlersStack(Stack):
         )
 
         CfnOutput(self, "InvokeCloudFormation", value=self.invoke_cloudformation)
-        
+
         log_group_invoke_cloudformation = aws_logs.LogGroup(
             self,
             "InvokeCloudFormationLogs",
             log_group_name=f"InvokeCloudFormation",
             removal_policy=RemovalPolicy.DESTROY,
         )
-        
+
         # CfnOutput(self, "InvokeCloudFormationLogsArn", value=log_group_invoke_cloudformation.log_group_arn)
-    
+
     def eval_engine(self):
-        
+
         self.lambda_eval_engine_lamdalith = aws_lambda.Function(
             self,
             "EvalEngineLambdalith",
