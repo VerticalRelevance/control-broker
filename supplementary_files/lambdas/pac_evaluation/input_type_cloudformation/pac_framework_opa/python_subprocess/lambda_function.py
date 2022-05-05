@@ -19,7 +19,7 @@ def s3_download(*,bucket,key,local_path):
             local_path
         )
     except ClientError as e:
-        print(f'ClientError:\nbucket: {bucket}\nkey: {key}\n{e}')
+        print(f'ClientError:\nbucket: {bucket}\nkey:\n{key}\n{e}')
         raise
     else:
         print(f'No ClientError download_file\nbucket:\n{bucket}\nkey:\n{key}')
@@ -36,7 +36,7 @@ def s3_download_dir(*,bucket, prefix=None, local_path):
             
     for result in pagination:
         if result.get('CommonPrefixes') is not None:
-            for subdir in result.get('Commonprefixes'):
+            for subdir in result.get('CommonPrefixes'):
                 s3_download_dir(
                     prefix = subdir.get('Prefix'),
                     local_path = local_path,
@@ -81,12 +81,11 @@ def mkdir(dir_):
     p.mkdir(parents=True,exist_ok=True)
     return str(p)
     
-        
 def lambda_handler(event, context):
     
     print(event)
     
-    opa_policies_bucket = event['OpaPolicies']['Bucket']
+    opa_policies_bucket = event['PaC']['Bucket']
     
     json_input = event['JsonInput']
     
@@ -134,5 +133,5 @@ def lambda_handler(event, context):
     print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
     
     return {
-        "OpaEvalResults": opa_eval_results
+        "EvaluateCloudFormationTemplateByOPAResults": opa_eval_results
     }

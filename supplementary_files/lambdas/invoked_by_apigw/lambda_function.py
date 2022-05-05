@@ -49,7 +49,7 @@ def lambda_handler(event,context):
     
     post_request_json_body = json.loads(event['body'])
     
-    eval_engine_sfn_arn = os.environ.get('ControlBrokerOutersfn_arn')
+    eval_engine_sfn_arn = os.environ.get('ControlBrokerOuterSfnArn')
     print(f'eval_engine_sfn_arn:\n{eval_engine_sfn_arn}')
     
     eval_results_reports_bucket = os.environ.get('ControlBrokerEvalResultsReportsBucket')
