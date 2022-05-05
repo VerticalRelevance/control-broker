@@ -24,9 +24,16 @@
     "/" : {
       "post" : {
         "responses" : {
-          "default" : {
-            "description" : "Default response for POST /"
-          }
+          "200": {
+            "description": "Control Broker response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlBrokerRequestStatus"
+                }
+              }
+            }
+          },
         },
         "security" : [ {
           "ControlBrokerClientAuthorizer" : [ ]
@@ -58,7 +65,22 @@
             "type":"object"
           }
         }
-      
+      },
+      "ControlBrokerRequestStatus": {
+        "properties":{
+          "RequestorIsAuthorized": {
+            "type":"boolean"
+          },
+          "EvalEngineHasReadAccessToinputs": {
+            "type":"boolean"
+          },
+          "ResultsReportS3Uri": {
+            "type":"string"
+          },
+          "EvalEngineSfnExecutionArn": {
+            "type":"string"
+          }
+        }
       }
     },
     "securitySchemes" : {
