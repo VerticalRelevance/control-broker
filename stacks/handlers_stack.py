@@ -33,7 +33,7 @@ class HandlersStack(Stack):
         self.eval_engine()
         self.endpoint()
 
-        self.api = ControlBrokerApi(self.lambda_eval_engine_lamdalith, None)
+        self.api = ControlBrokerApi(self.lambda_eval_engine_lambdalith, None)
 
     def endpoint(self):
 
@@ -76,7 +76,7 @@ class HandlersStack(Stack):
                 "./supplementary_files/lambdas_handlers_stack/invoked_by_apigw_cloudformation"
             ),
             environment={
-                "EvalEngineLambdalithFunctionName": self.eval_engine_lamdalith.function_name
+                "EvalEngineLambdalithFunctionName": self.lambda_eval_engine_lambdalith.function_name
             },
         )
 
@@ -85,7 +85,7 @@ class HandlersStack(Stack):
                 actions=[
                     "lambda:Invoke",
                 ],
-                resources=[self.lambda_eval_engine_lamdalith.lambda_function_arn],
+                resources=[self.lambda_eval_engine_lambdalith.function_arn],
             )
         )
 
@@ -95,7 +95,7 @@ class HandlersStack(Stack):
 
     def eval_engine(self):
 
-        self.lambda_eval_engine_lamdalith = aws_lambda.Function(
+        self.lambda_eval_engine_lambdalith = aws_lambda.Function(
             self,
             "EvalEngineLambdalith",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
@@ -103,6 +103,6 @@ class HandlersStack(Stack):
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas_handlers_stack/eval_engine_lamdalith"
+                "./supplementary_files/lambdas_handlers_stack/eval_engine_lambdalith"
             ),
         )
