@@ -58,7 +58,8 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
         self.deploy_outer_sfn()
 
         self.Input_reader_roles: List[aws_iam.Role] = [
-            self.lambda_opa_eval_python_subprocess.role,
+            self.lambda_evaluate_cloudformation_by_opa.role,
+            self.lambda_pac_evaluation_router.role,
         ]
 
         self.outer_eval_engine_state_machine = (
@@ -124,6 +125,21 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             ],
         )
 
+        # converted inputs
+
+        self.bucket_converted_inputs = aws_s3.Bucket(
+            self,
+            "ConvertedInputs",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+
         # results reports
 
         self.bucket_eval_results_reports = aws_s3.Bucket(
@@ -184,21 +200,361 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
 
     def deploy_inner_sfn_lambdas(self):
 
-        # opa eval - python subprocess - single threaded
+        # pac evaluation router
 
-        self.lambda_opa_eval_python_subprocess = aws_lambda.Function(
+        self.lambda_pac_evaluation_router = aws_lambda.Function(
             self,
-            "OpaEvalPythonSubprocessSingleThreaded",
+            "PaCEvaluationRouter",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=10240,  # todo power-tune
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas/opa_eval/python_subprocess"
+                "./supplementary_files/lambdas/pac_evaluation_router"
+            ),
+            environment={
+                "PaCBucketRouting": json.dumps(
+                    {"OPA": self.bucket_opa_policies.bucket_name}
+                ),
+                "ConvertedInputsBucket": self.bucket_converted_inputs.bucket_name,
+            },
+        )
+
+        self.lambda_pac_evaluation_router.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "cloudformation:ValidateTemplate",
+                    "cloudformation:DescribeType",
+                    "cloudformation:Get*",  # FIXME
+                    "cloudformation:Describe*",  # FIXME
+                ],
+                resources=["*"],
+            )
+        )
+        self.lambda_pac_evaluation_router.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "cloudcontrol:GetResource",
+                    "cloudcontrol:*",  # FIXME
+                ],
+                resources=["*"],
+            )
+        )
+        self.lambda_pac_evaluation_router.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                ],
+                resources=[
+                    self.bucket_converted_inputs.arn_for_objects("*"),
+                ],
+            )
+        )
+        self.lambda_pac_evaluation_router.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                # Get*, List* for all services with a cloudcontrol provisionable resource
+                # required fro cloudcontrol.get_resource()
+                actions=[
+                    "acmpca:Get*",
+                    "acmpca:List*",
+                    "aps:Get*",
+                    "aps:List*",
+                    "accessanalyzer:Get*",
+                    "accessanalyzer:List*",
+                    "amplify:Get*",
+                    "amplify:List*",
+                    "amplifyuibuilder:Get*",
+                    "amplifyuibuilder:List*",
+                    "apigateway:Get*",
+                    "apigateway:List*",
+                    "appflow:Get*",
+                    "appflow:List*",
+                    "appintegrations:Get*",
+                    "appintegrations:List*",
+                    "apprunner:Get*",
+                    "apprunner:List*",
+                    "appstream:Get*",
+                    "appstream:List*",
+                    "appsync:Get*",
+                    "appsync:List*",
+                    "applicationinsights:Get*",
+                    "applicationinsights:List*",
+                    "athena:Get*",
+                    "athena:List*",
+                    "auditmanager:Get*",
+                    "auditmanager:List*",
+                    "autoscaling:Get*",
+                    "autoscaling:List*",
+                    "backup:Get*",
+                    "backup:List*",
+                    "batch:Get*",
+                    "batch:List*",
+                    "budgets:Get*",
+                    "budgets:List*",
+                    "ce:Get*",
+                    "ce:List*",
+                    "cur:Get*",
+                    "cur:List*",
+                    "cassandra:Get*",
+                    "cassandra:List*",
+                    "certificatemanager:Get*",
+                    "certificatemanager:List*",
+                    "chatbot:Get*",
+                    "chatbot:List*",
+                    "cloudformation:Get*",
+                    "cloudformation:List*",
+                    "cloudfront:Get*",
+                    "cloudfront:List*",
+                    "cloudtrail:Get*",
+                    "cloudtrail:List*",
+                    "cloudwatch:Get*",
+                    "cloudwatch:List*",
+                    "codeartifact:Get*",
+                    "codeartifact:List*",
+                    "codeguruprofiler:Get*",
+                    "codeguruprofiler:List*",
+                    "codegurureviewer:Get*",
+                    "codegurureviewer:List*",
+                    "codestarconnections:Get*",
+                    "codestarconnections:List*",
+                    "codestarnotifications:Get*",
+                    "codestarnotifications:List*",
+                    "config:Get*",
+                    "config:List*",
+                    "connect:Get*",
+                    "connect:List*",
+                    "customerprofiles:Get*",
+                    "customerprofiles:List*",
+                    "databrew:Get*",
+                    "databrew:List*",
+                    "datasync:Get*",
+                    "datasync:List*",
+                    "detective:Get*",
+                    "detective:List*",
+                    "devopsguru:Get*",
+                    "devopsguru:List*",
+                    "devicefarm:Get*",
+                    "devicefarm:List*",
+                    "dynamodb:Get*",
+                    "dynamodb:List*",
+                    "ec2:Get*",
+                    "ec2:List*",
+                    "ecr:Get*",
+                    "ecr:List*",
+                    "ecs:Get*",
+                    "ecs:List*",
+                    "efs:Get*",
+                    "efs:List*",
+                    "eks:Get*",
+                    "eks:List*",
+                    "emr:Get*",
+                    "emr:List*",
+                    "emrcontainers:Get*",
+                    "emrcontainers:List*",
+                    "elasticache:Get*",
+                    "elasticache:List*",
+                    "elasticloadbalancingv2:Get*",
+                    "elasticloadbalancingv2:List*",
+                    "eventschemas:Get*",
+                    "eventschemas:List*",
+                    "events:Get*",
+                    "events:List*",
+                    "evidently:Get*",
+                    "evidently:List*",
+                    "fis:Get*",
+                    "fis:List*",
+                    "fms:Get*",
+                    "fms:List*",
+                    "finspace:Get*",
+                    "finspace:List*",
+                    "forecast:Get*",
+                    "forecast:List*",
+                    "frauddetector:Get*",
+                    "frauddetector:List*",
+                    "gamelift:Get*",
+                    "gamelift:List*",
+                    "globalaccelerator:Get*",
+                    "globalaccelerator:List*",
+                    "glue:Get*",
+                    "glue:List*",
+                    "greengrassv2:Get*",
+                    "greengrassv2:List*",
+                    "groundstation:Get*",
+                    "groundstation:List*",
+                    "healthlake:Get*",
+                    "healthlake:List*",
+                    "iam:Get*",
+                    "iam:List*",
+                    "ivs:Get*",
+                    "ivs:List*",
+                    "imagebuilder:Get*",
+                    "imagebuilder:List*",
+                    "inspector:Get*",
+                    "inspector:List*",
+                    "inspectorv2:Get*",
+                    "inspectorv2:List*",
+                    "iot:Get*",
+                    "iot:List*",
+                    "iotanalytics:Get*",
+                    "iotanalytics:List*",
+                    "iotcoredeviceadvisor:Get*",
+                    "iotcoredeviceadvisor:List*",
+                    "iotevents:Get*",
+                    "iotevents:List*",
+                    "iotfleethub:Get*",
+                    "iotfleethub:List*",
+                    "iotsitewise:Get*",
+                    "iotsitewise:List*",
+                    "iotwireless:Get*",
+                    "iotwireless:List*",
+                    "kms:Get*",
+                    "kms:List*",
+                    "kafkaconnect:Get*",
+                    "kafkaconnect:List*",
+                    "kendra:Get*",
+                    "kendra:List*",
+                    "kinesis:Get*",
+                    "kinesis:List*",
+                    "kinesisfirehose:Get*",
+                    "kinesisfirehose:List*",
+                    "kinesisvideo:Get*",
+                    "kinesisvideo:List*",
+                    "lambda:Get*",
+                    "lambda:List*",
+                    "lex:Get*",
+                    "lex:List*",
+                    "licensemanager:Get*",
+                    "licensemanager:List*",
+                    "lightsail:Get*",
+                    "lightsail:List*",
+                    "location:Get*",
+                    "location:List*",
+                    "logs:Get*",
+                    "logs:List*",
+                    "lookoutequipment:Get*",
+                    "lookoutequipment:List*",
+                    "lookoutmetrics:Get*",
+                    "lookoutmetrics:List*",
+                    "lookoutvision:Get*",
+                    "lookoutvision:List*",
+                    "msk:Get*",
+                    "msk:List*",
+                    "mwaa:Get*",
+                    "mwaa:List*",
+                    "macie:Get*",
+                    "macie:List*",
+                    "mediaconnect:Get*",
+                    "mediaconnect:List*",
+                    "mediapackage:Get*",
+                    "mediapackage:List*",
+                    "memorydb:Get*",
+                    "memorydb:List*",
+                    "networkfirewall:Get*",
+                    "networkfirewall:List*",
+                    "networkmanager:Get*",
+                    "networkmanager:List*",
+                    "nimblestudio:Get*",
+                    "nimblestudio:List*",
+                    "opensearchservice:Get*",
+                    "opensearchservice:List*",
+                    "opsworkscm:Get*",
+                    "opsworkscm:List*",
+                    "panorama:Get*",
+                    "panorama:List*",
+                    "personalize:Get*",
+                    "personalize:List*",
+                    "pinpoint:Get*",
+                    "pinpoint:List*",
+                    "qldb:Get*",
+                    "qldb:List*",
+                    "quicksight:Get*",
+                    "quicksight:List*",
+                    "rds:Get*",
+                    "rds:List*",
+                    "rum:Get*",
+                    "rum:List*",
+                    "redshift:Get*",
+                    "redshift:List*",
+                    "refactorspaces:Get*",
+                    "refactorspaces:List*",
+                    "rekognition:Get*",
+                    "rekognition:List*",
+                    "resiliencehub:Get*",
+                    "resiliencehub:List*",
+                    "resourcegroups:Get*",
+                    "resourcegroups:List*",
+                    "robomaker:Get*",
+                    "robomaker:List*",
+                    "route53:Get*",
+                    "route53:List*",
+                    "route53recoverycontrol:Get*",
+                    "route53recoverycontrol:List*",
+                    "route53recoveryreadiness:Get*",
+                    "route53recoveryreadiness:List*",
+                    "route53resolver:Get*",
+                    "route53resolver:List*",
+                    "s3:Get*",
+                    "s3:List*",
+                    "s3objectlambda:Get*",
+                    "s3objectlambda:List*",
+                    "s3outposts:Get*",
+                    "s3outposts:List*",
+                    "ses:Get*",
+                    "ses:List*",
+                    "sqs:Get*",
+                    "sqs:List*",
+                    "ssm:Get*",
+                    "ssm:List*",
+                    "ssmcontacts:Get*",
+                    "ssmcontacts:List*",
+                    "ssmincidents:Get*",
+                    "ssmincidents:List*",
+                    "sso:Get*",
+                    "sso:List*",
+                    "sagemaker:Get*",
+                    "sagemaker:List*",
+                    "servicecatalog:Get*",
+                    "servicecatalog:List*",
+                    "servicecatalogappregistry:Get*",
+                    "servicecatalogappregistry:List*",
+                    "signer:Get*",
+                    "signer:List*",
+                    "stepfunctions:Get*",
+                    "stepfunctions:List*",
+                    "synthetics:Get*",
+                    "synthetics:List*",
+                    "timestream:Get*",
+                    "timestream:List*",
+                    "transfer:Get*",
+                    "transfer:List*",
+                    "wafv2:Get*",
+                    "wafv2:List*",
+                    "wisdom:Get*",
+                    "wisdom:List*",
+                    "workspaces:Get*",
+                    "workspaces:List*",
+                    "xray:Get*",
+                    "xray:List*",
+                ],
+                resources=["*"],
+            )
+        )
+
+        # InputType CloudFormation - PaCFramework OPA - PythonSubprocess
+
+        self.lambda_evaluate_cloudformation_by_opa = aws_lambda.Function(
+            self,
+            "EvaluateCloudFormationTemplateByOPAPythonSubprocess",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=10240,  # todo power-tune
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/pac_evaluation/input_type_cloudformation/pac_framework_opa/python_subprocess"
             ),
         )
 
-        self.lambda_opa_eval_python_subprocess.role.add_to_policy(
+        self.lambda_evaluate_cloudformation_by_opa.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:HeadObject",
@@ -208,6 +564,8 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                 resources=[
                     self.bucket_opa_policies.bucket_arn,
                     self.bucket_opa_policies.arn_for_objects("*"),
+                    self.bucket_converted_inputs.bucket_arn,
+                    self.bucket_converted_inputs.arn_for_objects("*"),
                 ],
             )
         )
@@ -308,7 +666,8 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             aws_iam.PolicyStatement(
                 actions=["lambda:InvokeFunction"],
                 resources=[
-                    self.lambda_opa_eval_python_subprocess.function_arn,
+                    self.lambda_pac_evaluation_router.function_arn,
+                    self.lambda_evaluate_cloudformation_by_opa.function_arn,
                     self.lambda_gather_infractions.function_arn,
                     self.lambda_handle_infraction.function_arn,
                 ],
@@ -358,37 +717,52 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             ),
             definition_string=json.dumps(
                 {
-                    "StartAt": "ParseInput",
+                    "StartAt": "PaCEvaluationRouter",
                     "States": {
-                        "ParseInput": {
-                            "Type": "Pass",
-                            "Next": "OpaEval",
-                            "Parameters": {
-                                "JsonInput": {
-                                    "Bucket.$": "$.Input.Bucket",
-                                    "Key.$": "$.Input.Key",
-                                },
-                                "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfn.ExecutionId",
-                                "ConsumerMetadata.$":"$.ConsumerMetadata",
-                            },
-                            "ResultPath": "$",
-                        },
-                        "OpaEval": {
+                        "PaCEvaluationRouter": {
                             "Type": "Task",
-                            "Next": "GatherInfractions",
-                            "ResultPath": "$.OpaEval",
+                            "Next": "ChoicePaCEvaluationRouting",
+                            "ResultPath": "$.PaCEvaluationRouter",
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
-                                "FunctionName": self.lambda_opa_eval_python_subprocess.function_name,
+                                "FunctionName": self.lambda_pac_evaluation_router.function_name,
+                                "Payload.$": "$",
+                            },
+                            "ResultSelector": {"Routing.$": "$.Payload.Routing"},
+                        },
+                        "ChoicePaCEvaluationRouting": {
+                            "Type": "Choice",
+                            "Default": "NoValidRoute",
+                            "Choices": [
+                                {
+                                    "Variable": "$.PaCEvaluationRouter.Routing.InvokingSfnNextState",
+                                    "StringEquals": "EvaluateCloudFormationTemplateByOPA",
+                                    "Next": "EvaluateCloudFormationTemplateByOPA",
+                                }
+                            ],
+                        },
+                        "NoValidRoute": {
+                            "Type": "Fail",
+                        },
+                        "EvaluateCloudFormationTemplateByOPA": {
+                            "Type": "Task",
+                            "Next": "GatherInfractions",
+                            "ResultPath": "$.EvaluateCloudFormationTemplateByOPA",
+                            "Resource": "arn:aws:states:::lambda:invoke",
+                            "Parameters": {
+                                "FunctionName": self.lambda_evaluate_cloudformation_by_opa.function_name,
                                 "Payload": {
-                                    "JsonInput.$": "$.JsonInput",
-                                    "OpaPolicies": {
-                                        "Bucket": self.bucket_opa_policies.bucket_name
+                                    "JsonInput": {
+                                        "Bucket.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Bucket",
+                                        "Key.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Key",
+                                    },
+                                    "PaC": {
+                                        "Bucket.$": "$.PaCEvaluationRouter.Routing.PaC.Bucket"
                                     },
                                 },
                             },
                             "ResultSelector": {
-                                "OpaEvalResults.$": "$.Payload.OpaEvalResults"
+                                "Results.$": "$.Payload.EvaluateCloudFormationTemplateByOPAResults"
                             },
                         },
                         "GatherInfractions": {
@@ -398,7 +772,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "Resource": "arn:aws:states:::lambda:invoke",
                             "Parameters": {
                                 "FunctionName": self.lambda_gather_infractions.function_name,
-                                "Payload.$": "$.OpaEval.OpaEvalResults",
+                                "Payload.$": "$.EvaluateCloudFormationTemplateByOPA.Results",
                             },
                             "ResultSelector": {
                                 "Infractions.$": "$.Payload.Infractions"
@@ -425,9 +799,12 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "ItemsPath": "$.GatherInfractions.Infractions",
                             "Parameters": {
                                 "Infraction.$": "$$.Map.Item.Value",
-                                "JsonInput.$": "$.JsonInput",
+                                "JsonInput": {
+                                    "Bucket.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Bucket",
+                                    "Key.$": "$.PaCEvaluationRouter.Routing.ModifiedInput.Key",
+                                },
                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
-                                "ConsumerMetadata.$": "$.ConsumerMetadata",
+                                "ConsumerMetadata.$": "$.ControlBrokerConsumerInputs.ConsumerMetadata",
                             },
                             "Iterator": {
                                 "StartAt": "HandleInfraction",
@@ -441,10 +818,10 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                             "FunctionName": self.lambda_handle_infraction.function_name,
                                             "Payload": {
                                                 "Infraction.$": "$.Infraction",
-                                                "JsonInput.$": "$.JsonInput",
+                                                "JsonInput.$":"$.JsonInput",
                                                 "OuterEvalEngineSfnExecutionId.$": "$.OuterEvalEngineSfnExecutionId",
                                                 "ConsumerMetadata.$": "$.ConsumerMetadata",
-                                            }
+                                            },
                                         },
                                         "ResultSelector": {"Payload.$": "$.Payload"},
                                     },
@@ -607,11 +984,8 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                             "ResultPath": "$.ForEachInput",
                             "ItemsPath": "$.InvokedByApigw.ControlBrokerConsumerInputs.InputKeys",
                             "Parameters": {
-                                "Input": {
-                                    "Bucket.$": "$.InvokedByApigw.ControlBrokerConsumerInputs.Bucket",
-                                    "Key.$": "$$.Map.Item.Value",
-                                },
-                                "ConsumerMetadata.$": "$.InvokedByApigw.ControlBrokerConsumerInputs.ConsumerMetadata",
+                                "InvokedByApigw.$": "$.InvokedByApigw",
+                                "ControlBrokerConsumerInputKey.$": "$$.Map.Item.Value",
                             },
                             "Iterator": {
                                 "StartAt": "InvokeInnerEvalEngineSfn",
@@ -624,11 +998,9 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                         "Parameters": {
                                             "StateMachineArn": self.sfn_inner_eval_engine.attr_arn,
                                             "Input": {
-                                                "Input.$": "$.Input",
-                                                "OuterEvalEngineSfn": {
-                                                    "ExecutionId.$": "$$.Execution.Id"
-                                                },
-                                                "ConsumerMetadata.$": "$.ConsumerMetadata",
+                                                "ControlBrokerConsumerInputKey.$": "$.ControlBrokerConsumerInputKey",
+                                                "ControlBrokerConsumerInputs.$": "$.InvokedByApigw.ControlBrokerConsumerInputs",
+                                                "OuterEvalEngineSfnExecutionId.$": "$$.Execution.Id",
                                             },
                                         },
                                     },
@@ -657,9 +1029,9 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
                                 "FunctionName": self.lambda_write_results_report.function_name,
                                 "Payload": {
                                     "OuterEvalEngineSfnExecutionId.$": "$$.Execution.Id",
-                                    "ResultsReportS3Uri.$":"$.ResultsReportS3Uri",
-                                    "ForEachInput.$":"$.ForEachInput",
-                                }
+                                    "ResultsReportS3Uri.$": "$.ResultsReportS3Uri",
+                                    "ForEachInput.$": "$.ForEachInput",
+                                },
                             },
                             "ResultSelector": {"Payload.$": "$.Payload"},
                         },

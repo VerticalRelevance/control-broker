@@ -1,3 +1,4 @@
+from typing import List
 import boto3
 from aws_cdk import (
     ArnFormat,
@@ -8,26 +9,46 @@ from aws_cdk import (
     aws_iam as iam,
     pipelines as pipelines,
 )
-
+from constructs import Construct
 
 class GitHubCDKPipelineStack(Stack):
-    """
-    If you want to use an existing CodeStar connection for the source stage, specify its arn with
-    codestar_connection_arn
+    """Create a CDK Pipelines CodePipeline using a GitHub repo via a CodeStar Connection.
 
-    additional_synth_iam_statements are added to the synth stage role"""
+    Optionally allows using a pre-existing CodeStar Connection via a SecretsManager Secret containing
+    the ARN of the CodeStar Connection.
+    """
 
     def __init__(
         self,
-        scope,
-        id,
-        github_repo_name,
-        github_repo_owner,
-        github_repo_branch,
-        codestar_connection_arn_secret_id=None,
-        additional_synth_iam_statements=None,
+        scope: Construct,
+        id: str,
+        github_repo_name: str,
+        github_repo_owner: str,
+        github_repo_branch: str,
+        codestar_connection_arn_secret_id: str = None,
+        additional_synth_iam_statements: List[iam.PolicyStatement] = None,
         **kwargs,
     ):
+        """Initialize a CDK Pipeline stack that uses a GitHub repo for its source.
+
+        :param scope: Scope of this stack.
+        :type scope: Construct
+        :param id: Unique identifier.
+        :type id: str
+        :param github_repo_name: Name of the repo to use for the pipeline's source stage.
+        :type github_repo_name: str
+        :param github_repo_owner: Owner of the repo for the pipeline's source stage.
+        :type github_repo_owner: str
+        :param github_repo_branch: Branch of the github repo, defaults to None
+        :type github_repo_branch: str, optional
+        :param codestar_connection_arn_secret_id: ID of a SecretsManager Secret
+                                                  that contains the ARN to a CodeStar Connection to use to access the
+                                                  GitHub repo. Useful if you already have a Connection you want to reuse.
+        :type codestar_connection_arn_secret_id: str, optional
+        :param additional_synth_iam_statements:   Statements to add to the CDK deployment role to allow CDK to get the
+                                                  secret at codestar_connection_arn_secret_id, if specified. Defaults to None
+        :type additional_synth_iam_statements: List[iam.PolicyStatement], optional
+        """
         super().__init__(scope, id, **kwargs)
 
         # Create codestar connection to connect pipeline to git.
@@ -83,6 +104,7 @@ class GitHubCDKPipelineStack(Stack):
                 "pip install -r requirements.txt",  # Instructs Codebuild to install required packages
                 "npx cdk synth",
             ],
+            env={"PIPELINE_SYNTH": "true"}
         )
 
         self.pipeline = pipelines.CodePipeline(
@@ -90,5 +112,5 @@ class GitHubCDKPipelineStack(Stack):
             "Pipeline",
             synth=pipeline_synth_action,
             publish_assets_in_parallel=False,
-            docker_enabled_for_synth=True
+            docker_enabled_for_synth=True,
         )

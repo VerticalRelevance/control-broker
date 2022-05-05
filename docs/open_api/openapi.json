@@ -1,0 +1,103 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "ControlBrokerEndpoint",
+    "version" : "2022-05-05 12:19:57UTC"
+  },
+  "servers" : [ {
+    "url" : "https://v8i28ze8df.execute-api.us-east-1.amazonaws.com/{basePath}",
+    "variables" : {
+      "basePath" : { }
+    }
+  } ],
+  "tags" : [ {
+    "name" : "aws:cloudformation:stack-id",
+    "x-amazon-apigateway-tag-value" : "arn:aws:cloudformation:us-east-1:446960196218:stack/ControlBrokerEndpointStackV0x7x0/0cfbb700-cc6c-11ec-bc72-0e5c5ed49289"
+  }, {
+    "name" : "aws:cloudformation:stack-name",
+    "x-amazon-apigateway-tag-value" : "ControlBrokerEndpointStackV0x7x0"
+  }, {
+    "name" : "aws:cloudformation:logical-id",
+    "x-amazon-apigateway-tag-value" : "ControlBrokerEndpoint7427912C"
+  } ],
+  "paths" : {
+    "/" : {
+      "post" : {
+        "responses" : {
+          "200": {
+            "description": "Control Broker response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlBrokerRequestStatus"
+                }
+              }
+            }
+          },
+        },
+        "security" : [ {
+          "ControlBrokerClientAuthorizer" : [ ]
+        } ],
+        "x-amazon-apigateway-integration" : {
+          "payloadFormatVersion" : "2.0",
+          "type" : "aws_proxy",
+          "httpMethod" : "POST",
+          "uri" : "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:446960196218:function:ControlBrokerEndpointStackV-InvokedByApigwFD5B66D0-Kmorz6WfyJpc/invocations",
+          "connectionType" : "INTERNET"
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ControlBrokerConsumerInputs" : {
+        "properties":{
+          "InputType": {
+            "type":"string"
+          },
+          "Bucket": {
+            "type":"string"
+          },
+          "InputKeys": {
+            "type":"array"
+          },
+          "ConsumerMetadata": {
+            "type":"object"
+          }
+        }
+      },
+      "ControlBrokerRequestStatus": {
+        "properties":{
+          "RequestorIsAuthorized": {
+            "type":"boolean"
+          },
+          "EvalEngineHasReadAccessToinputs": {
+            "type":"boolean"
+          },
+          "ResultsReportS3Uri": {
+            "type":"string"
+          },
+          "EvalEngineSfnExecutionArn": {
+            "type":"string"
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "ControlBrokerClientAuthorizer" : {
+        "in" : "header",
+        "name" : "Authorization",
+        "type" : "apiKey",
+        "x-amazon-apigateway-authorizer" : {
+          "identitySource" : "$request.header.Authorization",
+          "authorizerUri" : "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:446960196218:function:ControlBrokerEndpointStac-ControlBrokerClientAutho-aNRC35BFIV3W/invocations",
+          "authorizerPayloadFormatVersion" : "2.0",
+          "authorizerResultTtlInSeconds" : 0,
+          "type" : "request",
+          "enableSimpleResponses" : true
+        }
+      }
+    }
+  },
+  "x-amazon-apigateway-importexport-version" : "1.0"
+}
