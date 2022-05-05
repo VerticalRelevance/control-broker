@@ -7,10 +7,12 @@ from aws_cdk import (
     Duration,
     Stack,
     CfnOutput,
+    RemovalPolicy,
     aws_s3,
     aws_lambda,
     aws_stepfunctions,
     aws_iam,
+    aws_logs,
     aws_apigatewayv2_alpha,  # experimental as of 4.25.22
     aws_apigatewayv2_integrations_alpha,  # experimental as of 4.25.22
     aws_apigatewayv2_authorizers_alpha,  # experimental as of 4.25.22
@@ -61,7 +63,7 @@ class HandlersStack(Stack):
         
         lambda_invoked_by_apigw_cloudformation = aws_lambda.Function(
             self,
-            "InvokedByApigw",
+            "InvokedByApigwCloudFormation",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
@@ -99,12 +101,18 @@ class HandlersStack(Stack):
             path=self.paths['CloudFormation'],
             methods=[aws_apigatewayv2_alpha.HttpMethod.POST],
             integration=integration_cloudformation,
-            authorizer=authorizer_lambda
+            authorizer=authorizer_lambda,
         )
         
         self.invoke_cloudformation = path.join(
             self.http_api.url.rstrip("/"), self.paths['CloudFormation'].strip("/")
         )
 
-        CfnOutput(self, "ApigwInvokeUrl", value=self.invoke_cloudformation)
+        CfnOutput(self, "InvokeCloudFormation", value=self.invoke_cloudformation)
         
+        log_group_outer_eval_engine_sfn = aws_logs.LogGroup(
+            self,
+            "InvokeCloudFormationLogs",
+            log_group_name=f"InvokeCloudFormation",
+            removal_policy=RemovalPolicy.DESTROY,
+        )
