@@ -107,11 +107,12 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         :type path: str
         """
 
+        self.eval_engine_route.grant_invoke(lambda_function)
+
         # TODO: Test that users cannot inject their own eval engine URL when calling the API with that header
         integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
             name, lambda_function, parameter_mapping=self.handler_invocation_url_mapping
         )
-
         self.add_routes(
             path=path,
             methods=[aws_apigatewayv2_alpha.HttpMethod.POST],
