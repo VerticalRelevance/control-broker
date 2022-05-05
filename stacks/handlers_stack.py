@@ -14,6 +14,7 @@ from aws_cdk import (
     aws_apigatewayv2_alpha,  # experimental as of 4.25.22
     aws_apigatewayv2_authorizers_alpha,
     aws_apigatewayv2_integrations_alpha,  # experimental as of 4.25.22,
+    aws_lambda_python_alpha,
     aws_logs,
     RemovalPolicy,
 )
@@ -82,15 +83,23 @@ class HandlersStack(Stack):
             environment={
                 "EvalEngineLambdalithFunctionName": self.lambda_eval_engine_lambdalith.function_name
             },
-        )
-
-        lambda_invoked_by_apigw_cloudformation.role.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    "lambda:Invoke",
-                ],
-                resources=[self.lambda_eval_engine_lambdalith.function_arn],
-            )
+            layers=[
+                aws_lambda_python_alpha.PythonLayerVersion(
+                    self,
+                    "aws_requests_auth",
+                    entry="./supplementary_files/lambda_layers/aws_requests_auth",
+                    compatible_runtimes=[
+                        aws_lambda.Runtime.PYTHON_3_9
+                    ]
+                ),
+                aws_lambda_python_alpha.PythonLayerVersion(self,
+                    "requests",
+                    entry="./supplementary_files/lambda_layers/requests",
+                    compatible_runtimes=[
+                        aws_lambda.Runtime.PYTHON_3_9
+                    ]
+                ),
+            ]
         )
 
         self.api.add_api_handler(
