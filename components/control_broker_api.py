@@ -12,7 +12,7 @@ from aws_cdk import (
     aws_s3,
     aws_stepfunctions,
 )
-import urllib
+from os import path
 
 
 class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
@@ -59,9 +59,9 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         self.add_routes(
             path=self.CONTROL_BROKER_EVAL_ENGINE_INVOCATION_PATH,
         )
-        eval_engine_url = urllib.path.join(
+        eval_engine_url = path.join(
             self.http_api.url.rstrip("/"),
-            self.CONTROL_BROKER_g_INVOCATION_PATH.strip("/"),
+            self.CONTROL_BROKER_EVAL_ENGINE_INVOCATION_PATH.strip("/"),
         )
         self.urls.append(eval_engine_url)
         self.eval_engine_invocation_url_mapping.overwrite_header(
@@ -97,6 +97,6 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
             integration=integration,
             **kwargs,
         )
-        handler_url = urllib.path.join(self.http_api.url.rstrip("/"), path.strip("/"))
+        handler_url = path.join(self.http_api.url.rstrip("/"), path.strip("/"))
         self.urls.append(handler_url)
         CfnOutput(self, f"{name}HandlerUrl", handler_url)
