@@ -15,7 +15,7 @@ from aws_cdk import (
 from os import path
 
 
-class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
+class ControlBrokerApiBroken(aws_apigatewayv2_alpha.HttpApi):
     CONTROL_BROKER_EVAL_ENGINE_INVOCATION_PATH = "/EvalEngine"
 
     def __init__(
@@ -27,21 +27,37 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         **kwargs,
     ):
         super().__init__(self, id, *args, **kwargs)
-        self.control_broker_invocation_lambda_function: str = (
-            control_broker_invocation_lambda_function
+        
+        self.control_broker_invocation_lambda_function_name: str = (
+            control_broker_invocation_lambda_function.function_name
         )
+        
         self.control_broker_results_bucket = control_broker_results_bucket
+        
         api_log_group = aws_logs.LogGroup(
             self, f"{id}AccessLogs", retention=access_log_retention
         )
+        
         api_log_group.grant_write(aws_iam.ServicePrincipal("apigateway.amazonaws.com"))
+        
         cfn_default_stage: aws_apigatewayv2.CfnStage = self.http_api.default_stage.node
+        
         cfn_default_stage.add_property_override(
             "AccessLogSettings",
             {
                 "DestinationArn": api_log_group.log_group_arn,
                 "Format": json.dumps(
-                    '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength", "$context.integrationErrorMessage"}'
+                    {
+                        "requestId":"$context.requestId",
+                        "ip": "$context.identity.sourceIp",
+                        "requestTime":"$context.requestTime",
+                        "httpMethod":"$context.httpMethod",
+                        "routeKey":"$context.routeKey",
+                        "status":"$context.status",
+                        "protocol":"$context.protocol",
+                        "responseLength":"$context.responseLength",
+                        "integrationErrorMessage":"$context.integrationErrorMessage"
+                    }
                 ),
             },
         )
@@ -91,12 +107,27 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
             name, lambda_function, parameter_mapping=self.handler_invocation_url_mapping
         )
+        
         self.add_routes(
             path=path,
             methods=[aws_apigatewayv2_alpha.HttpMethod.POST],
             integration=integration,
             **kwargs,
         )
+        
         handler_url = path.join(self.http_api.url.rstrip("/"), path.strip("/"))
+        
         self.urls.append(handler_url)
+        
         CfnOutput(self, f"{name}HandlerUrl", handler_url)
+
+class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi): # does not deploy
+    def __init__(
+        self,
+        *args,
+        **kwargs
+    ):
+        
+        super().__init__(self, id, *args, **kwargs)
+
+        pass
