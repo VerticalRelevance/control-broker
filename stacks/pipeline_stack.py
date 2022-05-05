@@ -24,7 +24,7 @@ class GitHubCDKPipelineStack(Stack):
         id: str,
         github_repo_name: str,
         github_repo_owner: str,
-        github_repo_branch: str = current_branch,
+        github_repo_branch: str,
         codestar_connection_arn_secret_id: str = None,
         additional_synth_iam_statements: List[iam.PolicyStatement] = None,
         **kwargs,
