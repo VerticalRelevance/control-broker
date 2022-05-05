@@ -41,22 +41,18 @@ class HandlersStack(Stack):
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas/invoked_by_apigw"
+                "./supplementary_files/lambdas_handlers_stack/invoked_by_apigw"
             ),
-            environment={
-                "ControlBrokerOuterSfnArn": self.control_broker_outer_state_machine.state_machine_arn,
-                "ControlBrokerEvalResultsReportsBucket": self.control_broker_eval_results_bucket.bucket_name,
-            },
         )
 
-        lambda_invoked_by_apigw.role.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    "states:StartExecution",
-                ],
-                resources=[self.control_broker_outer_state_machine.state_machine_arn],
-            )
-        )
+        # lambda_invoked_by_apigw.role.add_to_policy(
+        #     aws_iam.PolicyStatement(
+        #         actions=[
+        #             "states:StartExecution",
+        #         ],
+        #         resources=[self.control_broker_outer_state_machine.state_machine_arn],
+        #     )
+        # )
         
         integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
             "ControlBrokerClient", lambda_invoked_by_apigw
