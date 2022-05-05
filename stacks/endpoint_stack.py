@@ -73,7 +73,7 @@ class EndpointStack(Stack):
 
         # auth - iam
 
-        authorizer_iam = aws_apigatewayv2_authorizers_alpha.HttpIamAuthorizer()
+        # authorizer_iam = aws_apigatewayv2_authorizers_alpha.HttpIamAuthorizer()
 
         # integration
 
@@ -110,7 +110,7 @@ class EndpointStack(Stack):
 
         self.http_api = aws_apigatewayv2_alpha.HttpApi(
             self,
-            "ControlBrokerClient",
+            "ControlBrokerEndpoint",
             # default_authorizer = authorizer
         )
 
@@ -129,3 +129,7 @@ class EndpointStack(Stack):
         )
 
         CfnOutput(self, "ApigwInvokeUrl", value=self.apigw_full_invoke_url)
+        
+        open_api_definition = f'aws apigatewayv2 export-api --api-id {self.http_api.http_api_id} --output-type YAML --specification OAS30 --stage-name $default stage-definition.yaml'
+        
+        CfnOutput(self, "CBEndpointOpenApiDefinition", value=open_api_definition)
