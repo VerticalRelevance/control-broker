@@ -31,17 +31,15 @@ class HandlersStack(Stack):
         super().__init__(*args, **kwargs)
 
         self.eval_engine()
-        self.endpoint_control_broker()
-        # self.endpoint_eval_engine()
+        self.api = ControlBrokerApi(
+            self,
+            "ControlBrokerApi",
+            control_broker_invocation_lambda_function=self.lambda_eval_engine_lambdalith,
+            control_broker_results_bucket=None,
+        )
+        self.endpoint()
 
-        # self.api = ControlBrokerApi(
-        #     # control_broker_invocation_lambda_function = self.lambda_eval_engine_lambdalith,
-        #     # control_broker_results_bucket = None
-        # )
-        
-        self.api = ControlBrokerApi()
-
-    def endpoint_control_broker(self):
+    def endpoint(self):
 
         # auth - lambda
 
