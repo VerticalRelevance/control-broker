@@ -1,67 +1,68 @@
 import json
+from urllib.parse import urljoin
 
 import aws_cdk
 from aws_cdk import (
     CfnOutput,
     aws_apigatewayv2,
     aws_apigatewayv2_alpha,
+    aws_apigatewayv2_authorizers_alpha,
     aws_apigatewayv2_integrations_alpha,
     aws_iam,
     aws_lambda,
     aws_logs,
     aws_s3,
-    aws_stepfunctions,
 )
-from os import path
 
 
-class ControlBrokerApiBroken(aws_apigatewayv2_alpha.HttpApi):
+class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
     CONTROL_BROKER_EVAL_ENGINE_INVOCATION_PATH = "/EvalEngine"
 
     def __init__(
         self,
-        *args,
+        scope,
+        name,
         control_broker_invocation_lambda_function: aws_lambda.Function,
         control_broker_results_bucket: aws_s3.Bucket,
         access_log_retention: aws_logs.RetentionDays = aws_logs.RetentionDays.ONE_DAY,
         **kwargs,
     ):
-        super().__init__(self, id, *args, **kwargs)
-        
-        self.control_broker_invocation_lambda_function_name: str = (
-            control_broker_invocation_lambda_function.function_name
+        super().__init__(scope, name, **kwargs)
+        self.control_broker_invocation_lambda_function: str = (
+            control_broker_invocation_lambda_function
         )
-        
+
         self.control_broker_results_bucket = control_broker_results_bucket
-        
+
         api_log_group = aws_logs.LogGroup(
             self, f"{id}AccessLogs", retention=access_log_retention
         )
-        
+
         api_log_group.grant_write(aws_iam.ServicePrincipal("apigateway.amazonaws.com"))
-        
-        cfn_default_stage: aws_apigatewayv2.CfnStage = self.http_api.default_stage.node
-        
+        cfn_default_stage: aws_apigatewayv2.CfnStage = (
+            self.default_stage.node.default_child
+        )
         cfn_default_stage.add_property_override(
             "AccessLogSettings",
             {
                 "DestinationArn": api_log_group.log_group_arn,
                 "Format": json.dumps(
                     {
-                        "requestId":"$context.requestId",
+                        "requestId": "$context.requestId",
                         "ip": "$context.identity.sourceIp",
-                        "requestTime":"$context.requestTime",
-                        "httpMethod":"$context.httpMethod",
-                        "routeKey":"$context.routeKey",
-                        "status":"$context.status",
-                        "protocol":"$context.protocol",
-                        "responseLength":"$context.responseLength",
-                        "integrationErrorMessage":"$context.integrationErrorMessage"
+                        "requestTime": "$context.requestTime",
+                        "httpMethod": "$context.httpMethod",
+                        "routeKey": "$context.routeKey",
+                        "status": "$context.status",
+                        "protocol": "$context.protocol",
+                        "responseLength": "$context.responseLength",
+                        "integrationErrorMessage": "$context.integrationErrorMessage",
                     }
                 ),
             },
         )
         self.urls = []
+        self._add_control_broker_eval_engine_invocation_route()
 
     def _add_control_broker_eval_engine_invocation_route(self):
         """Adds a route, which only handlers can call, that directly invokes the Control Broker Eval Engine."""
@@ -72,19 +73,22 @@ class ControlBrokerApiBroken(aws_apigatewayv2_alpha.HttpApi):
                 handler=self.control_broker_invocation_lambda_function,
             )
         )
-        self.add_routes(
+        self.eval_engine_route = self.add_routes(
             path=self.CONTROL_BROKER_EVAL_ENGINE_INVOCATION_PATH,
-        )
-        eval_engine_url = path.join(
-            self.http_api.url.rstrip("/"),
+            integration=self.handler_invocation_integration,
+            authorizer=aws_apigatewayv2_authorizers_alpha.HttpIamAuthorizer(),
+        )[0]
+        eval_engine_url = urljoin(
+            self.url.rstrip("/"),
             self.CONTROL_BROKER_EVAL_ENGINE_INVOCATION_PATH.strip("/"),
         )
         self.urls.append(eval_engine_url)
-        self.eval_engine_invocation_url_mapping.overwrite_header(
-            "x-control-broker-invoke-url", eval_engine_url
-        )
-        CfnOutput(self, f"EvalEngineUrl", eval_engine_url)
         self.handler_invocation_url_mapping = aws_apigatewayv2_alpha.ParameterMapping()
+        self.handler_invocation_url_mapping.overwrite_header(
+            "x-control-broker-invoke-url",
+            aws_apigatewayv2_alpha.MappingValue(eval_engine_url),
+        )
+        CfnOutput(self, "EvalEngineUrl", value=eval_engine_url)
 
     def add_api_handler(
         self,
@@ -107,27 +111,13 @@ class ControlBrokerApiBroken(aws_apigatewayv2_alpha.HttpApi):
         integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
             name, lambda_function, parameter_mapping=self.handler_invocation_url_mapping
         )
-        
+
         self.add_routes(
             path=path,
             methods=[aws_apigatewayv2_alpha.HttpMethod.POST],
             integration=integration,
             **kwargs,
         )
-        
-        handler_url = path.join(self.http_api.url.rstrip("/"), path.strip("/"))
-        
+        handler_url = urljoin(self.url.rstrip("/"), path.strip("/"))
         self.urls.append(handler_url)
-        
-        CfnOutput(self, f"{name}HandlerUrl", handler_url)
-
-class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi): # does not deploy
-    def __init__(
-        self,
-        *args,
-        **kwargs
-    ):
-        
-        super().__init__(self, id, *args, **kwargs)
-
-        pass
+        CfnOutput(self, f"{name}HandlerUrl", value=handler_url)
