@@ -2,6 +2,7 @@
 import os
 
 import aws_cdk as cdk
+from git import Repo
 
 from stacks.control_broker_stack import (
     ControlBrokerStack,
@@ -51,6 +52,10 @@ if app.node.try_get_context("control-broker/client/enabled"):
     )
 
 if continuously_deployed:
+    try:
+        current_branch = Repo().active_branch.name
+    except TypeError:
+        current_branch = None
     pipeline_stack = GitHubCDKPipelineStack(
         app,
         "ControlBrokerCICDDeployment",
@@ -58,6 +63,7 @@ if continuously_deployed:
         **app.node.try_get_context(
             "control-broker/continuous-deployment/github-config"
         ),
+        github_repo_branch=current_branch
     )
     pipeline_stack.pipeline.add_stage(deploy_stage)
 app.synth()
