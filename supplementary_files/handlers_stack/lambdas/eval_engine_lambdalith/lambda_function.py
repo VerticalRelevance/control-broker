@@ -22,6 +22,22 @@ def get_object(*,bucket,key):
         content = json.loads(body.read().decode('utf-8'))
         return content
 
+def s3_download(*,bucket,key,local_path):
+    
+    try:
+        s3.download_file(
+            bucket,
+            key,
+            local_path
+        )
+    except ClientError as e:
+        print(f'ClientError:\nbucket: {bucket}\nkey:\n{key}\n{e}')
+        raise
+    else:
+        print(f'No ClientError download_file\nbucket:\n{bucket}\nkey:\n{key}')
+        return True
+
+
 def get_is_allowed_decision():
     return bool(getrandbits(1))
 
@@ -36,12 +52,17 @@ def lambda_handler(event,context):
     
     print(f'input_analyzed:\n{input_analyzed}')
 
-    input_analyzed_object = get_object(
-        bucket = input_analyzed['Bucket'],
-        key = input_analyzed['Key']
-    )
+    # write input_analyzed_object to /tmp
     
-    print(f'input_analyzed_object:\n{input_analyzed_object}')
+    input_analyzed_object_path = '/tmp/input_analyzed_object.json'
+    
+    print(f'begin: Get json_input')
+    
+    s3_download(
+        bucket = input_analyzed['Bucket'],
+        key = input_analyzed['Key'],
+        local_path = input_analyzed_object_path
+    )
 
     return {
         "EvalEngineLambdalith": {
