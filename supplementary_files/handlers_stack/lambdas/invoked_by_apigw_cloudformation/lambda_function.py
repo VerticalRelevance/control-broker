@@ -43,7 +43,7 @@ def lambda_handler(event,context):
     print(f'BotoAWSRequestsAuth:\n{auth}')
     
     eval_engine_input = {
-        "ConsumerMetadata":request_json_body['ConsumerMetadata'],
+        "RequestMetadata":request_json_body['RequestMetadata'],
         "InputAnalyzed":request_json_body['InputAnalyzed'],
         "EvalEngineConfiguration": {
             "PaCFrameworkBucket": os.environ['PaCFrameworkBucket']
