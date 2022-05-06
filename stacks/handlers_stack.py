@@ -164,3 +164,5 @@ class HandlersStack(Stack):
                 ],
             )
         )
+
+        CfnOutput(self, "EvalEngineLamdalithArn", value=self.lambda_eval_engine_lambdalith.function_arn)
