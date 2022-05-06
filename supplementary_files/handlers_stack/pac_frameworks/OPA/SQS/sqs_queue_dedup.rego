@@ -1,15 +1,17 @@
 package sqs_queue_dedup
 
-import input 
-
 type = "AWS::SQS::Queue"
-
 
 default allow = false
 
 allow {
     count(infraction) == 0
 }
+
+# make "allow":null if this policy is not applicable
+
+# policy determines if it is itself applicable, based on value of ApprovedContext
+
 
 infraction[r] {
     some offending_resource
@@ -26,7 +28,7 @@ offending_resources = { r | resources[r]} - obedient_resources
 obedient_resources[resource] {
     some resource
     properties := resources[resource]
-    properties.ContentBasedDeduplication == input.EvaluationContext.Allowed.SQS.Queue.ContentBasedDeduplication
+    properties.ContentBasedDeduplication == data.EvaluationContext.Allowed.SQS.Queue.ContentBasedDeduplication
 }
 
 resources[resource] = def {
