@@ -195,7 +195,7 @@ def lambda_handler(event,context):
     return {
         "EvalEngineLambdalith": {
             "Evaluation": {
-                "IsAllowed": bool(infractions)
+                "IsAllowed": not bool(infractions)
             },
             "Infractions":infractions
         }
