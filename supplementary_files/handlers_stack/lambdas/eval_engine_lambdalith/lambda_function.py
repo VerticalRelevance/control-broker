@@ -28,11 +28,21 @@ def get_is_allowed_decision():
 def lambda_handler(event,context):
     print(f'event\n{event}\ncontext:\n{context}')
     
-    
     request_json_body = json.loads(event['body'])
     
     print(f'request_json_body:\n{request_json_body}')
+
+    input_analyzed = request_json_body['InputAnalyzed']
     
+    print(f'input_analyzed:\n{input_analyzed}')
+
+    input_analyzed_object = get_object(
+        bucket = input_analyzed['Bucket'],
+        key = input_analyzed['Key']
+    )
+    
+    print(f'input_analyzed_object:\n{input_analyzed_object}')
+
     return {
         "EvalEngineLambdalith": {
             "Evaluation": {
