@@ -1,4 +1,5 @@
 import json
+from typing import Any
 from urllib.parse import urljoin
 
 import aws_cdk
@@ -95,16 +96,22 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         name: str,
         lambda_function: aws_cdk.aws_lambda.Function,
         path: str,
-        **kwargs,
+        **kwargs: Any,
     ):
         """Add a Control Broker Handler to process requests. Expected to invoke the Control Broker upon successful completion.
 
-        :param name: _description_
+        :param name: Name of the integration created. Also used in the {name}HandlerOutput stack output.
         :type name: str
-        :param lambda_function: _description_
+        :param lambda_function: Lambda function that receives the user's direct
+                                request to the API and calls the Eval Engine with the handled (and
+                                possibly modified) request.
         :type lambda_function: aws_cdk.aws_lambda.Function
-        :param path: _description_
+        :param path: Path on the API for this handler.
         :type path: str
+        :param *kwargs: Keyword arguments are passing to the
+                        aws_apigatewayv2_alpha.HttpApi.add_routes() method. This allows setting
+                        authorizers, for instance.
+        :type *kwargs: Any
         """
 
         self.eval_engine_route.grant_invoke(lambda_function)
