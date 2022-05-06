@@ -1,10 +1,15 @@
-from random import getrandbits
 import json
+import subprocess
+import shutil
+import re
+import os
+from pathlib import Path
 
 import boto3
 from botocore.exceptions import ClientError
 
 s3 = boto3.client('s3')
+s3r = boto3.resource('s3')
 
 def get_object(*,bucket,key):
     
@@ -37,8 +42,41 @@ def s3_download(*,bucket,key,local_path):
         print(f'No ClientError download_file\nbucket:\n{bucket}\nkey:\n{key}')
         return True
 
+def s3_download_dir(*,bucket, prefix=None, local_path):
+    print(f'Begin s3_download_dir\nbucket:\n{bucket}\nprefix:\n{prefix}\nlocal_path:\n{local_path}')
+    paginator = s3.get_paginator('list_objects')
+    
+    if prefix:
+        pagination = paginator.paginate(Bucket=bucket, Delimiter='/', Prefix=prefix)
+    else:
+        pagination = paginator.paginate(Bucket=bucket, Delimiter='/')
+            
+    for result in pagination:
+        if result.get('CommonPrefixes') is not None:
+            for subdir in result.get('CommonPrefixes'):
+                s3_download_dir(
+                    prefix = subdir.get('Prefix'),
+                    local_path = local_path,
+                    bucket = bucket
+                )
+        for file in result.get('Contents', []):
+            dest_pathname = os.path.join(local_path, file.get('Key'))
+            if not os.path.exists(os.path.dirname(dest_pathname)):
+                os.makedirs(os.path.dirname(dest_pathname))
+            if not file.get('Key').endswith('/'):
+                s3_download(
+                    bucket=bucket,
+                    key=file.get('Key'),
+                    local_path=dest_pathname
+                )
+
+def mkdir(dir_):
+    p = Path(dir_)
+    p.mkdir(parents=True,exist_ok=True)
+    return str(p) 
 
 def get_is_allowed_decision():
+    from random import getrandbits
     return bool(getrandbits(1))
 
 def lambda_handler(event,context):
@@ -56,13 +94,29 @@ def lambda_handler(event,context):
     
     input_analyzed_object_path = '/tmp/input_analyzed_object.json'
     
-    print(f'begin: Get json_input')
+    print(f'begin: Get input_analyzed_object')
     
     s3_download(
         bucket = input_analyzed['Bucket'],
         key = input_analyzed['Key'],
         local_path = input_analyzed_object_path
     )
+    
+    # get PaC Framework Policies
+    
+    pac_framework_bucket = request_json_body['EvalEngineConfiguration']['PaCFrameworkBucket']
+    
+    print(f'pac_framework_bucket:\n{pac_framework_bucket}')
+
+    policy_path_root = mkdir('/tmp/opa-policies')
+    
+    print(f'begin: Get Policies')
+    
+    s3_download_dir(
+        bucket = pac_framework_bucket,
+        local_path = policy_path_root
+    )
+
 
     return {
         "EvalEngineLambdalith": {
