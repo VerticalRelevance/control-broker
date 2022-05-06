@@ -1,0 +1,9 @@
+{
+    "EvaluationContext":{
+        "Allowed":
+            "SQS": {
+                "ContentBasedDeduplication":true
+            }
+        }
+    }
+}

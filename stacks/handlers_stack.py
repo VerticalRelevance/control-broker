@@ -45,6 +45,31 @@ class HandlersStack(Stack):
 
     def pac_frameworks(self):
         
+        # EvaluationContext - owned by Security Team
+        
+        self.bucket_opa_policies = aws_s3.Bucket(
+            self,
+            "EvaluationContext",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+
+        aws_s3_deployment.BucketDeployment(
+            self,
+            "EvaluationContextDeployment",
+            sources=[
+                aws_s3_deployment.Source.asset("./supplementary_files/handlers_stack/evaluation_context")
+            ],
+            destination_bucket=self.bucket_opa_policies,
+            retain_on_delete=False,
+        )
+        
         # opa
         
         self.bucket_opa_policies = aws_s3.Bucket(
@@ -69,6 +94,9 @@ class HandlersStack(Stack):
             destination_bucket=self.bucket_opa_policies,
             retain_on_delete=False,
         )
+        
+        
+        
 
     
     def endpoint(self):
@@ -146,7 +174,7 @@ class HandlersStack(Stack):
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
-            memory_size=1024,
+            memory_size=10240, # TODO power-tune
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/handlers_stack/lambdas/eval_engine_lambdalith"
             ),
