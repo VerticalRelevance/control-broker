@@ -39,11 +39,11 @@ def s3_download(*,bucket,key,local_path):
         print(f'ClientError:\nbucket: {bucket}\nkey:\n{key}\n{e}')
         raise
     else:
-        print(f'No ClientError download_file\nbucket:\n{bucket}\nkey:\n{key}')
+        # print(f'No ClientError download_file\nbucket:\n{bucket}\nkey:\n{key}')
         return True
 
 def s3_download_dir(*,bucket, prefix=None, local_path):
-    print(f'Begin s3_download_dir\nbucket:\n{bucket}\nprefix:\n{prefix}\nlocal_path:\n{local_path}')
+    # print(f'Begin s3_download_dir\nbucket:\n{bucket}\nprefix:\n{prefix}\nlocal_path:\n{local_path}')
     paginator = s3.get_paginator('list_objects')
     
     if prefix:
@@ -190,7 +190,11 @@ def lambda_handler(event,context):
     for k in reserved_keys:
         opa_eval_results.pop(k,None)
     
-    infractions = [ {i:opa_eval_results[i]}for i in opa_eval_results if not opa_eval_results[i].get('allow')]
+    print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
+    
+    infractions = [ {i:opa_eval_results[i]}for i in opa_eval_results if opa_eval_results[i].get('allow') == False]
+
+    print(f'infractions:\n{infractions}\n{type(infractions)}')
     
     return {
         "EvalEngineLambdalith": {
