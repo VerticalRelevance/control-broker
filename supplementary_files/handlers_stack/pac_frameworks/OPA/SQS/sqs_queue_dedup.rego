@@ -16,6 +16,7 @@ type = "AWS::SQS::Queue"
 
 rule_applicable {
     data.ApprovedContext == "Prod"
+    data.InputType == "CloudFormation
 }
 
 default allow = false
