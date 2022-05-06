@@ -2,22 +2,32 @@ package sqs_queue_dedup
 
 type = "AWS::SQS::Queue"
 
-default allow = false
+# allow:null if this policy is not applicable
 
-allow = null {
+# not applicable if ApprovedContext != "Prod"
+
+# this Policy only applies to Prod
+
+# if not applicable, do not return any infractions
+
+# allow:true if this policy is applicable and no violations
+
+# allow:false if this policy is applicable and yes violations
+
+rule_applicable {
     data.ApprovedContext == "Prod"
 }
 
-allow {
+default allow = false
+
+allow = null {
+    not rule_applicable
+} else {
     count(infraction) == 0
 }
 
-# make "allow":null if this policy is not applicable
-
-# policy determines if it is itself applicable, based on value of ApprovedContext
-
-
 infraction[r] {
+    rule_applicable # return empty set if rule not applicable
     some offending_resource
     offending_resources[offending_resource]
     r := {
