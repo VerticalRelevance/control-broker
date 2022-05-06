@@ -73,6 +73,11 @@ class HandlersStack(Stack):
             retain_on_delete=False,
         )
         
+        self.evaluation_context = {
+            "Bucket": self.bucket_evaluation_context.bucket_name,
+            "Key":"evaluation-context.json"
+        }
+        
         # opa
         
         self.bucket_pac_policies = aws_s3.Bucket(
@@ -179,6 +184,7 @@ class HandlersStack(Stack):
             environment={
                 "PaCFramework": self.pac_framework,
                 "PaCPoliciesBucket": self.bucket_pac_policies.bucket_name,
+                "EvaluationContext": self.evaluation_context 
             },
         )
         

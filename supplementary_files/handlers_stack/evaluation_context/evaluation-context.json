@@ -2,7 +2,9 @@
     "EvaluationContext":{
         "Allowed":
             "SQS": {
-                "ContentBasedDeduplication":true
+                "Queue": {
+                    "ContentBasedDeduplication":true
+                }
             }
         }
     }
