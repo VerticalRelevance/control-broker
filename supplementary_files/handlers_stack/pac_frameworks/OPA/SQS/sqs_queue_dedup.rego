@@ -15,8 +15,8 @@ type = "AWS::SQS::Queue"
 # allow:false if this policy is applicable and yes violations
 
 rule_applicable {
-    data.ApprovedContext == "Prod"
-    data.InputType == "CloudFormation
+    data.ApprovedContext.EnvironmentEvaluation == "Prod"
+    data.InputType == "CloudFormation"
 }
 
 default allow = false
