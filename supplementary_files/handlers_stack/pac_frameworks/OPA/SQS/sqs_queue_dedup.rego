@@ -4,6 +4,10 @@ type = "AWS::SQS::Queue"
 
 default allow = false
 
+allow = null {
+    data.ApprovedContext == "Prod"
+}
+
 allow {
     count(infraction) == 0
 }
