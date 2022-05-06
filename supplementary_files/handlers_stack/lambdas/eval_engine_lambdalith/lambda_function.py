@@ -100,16 +100,27 @@ def lambda_handler(event,context):
     
     print(f'request_json_body:\n{request_json_body}')
 
-    input_analyzed = request_json_body['InputAnalyzed']
+    input_analyzed = request_json_body['Input']
     
     print(f'input_analyzed:\n{input_analyzed}')
+    
+    # write InputType to tmp
+    
+    input_type_path = '/tmp/input_type.json'
+    
+    input_type = {
+        "InputType":request_json_body['InputType']
+    }
+    
+    with open(input_type_path,'w') as f:
+        json.dump(input_type,f,indent=2)
     
     # write approved_context to tmp
     
     approved_context_path = '/tmp/approved_context.json'
     
     approved_context = {
-        "ApprovedContext":request_json_body['EvalEngineConfiguration']['ApprovedContext']
+        "ApprovedContext":request_json_body['Context']
     }
     
     with open(approved_context_path,'w') as f:
