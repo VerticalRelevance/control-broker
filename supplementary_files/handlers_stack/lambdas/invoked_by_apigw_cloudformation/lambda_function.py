@@ -81,7 +81,7 @@ def lambda_handler(event,context):
     
     print(f'headers:\n{headers}')
     
-    authorization_header = headers['Authorization']
+    authorization_header = headers['authorization']
     
     print(f'authorization_header:\n{authorization_header}')
     
