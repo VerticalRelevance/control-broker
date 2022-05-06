@@ -89,10 +89,6 @@ def run_bash(*, bash_path):
         'stderr': stderr
     }
 
-def get_is_allowed_decision():
-    from random import getrandbits
-    return bool(getrandbits(1))
-
 def lambda_handler(event,context):
     print(f'event\n{event}\ncontext:\n{context}')
     
@@ -189,10 +185,18 @@ def lambda_handler(event,context):
     opa_eval_results = stdout_
     print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
     
+    reserved_keys = ['ApprovedContext','EvaluationContext','InputType']
+
+    for k in reserved_keys:
+        opa_eval_results.pop(k,None)
+    
+    infractions = [ {i:opa_eval_results[i]}for i in opa_eval_results if not opa_eval_results[i].get('allow')]
+    
     return {
         "EvalEngineLambdalith": {
             "Evaluation": {
-                "IsAllowed": get_is_allowed_decision()
-            }
+                "IsAllowed": bool(infractions)
+            },
+            "Infractions":infractions
         }
     }
