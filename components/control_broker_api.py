@@ -97,7 +97,7 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         lambda_function: aws_cdk.aws_lambda.Function,
         path: str,
         **kwargs: Any,
-    ):
+    ) -> aws_apigatewayv2_alpha.HttpRoute:
         """Add a Control Broker Handler to process requests. Expected to invoke the Control Broker upon successful completion.
 
         :param name: Name of the integration created. Also used in the {name}HandlerOutput stack output.
@@ -120,12 +120,13 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         integration = aws_apigatewayv2_integrations_alpha.HttpLambdaIntegration(
             name, lambda_function, parameter_mapping=self.handler_invocation_url_mapping
         )
-        self.add_routes(
+        route = self.add_routes(
             path=path,
             methods=[aws_apigatewayv2_alpha.HttpMethod.POST],
             integration=integration,
             **kwargs,
-        )
+        )[0]
         handler_url = urljoin(self.url.rstrip("/"), path.strip("/"))
         self.urls.append(handler_url)
         CfnOutput(self, f"{name}HandlerUrl", value=handler_url)
+        return route
