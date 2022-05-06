@@ -15,6 +15,12 @@ account_id = boto3.client('sts').get_caller_identity().get('Account')
 def get_host(*,full_invoke_url):
     m = re.search('https://(.*)/.*',full_invoke_url)
     return m.group(1)
+
+def get_evaluation_context(*,requested_evaluation_status,authorization_header):
+    
+    pass
+
+    return "Prod"
     
 def lambda_handler(event,context):
     
@@ -27,6 +33,10 @@ def lambda_handler(event,context):
     headers = event['headers']
     
     print(f'headers:\n{headers}')
+    
+    authorization_header = headers['Authorization']
+    
+    print(f'authorization_header:\n{authorization_header}')
     
     eval_engine_invoke_url = headers['x-eval-engine-invoke-url']
     
@@ -42,10 +52,21 @@ def lambda_handler(event,context):
     
     print(f'BotoAWSRequestsAuth:\n{auth}')
     
+    requested_evaluation_status = request_json_body['ConsumerMetadata']['RequestedEvaluationContext']
+    
+    print(f'requested_evaluation_status:\n{requested_evaluation_status}')
+    
+    evaluation_context = get_evaluation_context(
+        requested_evaluation_status = requested_evaluation_status,
+        authorization_header = authorization_header
+    )
+    
     eval_engine_input = {
         "ConsumerMetadata":request_json_body['ConsumerMetadata'],
         "InputAnalyzed":request_json_body['InputAnalyzed'],
-        "EvalEngineConfiguration": {}
+        "EvalEngineConfiguration": {
+            "EvaluationContext":evaluation_context
+        }
     }
     
     print(f'eval_engine_input:\n{eval_engine_input}')
