@@ -108,6 +108,16 @@ def lambda_handler(event,context):
     
     print(f'consumer_metadata:\n{consumer_metadata}')
     
+    # get evaluation context
+    
+    evaluation_context_path = '/tmp/evaluation_context.json'
+    
+    s3_download(
+        bucket = os.environ['EvaluationContext']['Bucket'],
+        key = os.environ['EvaluationContext']['Key'],
+        local_path = evaluation_context_path
+    )
+    
     # write ConsumerMetadata to /tmp
 
     consumer_metadata_path = '/tmp/consumer_metadata.json'
@@ -119,8 +129,6 @@ def lambda_handler(event,context):
     
     input_analyzed_object_path = '/tmp/input_analyzed_object.json'
     
-    print(f'begin: Get input_analyzed_object')
-    
     s3_download(
         bucket = input_analyzed['Bucket'],
         key = input_analyzed['Key'],
@@ -130,8 +138,6 @@ def lambda_handler(event,context):
     # get PaC Framework Policies
     
     policy_path_root = mkdir('/tmp/pac_policies')
-    
-    print(f'begin: Get Policies')
     
     s3_download_dir(
         bucket = os.environ['PaCPoliciesBucket'],
@@ -159,8 +165,6 @@ def lambda_handler(event,context):
     opa_eval_results = stdout_
     print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
     
-    
-
     return {
         "EvalEngineLambdalith": {
             "Evaluation": {

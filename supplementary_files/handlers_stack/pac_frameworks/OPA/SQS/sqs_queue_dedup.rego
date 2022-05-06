@@ -25,8 +25,7 @@ offending_resources = { r | resources[r]} - obedient_resources
 obedient_resources[resource] {
     some resource
     properties := resources[resource]
-    properties.ContentBasedDeduplication == true
-    #properties.ContentBasedDeduplication == false
+    properties.ContentBasedDeduplication == input.EvaluationContext.Allowed.SQS.Queue.ContentBasedDeduplication
 }
 
 resources[resource] = def {
