@@ -9,6 +9,8 @@ from aws_cdk import (
     CfnOutput,
     aws_lambda,
     aws_iam,
+    aws_s3,
+    aws_s3_deployment,
     aws_logs,
     aws_apigatewayv2,
     aws_apigatewayv2_alpha,  # experimental as of 4.25.22
@@ -31,7 +33,7 @@ class HandlersStack(Stack):
 
         super().__init__(*args, **kwargs)
 
-        self.eval_engine()
+        self.pac_frameworks()
         self.api = ControlBrokerApi(
             self,
             "ControlBrokerApi",
@@ -40,6 +42,34 @@ class HandlersStack(Stack):
         )
         self.endpoint()
 
+    def pac_frameworks(self):
+        
+        # opa
+        
+        self.bucket_opa_policies = aws_s3.Bucket(
+            self,
+            "OpaPolicies",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+
+        aws_s3_deployment.BucketDeployment(
+            self,
+            "OpaPolicies",
+            sources=[
+                aws_s3_deployment.Source.asset("./supplementary_files/handlers_stack/opa-policies")
+            ],
+            destination_bucket=self.bucket_opa_policies,
+            retain_on_delete=False,
+        )
+
+    
     def endpoint(self):
 
         # auth - lambda
@@ -68,7 +98,7 @@ class HandlersStack(Stack):
             ],
         )
 
-        # integration
+        # integration - cloudformation
 
         lambda_invoked_by_apigw_cloudformation = aws_lambda.Function(
             self,
@@ -78,7 +108,7 @@ class HandlersStack(Stack):
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas_handlers_stack/invoked_by_apigw_cloudformation"
+                "./supplementary_files/handlers_stack/lambdas/invoked_by_apigw_cloudformation"
             ),
             environment={
                 "EvalEngineLambdalithFunctionName": self.lambda_eval_engine_lambdalith.function_name
