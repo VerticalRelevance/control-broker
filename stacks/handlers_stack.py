@@ -52,7 +52,7 @@ class HandlersStack(Stack):
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas_handlers_stack/apigw_authorizer"
+                "./supplementary_files/handlers_stack/lambdas/apigw_authorizer"
             ),
         )
 
@@ -116,9 +116,6 @@ class HandlersStack(Stack):
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas_handlers_stack/eval_engine_lambdalith"
+                "./supplementary_files/handlers_stack/lambdas/eval_engine_lambdalith"
             ),
         )
-    
-    def endpoint_eval_engine(self):
-        pass
