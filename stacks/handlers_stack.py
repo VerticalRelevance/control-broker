@@ -34,6 +34,7 @@ class HandlersStack(Stack):
         super().__init__(*args, **kwargs)
 
         self.pac_frameworks()
+        self.eval_engine()
         self.api = ControlBrokerApi(
             self,
             "ControlBrokerApi",
@@ -61,9 +62,9 @@ class HandlersStack(Stack):
 
         aws_s3_deployment.BucketDeployment(
             self,
-            "OpaPolicies",
+            "OpaPoliciesDeployment",
             sources=[
-                aws_s3_deployment.Source.asset("./supplementary_files/handlers_stack/opa-policies")
+                aws_s3_deployment.Source.asset("./supplementary_files/handlers_stack/opa_policies")
             ],
             destination_bucket=self.bucket_opa_policies,
             retain_on_delete=False,
@@ -148,4 +149,18 @@ class HandlersStack(Stack):
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/handlers_stack/lambdas/eval_engine_lambdalith"
             ),
+        )
+        
+        self.lambda_eval_engine_lambdalith.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject",
+                    "s3:GetBucket",
+                    "s3:List*",
+                ],
+                resources=[
+                    self.bucket_opa_policies.bucket_arn,
+                    self.bucket_opa_policies.arn_for_objects("*"),
+                ],
+            )
         )
