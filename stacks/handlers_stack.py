@@ -184,7 +184,7 @@ class HandlersStack(Stack):
             environment={
                 "PaCFramework": self.pac_framework,
                 "PaCPoliciesBucket": self.bucket_pac_policies.bucket_name,
-                "EvaluationContext": self.evaluation_context 
+                "EvaluationContext": json.dumps(self.evaluation_context) 
             },
         )
         
@@ -198,6 +198,8 @@ class HandlersStack(Stack):
                 resources=[
                     self.bucket_pac_policies.bucket_arn,
                     self.bucket_pac_policies.arn_for_objects("*"),
+                    self.bucket_evaluation_context.bucket_arn,
+                    self.bucket_evaluation_context.arn_for_objects("*"),
                 ],
             )
         )

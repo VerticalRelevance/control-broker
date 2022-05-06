@@ -112,9 +112,11 @@ def lambda_handler(event,context):
     
     evaluation_context_path = '/tmp/evaluation_context.json'
     
+    evaluation_context = json.loads(os.environ['EvaluationContext'])
+    
     s3_download(
-        bucket = os.environ['EvaluationContext']['Bucket'],
-        key = os.environ['EvaluationContext']['Key'],
+        bucket = evaluation_context['Bucket'],
+        key = evaluation_context['Key'],
         local_path = evaluation_context_path
     )
     
@@ -145,7 +147,7 @@ def lambda_handler(event,context):
         prefix = os.environ['PaCFramework']
     )
 
-    # to tmp
+    # opa to tmp
 
     shutil.copy('./opa','/tmp/opa')
     

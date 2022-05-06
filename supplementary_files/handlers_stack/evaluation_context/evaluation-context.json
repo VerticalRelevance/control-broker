@@ -1,6 +1,6 @@
 {
     "EvaluationContext":{
-        "Allowed":
+        "Allowed": {
             "SQS": {
                 "Queue": {
                     "ContentBasedDeduplication":true
