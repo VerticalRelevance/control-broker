@@ -104,7 +104,7 @@ def lambda_handler(event,context):
     
     print(f'input_analyzed:\n{input_analyzed}')
     
-        # write eval enginge configuration to tmp
+    # write approved_context to tmp
     
     approved_context_path = '/tmp/approved_context.json'
     
@@ -129,14 +129,14 @@ def lambda_handler(event,context):
     
     # write ConsumerMetadata to /tmp
     
-    consumer_request_context= request_json_body['ConsumerRequestContext']
+    consumer_metadata= request_json_body['ConsumerMetadata']
     
-    print(f'consumer_request_context:\n{consumer_request_context}')
+    print(f'consumer_metadata:\n{consumer_metadata}')
 
     consumer_metadata_path = '/tmp/consumer_metadata.json'
     
     with open(consumer_metadata_path,'w') as f:
-        json.dump(consumer_request_context,f,indent=2)
+        json.dump(consumer_metadata,f,indent=2)
 
     # write input_analyzed_object to /tmp
     

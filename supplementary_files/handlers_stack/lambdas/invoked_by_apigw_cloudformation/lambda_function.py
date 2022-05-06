@@ -16,11 +16,24 @@ def get_host(*,full_invoke_url):
     m = re.search('https://(.*)/.*',full_invoke_url)
     return m.group(1)
 
-def get_approved_context(*,consumer_request_context,authorization_header):
+def get_approved_context(*,consumer_metadata,consumer_request_context):
     
-    # some Authz call
+    def integrate_with_my_entitlement_system(consumer_metadata,consumer_request_context):
+        
+        # make external call per enterprise implementation
+        
+        # if consumer is authorized to call the CB with the context it provided, then return the unmodified context
+        
+        # if not, return failure
+        
+        # demo check below
+        
+        return consumer_metadata['SSOAttributes']['Org'] == "OrgA"
     
-    return consumer_request_context # auto-approve for now, pending full implementation
+    if integrate_with_my_entitlement_system(consumer_metadata,consumer_request_context):
+        return consumer_request_context
+    else:
+        return False
  
 def validate_input_type(request_json_body):
     
@@ -38,7 +51,8 @@ def get_consumer_metadata(event):
     
         authorization_header = headers['Authorization']
 
-        # per enterprise implentation, demo values below
+        # make external call per enterprise implementation
+        # demo values below
         
         return {
             "Org":"OrgA",
@@ -50,6 +64,10 @@ def get_consumer_metadata(event):
     return {
         "SSOAttributes": integrate_with_my_identity_provider(event)
     }
+
+def control_broker_has_read_acces_to_input(even):
+    #TODO
+    return True
     
 def lambda_handler(event,context):
     
@@ -83,25 +101,35 @@ def lambda_handler(event,context):
     
     consumer_request_context = request_json_body['Context']
     
+    consumer_metadata = get_consumer_metadata(event)
+    
     print(f'consumer_request_context:\n{consumer_request_context}')
     
     approved_context = get_approved_context(
-        consumer_request_context = consumer_request_context,
-        authorization_header = authorization_header
+        consumer_metadata = consumer_metadata,
+        consumer_request_context = consumer_request_context
     )
     
     if not approved_context:
-        return False # malformed request - unnapproved
-        
-    # Does CB have read access to your input? Boolean
-    # Are you authorized to call the CB with the Context you provided? Boolean
+        fail_fast = {
+            "RequestorAuthorizedForProvidedContext": False
+        }
+        print(f'fail_fast:{fail_fast}')
+        return fail_fast
     
+    if not control_broker_has_read_acces_to_input(event):
+        fail_fast = {
+            "ControlBrokerHasReadAccessToInputS3Path": False
+        }
+        print(f'fail_fast:{fail_fast}')
+        return fail_fast
+
     eval_engine_input =  {
         "Input":request_json_body['Input'],
         "Context": approved_context,
         "InputType": validate_input_type(request_json_body),
-        "ConsumerMetadata": get_consumer_metadata(event), 
-            #things we know about requestor based on the authentication system
+        "ConsumerMetadata": consumer_metadata, 
+            # NB renamed from an object manually provided by the user to things we know about requestor based on the authentication system
     }
     
     print(f'eval_engine_input:\n{eval_engine_input}')
