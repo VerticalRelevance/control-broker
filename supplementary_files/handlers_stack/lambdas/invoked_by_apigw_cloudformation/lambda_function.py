@@ -28,7 +28,7 @@ def lambda_handler(event,context):
     
     print(f'headers:\n{headers}')
     
-    eval_engine_invoke_url = headers['x-control-broker-invoke-url']
+    eval_engine_invoke_url = headers['x-eval-engine-invoke-url']
     
     print(f'eval_engine_invoke_url:\n{eval_engine_invoke_url}')
     
