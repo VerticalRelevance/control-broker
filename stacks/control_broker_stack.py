@@ -1,14 +1,12 @@
 import os
 import json
-from typing import List, Sequence
+from typing import List
 
 from aws_cdk import (
     Duration,
     Stack,
     RemovalPolicy,
     CfnOutput,
-    SecretValue,
-    aws_config,
     aws_dynamodb,
     aws_s3,
     aws_s3_deployment,
@@ -22,15 +20,16 @@ from constructs import Construct
 
 from utils.mixins import SecretConfigStackMixin
 
-
 class ControlBrokerStack(Stack, SecretConfigStackMixin):
+    """A full Control Broker installation."""
+
     def __init__(
         self,
         scope: Construct,
         construct_id: str,
         **kwargs,
     ) -> None:
-        """A full Control Broker installation.
+        """Instantiate a full Control Broker installation.
 
         :param scope:
         :type scope: Construct
@@ -99,11 +98,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             removal_policy=RemovalPolicy.DESTROY,
         )
 
-        # event bridge bus
-
         self.event_bus_infractions = aws_events.EventBus(self, "Infractions")
-
-        # debug event bridge by logging events
 
         logs_infraction_events = aws_logs.LogGroup(
             self, "InfractionEvents", removal_policy=RemovalPolicy.DESTROY

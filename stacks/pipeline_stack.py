@@ -3,8 +3,6 @@ import boto3
 from aws_cdk import (
     ArnFormat,
     Stack,
-    aws_codepipeline as codepipeline,
-    aws_codepipeline_actions as codepipeline_actions,
     aws_codestarconnections as codestarconnections,
     aws_iam as iam,
     pipelines as pipelines,
@@ -21,7 +19,7 @@ class GitHubCDKPipelineStack(Stack):
     def __init__(
         self,
         scope: Construct,
-        id: str,
+        name: str,
         github_repo_name: str,
         github_repo_owner: str,
         github_repo_branch: str,
@@ -49,7 +47,7 @@ class GitHubCDKPipelineStack(Stack):
                                                   secret at codestar_connection_arn_secret_id, if specified. Defaults to None
         :type additional_synth_iam_statements: List[iam.PolicyStatement], optional
         """
-        super().__init__(scope, id, **kwargs)
+        super().__init__(scope, name, **kwargs)
 
         # Create codestar connection to connect pipeline to git.
         # The connector name is sliced here because the max length
