@@ -21,6 +21,35 @@ def get_approved_context(*,consumer_request_context,authorization_header):
     # some Authz call
     
     return consumer_request_context # auto-approve for now, pending full implementation
+ 
+def validate_input_type(request_json_body):
+    
+    # go to that provided object
+    
+    # validate it matches type expected by this handler i.e. CloudFormation
+    
+    return "CloudFormation"
+
+def get_consumer_metadata(event):
+
+    def integrate_with_my_identity_provider(event):
+    
+        headers = event['headers']
+    
+        authorization_header = headers['Authorization']
+
+        # per enterprise implentation, demo values below
+        
+        return {
+            "Org":"OrgA",
+            "BusinessUnit":"BU1",
+            "BillingCode":"bu-01",
+            "Name":"Jane Ray"
+        }
+
+    return {
+        "SSOAttributes": integrate_with_my_identity_provider(event)
+    }
     
 def lambda_handler(event,context):
     
@@ -61,12 +90,18 @@ def lambda_handler(event,context):
         authorization_header = authorization_header
     )
     
-    eval_engine_input = {
-        "ConsumerRequestContext":consumer_request_context,
-        "InputAnalyzed":request_json_body['Input'],
-        "EvalEngineConfiguration": {
-            "ApprovedContext":approved_context
-        }
+    if not approved_context:
+        return False # malformed request - unnapproved
+        
+    # Does CB have read access to your input? Boolean
+    # Are you authorized to call the CB with the Context you provided? Boolean
+    
+    eval_engine_input =  {
+        "Input":request_json_body['Input'],
+        "Context": approved_context,
+        "InputType": validate_input_type(request_json_body),
+        "ConsumerMetadata": get_consumer_metadata(event), 
+            #things we know about requestor based on the authentication system
     }
     
     print(f'eval_engine_input:\n{eval_engine_input}')
