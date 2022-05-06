@@ -49,7 +49,7 @@ def get_consumer_metadata(event):
     
         headers = event['headers']
     
-        authorization_header = headers['Authorization']
+        authorization_header = headers['authorization']
 
         # make external call per enterprise implementation
         # demo values below
