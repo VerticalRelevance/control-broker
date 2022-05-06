@@ -104,11 +104,11 @@ def lambda_handler(event,context):
     
     print(f'input_analyzed:\n{input_analyzed}')
     
-    consumer_metadata= request_json_body['RequestMetadata']
+    consumer_metadata= request_json_body['ConsumerMetadata']
     
     print(f'consumer_metadata:\n{consumer_metadata}')
     
-    # write RequestMetadata to /tmp
+    # write ConsumerMetadata to /tmp
 
     consumer_metadata_path = '/tmp/consumer_metadata.json'
     
