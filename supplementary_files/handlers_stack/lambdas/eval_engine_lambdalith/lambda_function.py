@@ -129,17 +129,14 @@ def lambda_handler(event,context):
     
     # get PaC Framework Policies
     
-    pac_framework_bucket = request_json_body['EvalEngineConfiguration']['PaCFrameworkBucket']
-    
-    print(f'pac_framework_bucket:\n{pac_framework_bucket}')
-
     policy_path_root = mkdir('/tmp/pac_policies')
     
     print(f'begin: Get Policies')
     
     s3_download_dir(
         bucket = pac_framework_bucket,
-        local_path = policy_path_root
+        local_path = policy_path_root,
+        prefix = os.environ['PacFramework']
     )
 
     # to tmp

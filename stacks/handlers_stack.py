@@ -28,10 +28,13 @@ class HandlersStack(Stack):
     def __init__(
         self,
         *args,
+        pac_framework,
         **kwargs,
     ):
 
         super().__init__(*args, **kwargs)
+
+        self.pac_framework = pac_framework
 
         self.pac_frameworks()
         self.eval_engine()
@@ -47,7 +50,7 @@ class HandlersStack(Stack):
         
         # EvaluationContext - owned by Security Team
         
-        self.bucket_opa_policies = aws_s3.Bucket(
+        self.bucket_evaluation_context = aws_s3.Bucket(
             self,
             "EvaluationContext",
             removal_policy=RemovalPolicy.DESTROY,
@@ -66,15 +69,15 @@ class HandlersStack(Stack):
             sources=[
                 aws_s3_deployment.Source.asset("./supplementary_files/handlers_stack/evaluation_context")
             ],
-            destination_bucket=self.bucket_opa_policies,
+            destination_bucket=self.bucket_evaluation_context,
             retain_on_delete=False,
         )
         
         # opa
         
-        self.bucket_opa_policies = aws_s3.Bucket(
+        self.bucket_pac_policies = aws_s3.Bucket(
             self,
-            "OpaPolicies",
+            "PaCPolicies",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
             block_public_access=aws_s3.BlockPublicAccess(
@@ -87,18 +90,14 @@ class HandlersStack(Stack):
 
         aws_s3_deployment.BucketDeployment(
             self,
-            "OpaPoliciesDeployment",
+            "PaCPoliciesDeployment",
             sources=[
-                aws_s3_deployment.Source.asset("./supplementary_files/handlers_stack/opa_policies")
+                aws_s3_deployment.Source.asset("./supplementary_files/handlers_stack/pac_frameworks")
             ],
-            destination_bucket=self.bucket_opa_policies,
+            destination_bucket=self.bucket_pac_policies,
             retain_on_delete=False,
         )
         
-        
-        
-
-    
     def endpoint(self):
 
         # auth - lambda
@@ -141,7 +140,6 @@ class HandlersStack(Stack):
             ),
             environment={
                 "EvalEngineLambdalithFunctionName": self.lambda_eval_engine_lambdalith.function_name,
-                "PaCFrameworkBucket": self.bucket_opa_policies.bucket_name
             },
             layers=[
                 aws_lambda_python_alpha.PythonLayerVersion(
@@ -178,6 +176,10 @@ class HandlersStack(Stack):
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/handlers_stack/lambdas/eval_engine_lambdalith"
             ),
+            environment={
+                "PaCFramework": self.pac_framework,
+                "PaCFrameworkBucket": self.bucket_pac_policies,
+            },
         )
         
         self.lambda_eval_engine_lambdalith.role.add_to_policy(

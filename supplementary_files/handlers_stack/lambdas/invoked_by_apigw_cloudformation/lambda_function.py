@@ -45,9 +45,7 @@ def lambda_handler(event,context):
     eval_engine_input = {
         "ConsumerMetadata":request_json_body['ConsumerMetadata'],
         "InputAnalyzed":request_json_body['InputAnalyzed'],
-        "EvalEngineConfiguration": {
-            "PaCFrameworkBucket": os.environ['PaCFrameworkBucket']
-        }
+        "EvalEngineConfiguration": {}
     }
     
     print(f'eval_engine_input:\n{eval_engine_input}')
