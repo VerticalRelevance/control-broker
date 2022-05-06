@@ -17,5 +17,6 @@ handlers_stack = HandlersStack(
     app,
     f"CBHandlersStack{STACK_VERSION}",
     env=env,
+    pac_framework=app.node.try_get_context("control-broker/pac-framework"),
 )
 app.synth()
