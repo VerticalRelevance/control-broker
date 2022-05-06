@@ -16,11 +16,11 @@ def get_host(*,full_invoke_url):
     m = re.search('https://(.*)/.*',full_invoke_url)
     return m.group(1)
 
-def get_approved_context(*,consumer_requested_context,authorization_header):
+def get_approved_context(*,consumer_request_context,authorization_header):
     
     # some Authz call
     
-    return consumer_requested_context # auto-approve for now, pending full implementation
+    return consumer_request_context # auto-approve for now, pending full implementation
     
 def lambda_handler(event,context):
     
@@ -52,18 +52,18 @@ def lambda_handler(event,context):
     
     print(f'BotoAWSRequestsAuth:\n{auth}')
     
-    consumer_requested_context = request_json_body['Metadata']['Context']
+    consumer_request_context = request_json_body['Context']
     
-    print(f'consumer_requested_context:\n{consumer_requested_context}')
+    print(f'consumer_request_context:\n{consumer_request_context}')
     
     approved_context = get_approved_context(
-        consumer_requested_context = consumer_requested_context,
+        consumer_request_context = consumer_request_context,
         authorization_header = authorization_header
     )
     
     eval_engine_input = {
-        "ConsumerMetadata":request_json_body['Metadata'],
-        "InputAnalyzed":request_json_body['InputAnalyzed'],
+        "ConsumerRequestContext":consumer_request_context,
+        "InputAnalyzed":request_json_body['Input'],
         "EvalEngineConfiguration": {
             "ApprovedContext":approved_context
         }

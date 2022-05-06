@@ -51,6 +51,9 @@ get_approved_context(*,consumer_requested_context,authorization_header):
     return consumer_requested_context # auto-approve for now, pending full implementation
 ```
 
+### Input Analyzed Object
+
+the object passed by the Consumer's request that is subject to PaC analysis
 
 ```
 -i /tmp/input_analyzed_object.json \
