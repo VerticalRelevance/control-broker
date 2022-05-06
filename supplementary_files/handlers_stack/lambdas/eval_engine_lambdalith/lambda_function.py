@@ -108,6 +108,13 @@ def lambda_handler(event,context):
     
     print(f'consumer_metadata:\n{consumer_metadata}')
     
+    # write eval enginge configuration to tmp
+    
+    approved_context_path = '/tmp/approved_context.json'
+    
+    with open(approved_context_path,'w') as f:
+        json.dump(request_json_body['EvalEngineConfiguration']['ApprovedContext'],f,indent=2)
+    
     # get evaluation context
     
     evaluation_context_path = '/tmp/evaluation_context.json'

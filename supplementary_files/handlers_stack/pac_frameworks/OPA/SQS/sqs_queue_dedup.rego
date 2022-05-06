@@ -4,6 +4,8 @@ import input
 
 type = "AWS::SQS::Queue"
 
+# only applies to Prod
+
 default allow = false
 
 allow {
