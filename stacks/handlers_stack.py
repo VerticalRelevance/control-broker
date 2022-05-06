@@ -178,7 +178,7 @@ class HandlersStack(Stack):
             ),
             environment={
                 "PaCFramework": self.pac_framework,
-                "PaCFrameworkBucket": self.bucket_pac_policies,
+                "PaCPoliciesBucket": self.bucket_pac_policies.bucket_name,
             },
         )
         
@@ -190,8 +190,8 @@ class HandlersStack(Stack):
                     "s3:List*",
                 ],
                 resources=[
-                    self.bucket_opa_policies.bucket_arn,
-                    self.bucket_opa_policies.arn_for_objects("*"),
+                    self.bucket_pac_policies.bucket_arn,
+                    self.bucket_pac_policies.arn_for_objects("*"),
                 ],
             )
         )
