@@ -134,9 +134,9 @@ def lambda_handler(event,context):
     print(f'begin: Get Policies')
     
     s3_download_dir(
-        bucket = os.environ['PacFrameworkBucket'],
+        bucket = os.environ['PaCPoliciesBucket'],
         local_path = policy_path_root,
-        prefix = os.environ['PaCPoliciesBucket']
+        prefix = os.environ['PaCFramework']
     )
 
     # to tmp
