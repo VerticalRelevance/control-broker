@@ -112,8 +112,12 @@ def lambda_handler(event,context):
     
     approved_context_path = '/tmp/approved_context.json'
     
+    approved_context = {
+        "ApprovedContext":request_json_body['EvalEngineConfiguration']['ApprovedContext']
+    }
+    
     with open(approved_context_path,'w') as f:
-        json.dump(request_json_body['EvalEngineConfiguration']['ApprovedContext'],f,indent=2)
+        json.dump(approved_context,f,indent=2)
     
     # get evaluation context
     

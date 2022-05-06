@@ -34,6 +34,24 @@ Passed by the Consumer in the request body sent to the Control Broker outer APIG
 
 Hosted in a bucket that is deployed to with the contents of this [directory](./supplementary_files/handlers_stack/evaluation_context)
 
+
+### ApprovedContext
+
+```
+-d /tmp/approved_context.json \
+```
+
+handler implements custom approval process. For now:
+
+```
+get_approved_context(*,consumer_requested_context,authorization_header):
+    
+    # some Authz call
+    
+    return consumer_requested_context # auto-approve for now, pending full implementation
+```
+
+
 ```
 -i /tmp/input_analyzed_object.json \
 ```
