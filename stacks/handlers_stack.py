@@ -39,6 +39,7 @@ class HandlersStack(Stack):
 
         self.pac_framework = pac_framework
 
+        self.output_handler()
         self.pac_frameworks()
         self.eval_engine()
         self.api = ControlBrokerApi(
@@ -48,8 +49,54 @@ class HandlersStack(Stack):
             control_broker_results_bucket=None,
         )
         self.endpoint()
-        self.output_handler()
 
+    def output_handler(self):
+        
+        self.lambda_output_handler = aws_lambda.Function(
+            self,
+            "OutputHandler",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/handlers_stack/lambdas/output_handler"
+            ),
+            # environment={},
+        )
+        
+        self.lambda_output_handler.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject",
+                    "s3:GetBucket",
+                    "s3:List*",
+                ],
+                resources=[
+                    self.bucket_raw_pac_results.bucket_arn,
+                    self.bucket_raw_pac_results.arn_for_objects("*"),
+                ],
+            )
+        )
+        
+        self.bucket_raw_pac_results.add_event_notification(aws_s3.EventType.OBJECT_CREATED,
+            aws_s3_notifications.LambdaDestination(self.lambda_output_handler),
+            # prefix="home/myusername/*"
+        )
+        
+        self.access_point = aws_s3objectlambda_alpha.AccessPoint(
+            self,
+            "OuputHandlerCloudFormationOPA",
+            bucket=self.bucket_raw_pac_results,
+            handler=self.lambda_output_handler,
+            access_point_name="ouput-handler-cloudformation-opa",
+            # payload={
+            #     "prop": "value"
+            # }
+        )
+
+        CfnOutput(self, "OuputHandlerCloudFormationOPAAccessPointArn", value=self.access_point.access_point_arn)
+    
     def pac_frameworks(self):
         
         # EvaluationContext - owned by Security Team
@@ -165,6 +212,11 @@ class HandlersStack(Stack):
             ),
             environment={
                 "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
+                "OutputHandlers": json.dumps([
+                    {
+                        "CloudFormationOPA": self.access_point.access_point_arn
+                    }
+                ])
             },
             layers=[
                 aws_lambda_python_alpha.PythonLayerVersion(
@@ -240,50 +292,3 @@ class HandlersStack(Stack):
         )
 
         CfnOutput(self, "EvalEngineLamdalithRoleArn", value=self.lambda_eval_engine_lambdalith.role.role_arn)
-
-    def output_handler(self):
-        
-        self.lambda_output_handler = aws_lambda.Function(
-            self,
-            "OutputHandler",
-            runtime=aws_lambda.Runtime.PYTHON_3_9,
-            handler="lambda_function.lambda_handler",
-            timeout=Duration.seconds(60),
-            memory_size=1024,
-            code=aws_lambda.Code.from_asset(
-                "./supplementary_files/handlers_stack/lambdas/output_handler"
-            ),
-            # environment={},
-        )
-        
-        self.lambda_output_handler.role.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    "s3:GetObject",
-                    "s3:GetBucket",
-                    "s3:List*",
-                ],
-                resources=[
-                    self.bucket_raw_pac_results.bucket_arn,
-                    self.bucket_raw_pac_results.arn_for_objects("*"),
-                ],
-            )
-        )
-        
-        self.bucket_raw_pac_results.add_event_notification(aws_s3.EventType.OBJECT_CREATED,
-            aws_s3_notifications.LambdaDestination(self.lambda_output_handler),
-            # prefix="home/myusername/*"
-        )
-        
-        self.access_point = aws_s3objectlambda_alpha.AccessPoint(
-            self,
-            "OuputHandlerCloudFormationOPA",
-            bucket=self.bucket_raw_pac_results,
-            handler=self.lambda_output_handler,
-            access_point_name="OuputHandlerCloudFormationOPA",
-            # payload={
-            #     "prop": "value"
-            # }
-        )
-
-        CfnOutput(self, "OuputHandlerCloudFormationOPAAccessPointArn", value=self.access_point.access_point_arn)

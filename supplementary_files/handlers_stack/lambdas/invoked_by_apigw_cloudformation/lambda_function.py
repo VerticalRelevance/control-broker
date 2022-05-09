@@ -220,11 +220,7 @@ def lambda_handler(event,context):
             "Key": f'cb-{generate_uuid()}',
             "Buckets": {
                 "Raw": os.environ['RawPaCResultsBucket'],
-                "OutputHandlers":[
-                    {
-                        'OuputHandlerCloudFormationOPA':                        os.environ.get('OuputHandlerCloudFormationOPA')
-                    },
-                ]
+                "OutputHandlers":json.loads(os.environ['OuputHandlers'])
             }
         }
     }
