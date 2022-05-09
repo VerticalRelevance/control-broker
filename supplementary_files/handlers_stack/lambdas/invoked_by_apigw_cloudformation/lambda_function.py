@@ -12,9 +12,6 @@ session = boto3.session.Session()
 region = session.region_name
 account_id = boto3.client('sts').get_caller_identity().get('Account')
 
-
- 
-
 class RequestParser():
     
     def __init__(self,*,
@@ -103,7 +100,7 @@ class RequestParser():
         
         return self.consumer_metadata
     
-    def get_approved_context(self,*,consumer_metadata,consumer_request_context):
+    def get_approved_context(self):
     
         def integrate_with_my_entitlement_system(consumer_metadata,consumer_request_context):
             
@@ -118,8 +115,13 @@ class RequestParser():
             return consumer_metadata['SSOAttributes']['Org'] == "OrgA"
         
         if integrate_with_my_entitlement_system(self.consumer_metadata,self.consumer_request_context):
-            return consumer_request_context
+            
+            self.approved_context = self.consumer_metadata
+            
+            return self.approved_context
+        
         else:
+        
             return False
     
         
@@ -137,8 +139,8 @@ def sign_request(*,
 ):
     
     def get_host(full_invoke_url):
-    m = re.search('https://(.*)/.*',full_invoke_url)
-    return m.group(1)
+        m = re.search('https://(.*)/.*',full_invoke_url)
+        return m.group(1)
     
     host = get_host(full_invoke_url)
     
@@ -166,6 +168,8 @@ def sign_request(*,
     }
     
     print(f'formatted response:\n{r}')
+    
+    return True
     
 def lambda_handler(event,context):
     
