@@ -5,6 +5,8 @@ import re
 import os
 from pathlib import Path
 
+import requests
+
 import boto3
 from botocore.exceptions import ClientError
 
@@ -54,25 +56,58 @@ def parse_pac_results(pac_results):
     
     return infractions, is_allowed  
 
+def s3_object_lambda_send_response(*,request_route,request_token,response_object:dict):
+    
+    try:
+        s3.write_get_object_response(
+            RequestRoute=request_route,
+            RequestToken=request_token,
+            Body=response_object,
+        )
+    except ClientError as e:
+        print(f'ClientError:\nrequest_route:\n{request_route}\nrequest_token:\n{request_token}\n{e}')
+        raise
+    else:
+        print(f'no ClientError write_get_object_response:\nrequest_route:\n{request_route}\nrequest_token:\n{request_token}\n{e}')
+
+    return {'status_code': 200}    
+
 def lambda_handler(event,context):
     
     print(f'event\n{event}\ncontext:\n{context}')
     
-    invoked_by = {
-        'Bucket': event['Records'][0]['s3']['bucket']['name'],
-        'Key': event['Records'][0]['s3']['object']['key']
-    }
+    ### event- driven
     
-    print(f'invoked_by:\n{invoked_by}')
-
-    invoked_by_object = get_object(
-        bucket = invoked_by['Bucket'],
-        key = invoked_by['Key']
-    )
+    # invoked_by = {
+    #     'Bucket': event['Records'][0]['s3']['bucket']['name'],
+    #     'Key': event['Records'][0]['s3']['object']['key']
+    # }
     
-    print(f'invoked_by_object:\n{invoked_by_object}')
+    # print(f'invoked_by:\n{invoked_by}')
 
-    pac_results = invoked_by_object
+    # invoked_by_object = get_object(
+    #     bucket = invoked_by['Bucket'],
+    #     key = invoked_by['Key']
+    # )
+    
+    # print(f'invoked_by_object:\n{invoked_by_object}')
+    
+    ### s3 object lambda
+
+    object_get_context = event["getObjectContext"]
+    request_route = object_get_context["outputRoute"]
+    request_token = object_get_context["outputToken"]
+    s3_url = object_get_context["inputS3Url"]
+
+    # Get object from S3
+    
+    response = requests.get(s3_url)
+    
+    original_object = response.content.decode('utf-8')
+    
+    print(f'original_object:\n{original_object}\n')
+
+    pac_results = original_object
     
     infractions, is_allowed = parse_pac_results(pac_results)
     
@@ -89,4 +124,8 @@ def lambda_handler(event,context):
     
     print(f'results_report:\n{results_report}\n')
     
-    return True
+    return s3_object_lambda_send_response(
+        request_route=request_route,
+        request_token=request_token,
+        response_object=results_report
+    )

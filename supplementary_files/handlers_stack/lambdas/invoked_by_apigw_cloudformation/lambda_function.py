@@ -220,7 +220,7 @@ def lambda_handler(event,context):
             "Key": f'cb-{generate_uuid()}',
             "Buckets": {
                 "Raw": os.environ['RawPaCResultsBucket'],
-                "OutputHandlers":json.loads(os.environ['OuputHandlers'])
+                "OutputHandlers":json.loads(os.environ['OutputHandlers'])
             }
         }
     }
