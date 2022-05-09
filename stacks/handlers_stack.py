@@ -70,8 +70,6 @@ class HandlersStack(Stack):
         self.input_handler_cloudformation()
         self.input_handler_config_event()
         
-        self.endpoint()
-        
         self.Input_reader_roles: List[aws_iam.Role] = [
             self.lambda_invoked_by_apigw_config_event.role,
             self.lambda_eval_engine_lambdalith.role,
@@ -309,14 +307,6 @@ class HandlersStack(Stack):
                 ])
             },
             layers=[
-                aws_lambda_python_alpha.PythonLayerVersion(
-                    self,
-                    "aws_requests_auth",
-                    entry="./supplementary_files/lambda_layers/aws_requests_auth",
-                    compatible_runtimes=[
-                        aws_lambda.Runtime.PYTHON_3_9
-                    ]
-                ),
                 self.layers['requests'],
                 self.layers['aws_requests_auth']
             ]
