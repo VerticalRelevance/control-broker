@@ -1,8 +1,17 @@
 import json
 import boto3
 import os
+import re
+
 from botocore.exceptions import ClientError
 from datetime import datetime
+
+import requests
+from aws_requests_auth.boto_utils import BotoAWSRequestsAuth
+
+session = boto3.session.Session()
+region = session.region_name
+account_id = boto3.client('sts').get_caller_identity().get('Account')
 
 sfn = boto3.client("stepfunctions")
 s3 = boto3.client("s3")
@@ -81,9 +90,9 @@ class SimpleControlBrokerClient():
         }
         
         print(f'\napigw formatted response:\n')
-        pp(r)
+        print(r)
     
-    return r
+        return r
 def lambda_handler(event, context):
 
     print(event)
@@ -122,26 +131,19 @@ def lambda_handler(event, context):
 
     # process
     
+    invoked_by_key = f'{config_rule_name}-{resource_type}-{resource_id}-{invoking_event["notificationCreationTime"]}'
 
     invoke_url = os.environ['ControlBrokerInvokeUrl']
     
-    # input_analyzed_path = './input_analyzed/ControlBrokerEvalEngineExampleAppStackSQS.template.json'
-    input_analyzed_path = './input_analyzed/ConfigEvent.sqs.queue.json'
-    
-    with open(input_analyzed_path,'r') as f:
-        input_analyzed_object:dict = json.loads(f.read())
-    
-    input_bucket = 'cschneider-control-broker-utils' # edit bucket policy to allow CB.Reader.RoleArn
-    
     input_analyzed = {
-        'Bucket': input_bucket,
-        'Key': input_analyzed_path.split('/')[-1]
+        "Bucket":os.environ['ConfigEventsRawInputBucket'],
+        "Key":invoked_by_key
     }
     
     put_object(
         bucket = input_analyzed['Bucket'],
         key = input_analyzed['Key'],
-        object_ = input_analyzed_object
+        object_ = event
     )
     
     cb_input_object = {
@@ -153,7 +155,7 @@ def lambda_handler(event, context):
     
     s = SimpleControlBrokerClient(
         invoke_url = invoke_url,
-        input_bucket = input_bucket,
+        input_bucket = input_analyzed['Bucket'],
         input_object = cb_input_object
     )
     
