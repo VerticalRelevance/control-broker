@@ -275,7 +275,7 @@ class HandlersStack(Stack):
             # prefix="home/myusername/*"
         )
         
-        aws_s3objectlambda_alpha.AccessPoint(
+        self.access_point = aws_s3objectlambda_alpha.AccessPoint(
             self,
             "OuputHandlerCloudFormationOPA",
             bucket=self.bucket_raw_pac_results,
@@ -285,3 +285,5 @@ class HandlersStack(Stack):
             #     "prop": "value"
             # }
         )
+
+        CfnOutput(self, "OuputHandlerCloudFormationOPAAccessPointArn", value=self.access_point.access_point_arn)
