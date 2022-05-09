@@ -213,7 +213,7 @@ def lambda_handler(event,context):
     if fail_fast:
         return fail_fast
     
-    # set result path
+    # set response
     
     response_expected_by_consumer = {
         "ResultsReport": {
@@ -221,12 +221,13 @@ def lambda_handler(event,context):
             "Buckets": {
                 "Raw": os.environ['RawPaCResultsBucket'],
                 "OutputHandlers":[
-                    os.environ.get('OuputHandler-CloudFormation-OPA')
+                    {
+                        'OuputHandler-CloudFormation-OPA':                        os.environ.get('OuputHandler-CloudFormation-OPA')
+                    },
                 ]
             }
         }
     }
-    
     
     # set input
     
@@ -249,7 +250,6 @@ def lambda_handler(event,context):
     )
     
     # set response
-    
     
     control_broker_request_status = {
         "Request":{

@@ -90,4 +90,3 @@ def lambda_handler(event,context):
     print(f'results_report:\n{results_report}\n')
     
     return True
-    
