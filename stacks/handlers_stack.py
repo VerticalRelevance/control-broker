@@ -103,6 +103,21 @@ class HandlersStack(Stack):
             retain_on_delete=False,
         )
         
+        # raw results
+        
+        self.bucket_raw_pac_results = aws_s3.Bucket(
+            self,
+            "RawPaCResults",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+        
     def endpoint(self):
 
         # auth - lambda
@@ -184,7 +199,8 @@ class HandlersStack(Stack):
             environment={
                 "PaCFramework": self.pac_framework,
                 "PaCPoliciesBucket": self.bucket_pac_policies.bucket_name,
-                "EvaluationContext": json.dumps(self.evaluation_context) 
+                "EvaluationContext": json.dumps(self.evaluation_context) ,
+                "RawPaCResultsBucket": self.bucket_raw_pac_results
             },
         )
         
@@ -200,6 +216,20 @@ class HandlersStack(Stack):
                     self.bucket_pac_policies.arn_for_objects("*"),
                     self.bucket_evaluation_context.bucket_arn,
                     self.bucket_evaluation_context.arn_for_objects("*"),
+                ],
+            )
+        )
+        
+        self.lambda_eval_engine_lambdalith.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                    "s3:GetBucket",
+                    "s3:List*",
+                ],
+                resources=[
+                    self.bucket_raw_pac_results.bucket_arn,
+                    self.bucket_raw_pac_results.arn_for_objects("*"),
                 ],
             )
         )
