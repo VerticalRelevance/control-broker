@@ -136,6 +136,8 @@ class HandlersStack(Stack):
     
     def output_handler(self):
         
+        self.event_bus_infractions = aws_events.EventBus(self, "Infractions")
+
         self.lambda_output_handler = aws_lambda.Function(
             self,
             "OutputHandler",
@@ -149,7 +151,9 @@ class HandlersStack(Stack):
             layers=[
                 self.layers['requests']
             ]
-            # environment={},
+            environment={
+                "InfractionsEventBusName":self.event_bus_infractions.event_bus_name
+            },
         )
         
         self.lambda_output_handler.role.add_to_policy(
@@ -165,12 +169,25 @@ class HandlersStack(Stack):
                 ],
             )
         )
+        
         self.lambda_output_handler.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:WriteGetObjectResponse",
                 ],
                 resources=["*"],
+            )
+        )
+        
+        self.lambda_output_handler.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "events:PutEvents",
+                ],
+                resources=[
+                    self.event_bus_infractions.event_bus_arn,
+                    f"{self.event_bus_infractions.event_bus_arn}*",
+                ],
             )
         )
         
