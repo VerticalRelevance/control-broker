@@ -11,6 +11,23 @@ from botocore.exceptions import ClientError
 s3 = boto3.client('s3')
 s3r = boto3.resource('s3')
 
+def put_object(*,bucket,key,object_:dict):
+    
+    print(f'begin put_object\nbucket:\n{bucket}\nkey:\n{key}')
+    
+    try:
+        r = s3.put_object(
+            Bucket = bucket,
+            Key = key,
+            Body = json.dumps(object_)
+        )
+    except ClientError as e:
+        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
+        raise
+    else:
+        print(f'no ClientError put_object:\nbucket:\n{bucket}\nkey:\n{key}')
+        return True
+        
 def get_object(*,bucket,key):
     
     try:
@@ -185,22 +202,10 @@ def lambda_handler(event,context):
     opa_eval_results = stdout_
     print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
     
-    reserved_keys = ['ApprovedContext','EvaluationContext','InputType']
-
-    for k in reserved_keys:
-        opa_eval_results.pop(k,None)
+    put_object(
+        Bucket=os.environ['RawResultsBucket'],
+        Key=input_analyzed['Key'],
+        object_ = opa_eval_results
+    )
     
-    print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
-    
-    infractions = [ {i:opa_eval_results[i]}for i in opa_eval_results if opa_eval_results[i].get('allow') == False]
-
-    print(f'infractions:\n{infractions}\n{type(infractions)}')
-    
-    return {
-        "EvalEngineLambdalith": {
-            "Evaluation": {
-                "IsAllowed": not bool(infractions)
-            },
-            "Infractions":infractions
-        }
-    }
+    return True
