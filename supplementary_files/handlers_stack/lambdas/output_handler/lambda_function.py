@@ -10,6 +10,7 @@ import requests
 import boto3
 from botocore.exceptions import ClientError
 
+eb = boto3.client('events')
 s3 = boto3.client('s3')
 s3r = boto3.resource('s3')
 
@@ -29,13 +30,48 @@ def get_object(*,bucket,key):
         content = json.loads(body.read().decode('utf-8'))
         return content
 
-def handle_infractions(infractions):
+
+def put_event_entry(*,
+    event_bus_name:str,
+    detail:dict,
+    source:str=os.environ['AWS_LAMBDA_FUNCTION_NAME'],
+    detail_type:str=os.environ['AWS_LAMBDA_FUNCTION_NAME'],
+):
+    try:
+        r = eb.put_events(
+            Entries = [
+                {
+                    'EventBusName':event_bus_name,
+                    'Detail':json.dumps(detail),
+                    'DetailType':detail_type,
+                    'Source':source,
+                }
+            ]
+        )
+    except ClientError as e:
+        print(f'ClientError:\n{e}')
+        return False
+    else:
+        print(r)
+        print(f'no ClientError: put_events')
+        return True
+
+def handle_infraction(infraction:dict):
+    
+    print(f'begin processing infraction:\n{infraction}')
+
+    put_event_entry(
+        event_bus_name = os.environ['InfractionsEventBusName'],
+        detail = infraction
+    )
+    
+
+def handle_infractions(infractions:list):
     
     for infraction in infractions:
         
-        print(f'begin processing infractions:\n{infraction}')
+        handle_infraction(infraction)
 
-        # TODO
 def s3_object_lambda_send_response(*,request_route,request_token,response_object:dict):
     
     try:
@@ -48,7 +84,7 @@ def s3_object_lambda_send_response(*,request_route,request_token,response_object
         print(f'ClientError:\nrequest_route:\n{request_route}\nrequest_token:\n{request_token}\n{e}')
         raise
     else:
-        print(f'no ClientError write_get_object_response:\nrequest_route:\n{request_route}\nrequest_token:\n{request_token}\n{e}')
+        print(f'no ClientError write_get_object_response:\nrequest_route:\n{request_route}\nrequest_token:\n{request_token}')
 
     return {'status_code': 200}    
 
