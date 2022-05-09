@@ -12,9 +12,6 @@ session = boto3.session.Session()
 region = session.region_name
 account_id = boto3.client('sts').get_caller_identity().get('Account')
 
-def get_host(*,full_invoke_url):
-    m = re.search('https://(.*)/.*',full_invoke_url)
-    return m.group(1)
 
 def get_approved_context(*,consumer_metadata,consumer_request_context):
     
@@ -68,10 +65,59 @@ def get_consumer_metadata(event):
 def control_broker_has_read_acces_to_input(event):
     #TODO
     return True
+
+class RequestParser():
+    
+    def __init__(self,*,
+    event
+    ):
+        self.event = event
+        
+        self.request_json_body = json.loads(event['body'])
+        self.headers = event['headers']
+
+def sign_request(*,
+    full_invoke_url:str,
+    region:str,
+    input:dict,
+):
+    
+    def get_host(full_invoke_url):
+    m = re.search('https://(.*)/.*',full_invoke_url)
+    return m.group(1)
+    
+    host = get_host(full_invoke_url)
+    
+    auth = BotoAWSRequestsAuth(
+        aws_host= host,
+        aws_region=region,
+        aws_service='execute-api'
+    )
+    
+    print(f'begin request\nfull_invoke_url\n{full_invoke_url}\njson input\n{input}')
+    
+    r = requests.post(
+        full_invoke_url,
+        auth = auth,
+        json = input
+    )
+    
+    print(f'signed request headers:\n{dict(r.request.headers)}')
+    
+    content = json.loads(r.content)
+    
+    r = {
+        'StatusCode':r.status_code,
+        'Content': content
+    }
+    
+    print(f'formatted response:\n{r}')
     
 def lambda_handler(event,context):
     
     print(f'event:\n{event}\ncontext:\n{context}')
+    
+    r = RequestParser(event=event)
     
     request_json_body = json.loads(event['body'])
     
@@ -84,20 +130,6 @@ def lambda_handler(event,context):
     authorization_header = headers['authorization']
     
     print(f'authorization_header:\n{authorization_header}')
-    
-    eval_engine_invoke_url = headers['x-eval-engine-invoke-url']
-    
-    print(f'eval_engine_invoke_url:\n{eval_engine_invoke_url}')
-    
-    host = get_host(full_invoke_url=eval_engine_invoke_url)
-    
-    auth = BotoAWSRequestsAuth(
-        aws_host= host,
-        aws_region=region,
-        aws_service='execute-api'
-    )
-    
-    print(f'BotoAWSRequestsAuth:\n{auth}')
     
     consumer_request_context = request_json_body['Context']
     
@@ -134,22 +166,11 @@ def lambda_handler(event,context):
     
     print(f'eval_engine_input:\n{eval_engine_input}')
     
-    r = requests.post(
-        eval_engine_invoke_url,
-        auth = auth,
-        json = eval_engine_input
+    sign_request(
+        full_invoke_url = headers['x-eval-engine-invoke-url'],
+        region = region,
+        input = eval_engine_input
     )
-    
-    print(f'headers:\n{dict(r.request.headers)}')
-    
-    content = json.loads(r.content)
-    
-    r = {
-        'StatusCode':r.status_code,
-        'Content': content
-    }
-    
-    print(f'apigw formatted response:\n{r}')
     
     control_broker_request_status = {
         "Request":{
@@ -158,6 +179,9 @@ def lambda_handler(event,context):
             },
             "Input": {
                 "GrantsRequiredReadAccess": control_broker_has_read_acces_to_input(event),
+            },
+            "InputType":{
+                "Validated":""
             },
             "Context":{
                 "IsApproved":""
