@@ -129,4 +129,5 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         handler_url = urljoin(self.url.rstrip("/"), path.strip("/"))
         self.urls.append(handler_url)
         CfnOutput(self, f"{name}HandlerUrl", value=handler_url)
-        return route
+        # return route
+        return handler_url

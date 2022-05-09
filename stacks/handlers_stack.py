@@ -10,6 +10,8 @@ from aws_cdk import (
     RemovalPolicy,
     aws_lambda,
     aws_iam,
+    aws_config,
+    aws_sqs,
     aws_s3,
     aws_s3_deployment,
     aws_s3_notifications,
@@ -317,7 +319,7 @@ class HandlersStack(Stack):
         )
         
     def input_handler_config_event(self):
-    
+        
         self.bucket_config_events_converted_inputs = aws_s3.Bucket(
             self,
             "ConfigEventsConvertedInput",
@@ -330,7 +332,19 @@ class HandlersStack(Stack):
                 restrict_public_buckets=True,
             ),
         )
-    
+        self.bucket_config_events_raw_inputs = aws_s3.Bucket(
+            self,
+            "ConfigEventsRawInput",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+        
         self.lambda_invoked_by_apigw_config_event = aws_lambda.Function(
             self,
             "InvokedByApigwConfigEvent",
@@ -682,8 +696,92 @@ class HandlersStack(Stack):
         )
 
         
-        self.api.add_api_handler(
+        handler_url_config_event = self.api.add_api_handler(
             "ConfigEvent", self.lambda_invoked_by_apigw_config_event, "/ConfigEvent"
+        )
+      
+      ####### DEV below - factor out later
+      
+      
+        # toggle content-based deduplication to trigger change tracked by Config
+        
+        # DEV: ToggledBoolean alternates upon every deploy
+        toggled_boolean_path = './supplementary_files/handlers_stack/dev/tracked_by_config/toggled_boolean.json'
+        
+        with open(toggled_boolean_path,'r') as f:
+            toggled_boolean = json.loads(f.read())['ToggledBoolean']
+        
+        aws_sqs.Queue(
+            self,
+            "TrackedByConfig01",
+            fifo = True,
+            # content_based_deduplication = True,
+            # content_based_deduplication = False,
+            content_based_deduplication = toggled_boolean,
+        )
+        
+        aws_sqs.Queue(
+            self,
+            "TrackedByConfig02",
+            fifo = True,
+            # content_based_deduplication = True,
+            # content_based_deduplication = False,
+            content_based_deduplication = not toggled_boolean,
+        )
+        
+        # DEV: ToggledBoolean alternates upon every deploy
+        with open(toggled_boolean_path,'w') as f:
+            json.dump({'ToggledBoolean':not toggled_boolean},f)
+        
+    
+        
+        self.lambda_invoked_by_config = aws_lambda.Function(
+            self,
+            f"InvokedByConfig",
+            code=aws_lambda.Code.from_asset('./supplementary_files/handlers_stack/lambdas/invoked_by_config'),
+            handler='lambda_function.lambda_handler',
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            environment={
+                "ControlBrokerInvokeUrl": handler_url_config_event,
+                "ConfigEventsRawInput":self.bucket_config_events_raw_inputs.bucket_name
+            },
+            layers=[
+                self.layers['requests'],
+                self.layers['aws_requests_auth']
+            ]
+        )
+        self.lambda_invoked_by_config.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                ],
+                resources=[
+                    self.bucket_config_events_raw_inputs.bucket_arn,
+                    self.bucket_config_events_raw_inputs.arn_for_objects("*"),
+                ],
+            )
+        )
+
+        self.custom_config_rule_sqs_poc = aws_config.CustomRule(
+            self,
+            "SQS-PoC",
+            rule_scope=aws_config.RuleScope.from_resources([
+                aws_config.ResourceType.SQS_QUEUE,
+            ]),
+            lambda_function=self.lambda_invoked_by_config,
+            configuration_changes=True,
+        )
+
+        log_group_config_compliance = aws_logs.LogGroup(
+            self,
+            "ConfigCompliance",
+            # log_group_name=f"/aws/vendedlogs/states/ConfigEventProcessingSfnLogs",
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+
+        self.custom_config_rule_sqs_poc.on_compliance_change(
+            "Log",
+            target = aws_events_targets.CloudWatchLogGroup(log_group_config_compliance)
         )
         
     def input_handler_cfn_hooks(self):
