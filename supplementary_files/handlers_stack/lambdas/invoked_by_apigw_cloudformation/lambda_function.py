@@ -117,7 +117,7 @@ class RequestParser():
         
         if integrate_with_my_entitlement_system(self.consumer_metadata,self.consumer_request_context):
             
-            self.approved_context = self.consumer_metadata
+            self.approved_context = self.consumer_request_context
             
             return self.approved_context
         
@@ -176,7 +176,6 @@ def generate_uuid():
     return str(uuid.uuid4())
 
 def generate_s3_uuid_uri(*,bucket):
-    
     
     uuid = generate_uuid()
 
