@@ -232,8 +232,8 @@ class ConfigEventToCloudFormationConverter():
         self.event = event
         
         self.config_event_s3_path = {
-            "Bucket":self.event['ControlBrokerConsumerInputs']['Bucket'],
-            "Key":self.event['ControlBrokerConsumerInputKey']
+            "Bucket":self.event['Input']['Bucket'],
+            "Key":self.event['Input']
         }
         
         self.config_event = get_object(
@@ -283,7 +283,7 @@ class ConfigEventToCloudFormationConverter():
     def put_converted_cloudformation(self):
         
         self.converted_s3_path = {
-            'Bucket' : os.environ['ConvertedInputsBucket'],
+            'Bucket' : os.environ['ConfigEventsConvertedInputBucket'],
             'Key' : self.config_event_s3_path['Key'],
         }
         
@@ -309,7 +309,6 @@ def convert_config_event_to_cfn(*,original_input_analyzed):
     
     return modified_input_analyzed
     
-          
 def sign_request(*,
     full_invoke_url:str,
     region:str,
@@ -360,8 +359,6 @@ def generate_s3_uuid_uri(*,bucket):
     
     return s3_uri
 
-    
-    
 def lambda_handler(event,context):
     
     print(f'event:\n{event}\ncontext:\n{context}')
