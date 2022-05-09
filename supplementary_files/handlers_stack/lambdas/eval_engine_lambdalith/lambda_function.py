@@ -201,9 +201,11 @@ def lambda_handler(event,context):
     
     # put raw pac results
     
+    response_expected_by_consumer = request_json_body['ResponseExpectedByConsumer']
+    
     put_object(
-        bucket=os.environ['RawPaCResultsBucket'],
-        key=input_analyzed['Key'],
+        bucket=response_expected_by_consumer['ResultsReport']['Key']['Buckets']['Raw'],
+        key=response_expected_by_consumer['ResultsReport']['Key'],
         object_ = opa_eval_results
     )
     
