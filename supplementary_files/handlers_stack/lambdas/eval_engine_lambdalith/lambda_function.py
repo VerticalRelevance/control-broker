@@ -103,6 +103,11 @@ def run_bash(*, bash_path):
         'stderr': stderr
     }
 
+def write_to_tmp(object_,filename):
+    
+    with open(f'/tmp/{filename}','w') as f:
+        json.dump(object_,f,indent=2)
+
 def lambda_handler(event,context):
     print(f'event\n{event}\ncontext:\n{context}')
     
@@ -116,27 +121,19 @@ def lambda_handler(event,context):
     
     # write InputType to tmp
     
-    input_type_path = '/tmp/input_type.json'
-    
     input_type = {
         "InputType":request_json_body['InputType']
     }
     
-    with open(input_type_path,'w') as f:
-        json.dump(input_type,f,indent=2)
+    write_to_tmp(input_type,'input_type.json')
     
     # write approved_context to tmp
-    
-    approved_context_path = '/tmp/approved_context.json'
     
     approved_context = {
         "ApprovedContext":request_json_body['Context']
     }
     
-    print(f'approved_context:\n{approved_context}')
-    
-    with open(approved_context_path,'w') as f:
-        json.dump(approved_context,f,indent=2)
+    write_to_tmp(approved_context,'approved_context.json')
     
     # get evaluation context
     
@@ -156,10 +153,7 @@ def lambda_handler(event,context):
     
     print(f'consumer_metadata:\n{consumer_metadata}')
 
-    consumer_metadata_path = '/tmp/consumer_metadata.json'
-    
-    with open(consumer_metadata_path,'w') as f:
-        json.dump(consumer_metadata,f,indent=2)
+    write_to_tmp(consumer_metadata,'consumer_metadata.json')
 
     # write input_analyzed_object to /tmp
     
