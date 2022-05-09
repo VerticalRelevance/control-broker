@@ -13,6 +13,10 @@ session = boto3.session.Session()
 region = session.region_name
 account_id = boto3.client('sts').get_caller_identity().get('Account')
 
+s3 = boto3.client('s3')
+cfn = boto3.client('cloudformation')
+cloudcontrol = boto3.client('cloudcontrol')
+
 def get_object(*,bucket,key):
     
     try:
@@ -226,14 +230,12 @@ class ConfigEventToCloudFormationConverter():
     
     def __init__(
         self,
-        event:dict
+        config_event_input_analyzed:dict
     ):
         
-        self.event = event
-        
         self.config_event_s3_path = {
-            "Bucket":self.event['Input']['Bucket'],
-            "Key":self.event['Input']
+            "Bucket":config_event_input_analyzed['Bucket'],
+            "Key":config_event_input_analyzed['Key']
         }
         
         self.config_event = get_object(
@@ -301,9 +303,9 @@ class ConfigEventToCloudFormationConverter():
         
         return self.converted_s3_path
     
-def convert_config_event_to_cfn(*,original_input_analyzed):
+def convert_config_event_to_cfn(*,config_event_input_analyzed):
         
-    c = ConfigEventToCloudFormationConverter(original_input_analyzed)
+    c = ConfigEventToCloudFormationConverter(config_event_input_analyzed)
     
     modified_input_analyzed = c.get_converted_s3_path()
     
@@ -402,8 +404,10 @@ def lambda_handler(event,context):
     
     original_input_analyzed = request_json_body['Input']
     
+    print(f'original_input_analyzed:\n{original_input_analyzed}')
+    
     converted_input_analyzed = convert_config_event_to_cfn(
-        original_input_analyzed = original_input_analyzed
+        config_event_input_analyzed = original_input_analyzed
     )
     
     # set input
