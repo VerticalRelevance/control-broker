@@ -15,6 +15,7 @@ from aws_cdk import (
     aws_s3_notifications,
     aws_logs,
     aws_events,
+    aws_events_targets,
     aws_apigatewayv2,
     # experimental
     aws_apigatewayv2_alpha,
@@ -136,7 +137,34 @@ class HandlersStack(Stack):
     
     def output_handler(self):
         
-        self.event_bus_infractions = aws_events.EventBus(self, "Infractions")
+        self.event_bus_infractions = aws_events.EventBus(
+            self,
+            "Infractions"
+        )
+        
+        # debug logs
+        
+        self.log_group_infractions = aws_logs.LogGroup(
+            self,
+            "InfractionsEvents",
+            retention=aws_logs.RetentionDays.ONE_DAY
+        )
+        
+        self.rule_control_broker = aws_events.Rule(
+            self,
+            "ControlBroker",
+            event_pattern=aws_events.EventPattern(
+                source=["ControlBroker"]
+            )
+        )
+        
+        self.rule_control_broker.add_target(
+            aws_events_targets.CloudWatchLogGroup(
+                self.log_group_infractions
+            )
+        )
+
+        # output handler
 
         self.lambda_output_handler = aws_lambda.Function(
             self,
@@ -150,7 +178,7 @@ class HandlersStack(Stack):
             ),
             layers=[
                 self.layers['requests']
-            ]
+            ],
             environment={
                 "InfractionsEventBusName":self.event_bus_infractions.event_bus_name
             },
