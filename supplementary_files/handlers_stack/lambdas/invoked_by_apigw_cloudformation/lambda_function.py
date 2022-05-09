@@ -27,12 +27,12 @@ class RequestParser():
 
     def requestor_is_authorized(self):
         # TODO
-        self.requestor_is_authorized = True
+        self._requestor_is_authorized = True
         return True
     
     def input_grants_required_read_access(self):
         # TODO
-        self.input_grants_required_read_access = True
+        self._input_grants_required_read_access = True
         return True
         
     def get_validated_input_type(self):
@@ -51,16 +51,16 @@ class RequestParser():
         request = {
             "Request":{
                 "Requestor": {
-                    "IsAuthorized": r.requestor_is_authorized,
+                    "IsAuthorized": self.requestor_is_authorized(),
                 },
                 "Input": {
-                    "GrantsRequiredReadAccess": r.input_grants_required_read_access
+                    "GrantsRequiredReadAccess": self.input_grants_required_read_access()
                 },
                 "InputType":{
-                    "Validated":bool(r.validated_input_type)
+                    "Validated":bool(self.get_validated_input_type())
                 },
                 "Context":{
-                    "IsApproved":bool(r.approved_context)
+                    "IsApproved":bool(self.approved_context)
                 }
             }
         }
@@ -213,10 +213,10 @@ def lambda_handler(event,context):
     control_broker_request_status = {
         "Request":{
             "Requestor": {
-                "IsAuthorized": r.requestor_is_authorized
+                "IsAuthorized": r._requestor_is_authorized
             },
             "Input": {
-                "GrantsRequiredReadAccess": r.input_grants_required_read_access
+                "GrantsRequiredReadAccess": r._input_grants_required_read_access
             },
             "InputType":{
                 "Validated":bool(r.validated_input_type)
