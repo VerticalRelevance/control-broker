@@ -153,6 +153,7 @@ class HandlersStack(Stack):
         self.rule_control_broker = aws_events.Rule(
             self,
             "ControlBroker",
+            event_bus = self.event_bus_infractions,
             event_pattern=aws_events.EventPattern(
                 source=["ControlBroker"]
             )
