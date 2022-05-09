@@ -199,6 +199,8 @@ def lambda_handler(event,context):
     opa_eval_results = stdout_
     print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
     
+    # put raw pac results
+    
     put_object(
         bucket=os.environ['RawPaCResultsBucket'],
         key=input_analyzed['Key'],

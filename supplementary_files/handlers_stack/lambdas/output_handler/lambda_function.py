@@ -27,7 +27,6 @@ def get_object(*,bucket,key):
         content = json.loads(body.read().decode('utf-8'))
         return content
 
-
 def handle_infractions(infractions):
     
     for infraction in infractions:
@@ -56,6 +55,7 @@ def parse_pac_results(pac_results):
     return infractions, is_allowed  
 
 def lambda_handler(event,context):
+    
     print(f'event\n{event}\ncontext:\n{context}')
     
     invoked_by = {
@@ -88,4 +88,6 @@ def lambda_handler(event,context):
     }
     
     print(f'results_report:\n{results_report}\n')
+    
+    return True
     
