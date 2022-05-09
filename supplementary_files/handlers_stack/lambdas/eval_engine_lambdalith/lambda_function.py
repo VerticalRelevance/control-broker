@@ -110,7 +110,7 @@ def lambda_handler(event,context):
     
     print(f'request_json_body:\n{request_json_body}')
 
-    input_analyzed = request_json_body['Input']
+    input_analyzed = request_json_body['InputAnalyzed']
     
     print(f'input_analyzed:\n{input_analyzed}')
     

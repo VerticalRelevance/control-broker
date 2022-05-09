@@ -172,10 +172,11 @@ def sign_request(*,
     
     return True
     
+def generate_uuid():
+    return str(uuid.uuid4())
+
 def generate_s3_uuid_uri(*,bucket):
     
-    def generate_uuid():
-        return str(uuid.uuid4())
     
     uuid = generate_uuid()
 
@@ -214,16 +215,27 @@ def lambda_handler(event,context):
     
     # set result path
     
-    raw_result_report_s3_uri = generate_s3_uuid_uri(bucket=os.environ['RawPaCResultsBucket'])
+    response_expected_by_consumer = {
+        "ResultsReport": {
+            "Key": f'cb-{generate_uuid()}',
+            "Buckets": {
+                "Raw": os.environ['RawPaCResultsBucket'],
+                "OutputHandlers":[
+                    os.environ.get('OuputHandler-CloudFormation-OPA')
+                ]
+            }
+        }
+    }
+    
     
     # set input
     
     eval_engine_input =  {
-        "Input":request_json_body['Input'],
+        "InputAnalyzed":request_json_body['Input'],
         "ConsumerMetadata": r.consumer_metadata, 
         "Context": r.approved_context,
         "InputType": r.validated_input_type,
-            # NB renamed from an object manually provided by the user to things we know about requestor based on the authentication system
+        "ResponseExpectedByConsumer": response_expected_by_consumer
     }
     
     print(f'eval_engine_input:\n{eval_engine_input}')
@@ -254,13 +266,7 @@ def lambda_handler(event,context):
                 "IsApproved":bool(r.approved_context)
             }
         },
-        "Response": {
-            "ResultReport":{
-                "Raw":{
-                    "S3Uri":""
-                },
-            }
-        }   
+        "Response": response_expected_by_consumer
     }
     
     print(f'control_broker_request_status:\n{control_broker_request_status}')
