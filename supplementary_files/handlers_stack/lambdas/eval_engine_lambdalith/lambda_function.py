@@ -203,8 +203,8 @@ def lambda_handler(event,context):
     print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
     
     put_object(
-        Bucket=os.environ['RawResultsBucket'],
-        Key=input_analyzed['Key'],
+        bucket=os.environ['RawPaCResultsBucket'],
+        key=input_analyzed['Key'],
         object_ = opa_eval_results
     )
     

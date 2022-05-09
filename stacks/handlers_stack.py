@@ -11,7 +11,9 @@ from aws_cdk import (
     aws_iam,
     aws_s3,
     aws_s3_deployment,
+    aws_s3_notifications,
     aws_logs,
+    aws_events,
     aws_apigatewayv2,
     aws_apigatewayv2_alpha,  # experimental as of 4.25.22
     aws_apigatewayv2_authorizers_alpha,
@@ -45,6 +47,7 @@ class HandlersStack(Stack):
             control_broker_results_bucket=None,
         )
         self.endpoint()
+        self.output_handler()
 
     def pac_frameworks(self):
         
@@ -116,6 +119,7 @@ class HandlersStack(Stack):
                 block_public_policy=True,
                 restrict_public_buckets=True,
             ),
+            event_bridge_enabled=True
         )
         
     def endpoint(self):
@@ -200,7 +204,7 @@ class HandlersStack(Stack):
                 "PaCFramework": self.pac_framework,
                 "PaCPoliciesBucket": self.bucket_pac_policies.bucket_name,
                 "EvaluationContext": json.dumps(self.evaluation_context) ,
-                "RawPaCResultsBucket": self.bucket_raw_pac_results
+                "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name
             },
         )
         
@@ -235,3 +239,23 @@ class HandlersStack(Stack):
         )
 
         CfnOutput(self, "EvalEngineLamdalithRoleArn", value=self.lambda_eval_engine_lambdalith.role.role_arn)
+
+    def output_handler(self):
+        
+        self.lambda_output_handler = aws_lambda.Function(
+            self,
+            "OutputHandler",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/handlers_stack/lambdas/output_handler"
+            ),
+            # environment={},
+        )
+        
+        self.bucket_raw_pac_results.add_event_notification(aws_s3.EventType.OBJECT_CREATED,
+            aws_s3_notifications.LambdaDestination(self.lambda_output_handler),
+            # prefix="home/myusername/*"
+        )
