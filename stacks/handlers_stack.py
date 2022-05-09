@@ -328,7 +328,7 @@ class HandlersStack(Stack):
         
     def input_handler_config_event(self):
     
-        self.bucket_converted_inputs = aws_s3.Bucket(
+        self.bucket_config_events_converted_inputs = aws_s3.Bucket(
             self,
             "ConfigEventsConvertedInput",
             removal_policy=RemovalPolicy.DESTROY,
@@ -358,7 +358,8 @@ class HandlersStack(Stack):
                         "HandlerName":"CloudFormationOPA",
                         "AccessPointArn": self.access_point.access_point_arn
                     }
-                ])
+                ]),
+                "ConfigEventsConvertedInputBucket":self.bucket_config_events_converted_inputs.bucket_name
             },
             layers=[
                 self.layers['requests'],
@@ -385,6 +386,18 @@ class HandlersStack(Stack):
                     # "cloudcontrol:*",  # FIXME
                 ],
                 resources=["*"],
+            )
+        )
+        
+        self.lambda_invoked_by_apigw_config_event.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                ],
+                resources=[
+                    self.bucket_config_events_converted_inputs.bucket_arn,
+                    self.bucket_config_events_converted_inputs.arn_for_objects("*"),
+                ],
             )
         )
         
@@ -447,5 +460,3 @@ class HandlersStack(Stack):
                 ],
             )
         )
-
-        CfnOutput(self, "EvalEngineLamdalithRoleArn", value=self.lambda_eval_engine_lambdalith.role.role_arn)
