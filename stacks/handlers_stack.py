@@ -163,7 +163,7 @@ class HandlersStack(Stack):
                 "./supplementary_files/handlers_stack/lambdas/invoked_by_apigw_cloudformation"
             ),
             environment={
-                "EvalEngineLambdalithFunctionName": self.lambda_eval_engine_lambdalith.function_name,
+                "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
             },
             layers=[
                 aws_lambda_python_alpha.PythonLayerVersion(

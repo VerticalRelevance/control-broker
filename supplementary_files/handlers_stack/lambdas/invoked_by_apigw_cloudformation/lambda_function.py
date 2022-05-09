@@ -1,6 +1,7 @@
 import json
 import re
 import os
+import uuid
 
 import boto3
 from botocore.exceptions import ClientError
@@ -171,11 +172,26 @@ def sign_request(*,
     
     return True
     
+def generate_s3_uuid_uri(*,bucket):
+    
+    def generate_uuid():
+        return str(uuid.uuid4())
+    
+    uuid = generate_uuid()
+
+    s3_uri = f's3://{bucket}/{uuid}'
+    
+    return s3_uri
+    
 def lambda_handler(event,context):
     
     print(f'event:\n{event}\ncontext:\n{context}')
     
+    # instantiate
+    
     r = RequestParser(event=event)
+    
+    # parse event
     
     request_json_body = json.loads(event['body'])
     
@@ -189,10 +205,18 @@ def lambda_handler(event,context):
     
     print(f'authorization_header:\n{authorization_header}')
     
+    # fail fast
+    
     fail_fast = r.fail_fast()
     
     if fail_fast:
         return fail_fast
+    
+    # set result path
+    
+    raw_result_report_s3_uri = generate_s3_uuid_uri(bucket=os.environ['RawPaCResultsBucket'])
+    
+    # set input
     
     eval_engine_input =  {
         "Input":request_json_body['Input'],
@@ -204,11 +228,16 @@ def lambda_handler(event,context):
     
     print(f'eval_engine_input:\n{eval_engine_input}')
     
+    # sign request
+    
     sign_request(
         full_invoke_url = headers['x-eval-engine-invoke-url'],
         region = region,
         input = eval_engine_input
     )
+    
+    # set response
+    
     
     control_broker_request_status = {
         "Request":{
@@ -230,15 +259,10 @@ def lambda_handler(event,context):
                 "Raw":{
                     "S3Uri":""
                 },
-                "OutputHandlers":[
-                    {
-                        "DefaultParsed": {
-                            "S3Uri":""
-                        }
-                    }
-                ]
             }
         }   
     }
+    
+    print(f'control_broker_request_status:\n{control_broker_request_status}')
     
     return control_broker_request_status
