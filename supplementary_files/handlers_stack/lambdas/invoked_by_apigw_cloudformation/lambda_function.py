@@ -13,58 +13,7 @@ region = session.region_name
 account_id = boto3.client('sts').get_caller_identity().get('Account')
 
 
-def get_approved_context(*,consumer_metadata,consumer_request_context):
-    
-    def integrate_with_my_entitlement_system(consumer_metadata,consumer_request_context):
-        
-        # make external call per enterprise implementation
-        
-        # if consumer is authorized to call the CB with the context it provided, then return the unmodified context
-        
-        # if not, return failure
-        
-        # demo check below
-        
-        return consumer_metadata['SSOAttributes']['Org'] == "OrgA"
-    
-    if integrate_with_my_entitlement_system(consumer_metadata,consumer_request_context):
-        return consumer_request_context
-    else:
-        return False
  
-def validate_input_type(request_json_body):
-    
-    # go to that provided object
-    
-    # validate it matches type expected by this handler i.e. CloudFormation
-    
-    return "CloudFormation"
-
-def get_consumer_metadata(event):
-
-    def integrate_with_my_identity_provider(event):
-    
-        headers = event['headers']
-    
-        authorization_header = headers['authorization']
-
-        # make external call per enterprise implementation
-        # demo values below
-        
-        return {
-            "Org":"OrgA",
-            "BusinessUnit":"BU1",
-            "BillingCode":"bu-01",
-            "Name":"Jane Ray"
-        }
-
-    return {
-        "SSOAttributes": integrate_with_my_identity_provider(event)
-    }
-
-def control_broker_has_read_acces_to_input(event):
-    #TODO
-    return True
 
 class RequestParser():
     
@@ -75,6 +24,63 @@ class RequestParser():
         
         self.request_json_body = json.loads(event['body'])
         self.headers = event['headers']
+        
+        self.consumer_request_context = self.request_json_body['Context']
+
+    def requestor_is_authorized(self):
+        return True
+    
+    def input_grants_required_read_access(self):
+        return True
+        
+    def get_validated_input_type(self):
+        # go to that provided object
+        
+        # validate it matches type expected by this handler i.e. CloudFormation
+        return "CloudFormation"
+    
+    def get_consumer_metadata(self):
+
+        def integrate_with_my_identity_provider(event):
+        
+            headers = event['headers']
+        
+            authorization_header = headers['authorization']
+    
+            # make external call per enterprise implementation
+            # demo values below
+            
+            return {
+                "Org":"OrgA",
+                "BusinessUnit":"BU1",
+                "BillingCode":"bu-01",
+                "Name":"Jane Ray"
+            }
+    
+        self.consumer_metadata = {
+            "SSOAttributes": integrate_with_my_identity_provider(self.event)
+        }
+        
+        return self.consumer_metadata
+    
+    def get_approved_context(self,*,consumer_metadata,consumer_request_context):
+    
+        def integrate_with_my_entitlement_system(consumer_metadata,consumer_request_context):
+            
+            # make external call per enterprise implementation
+            
+            # if consumer is authorized to call the CB with the context it provided, then return the unmodified context
+            
+            # if not, return failure
+            
+            # demo check below
+            
+            return consumer_metadata['SSOAttributes']['Org'] == "OrgA"
+        
+        if integrate_with_my_entitlement_system(self.consumer_metadata,self.consumer_request_context):
+            return consumer_request_context
+        else:
+            return False
 
 def sign_request(*,
     full_invoke_url:str,
@@ -131,17 +137,6 @@ def lambda_handler(event,context):
     
     print(f'authorization_header:\n{authorization_header}')
     
-    consumer_request_context = request_json_body['Context']
-    
-    consumer_metadata = get_consumer_metadata(event)
-    
-    print(f'consumer_request_context:\n{consumer_request_context}')
-    
-    approved_context = get_approved_context(
-        consumer_metadata = consumer_metadata,
-        consumer_request_context = consumer_request_context
-    )
-    
     if not approved_context:
         fail_fast = {
             "RequestorAuthorizedForProvidedContext": False
@@ -158,9 +153,9 @@ def lambda_handler(event,context):
 
     eval_engine_input =  {
         "Input":request_json_body['Input'],
-        "Context": approved_context,
-        "InputType": validate_input_type(request_json_body),
-        "ConsumerMetadata": consumer_metadata, 
+        "ConsumerMetadata": r.consumer_metadata, 
+        "Context": r.approved_context,
+        "InputType": r.get_validated_input_type(),
             # NB renamed from an object manually provided by the user to things we know about requestor based on the authentication system
     }
     
@@ -175,16 +170,16 @@ def lambda_handler(event,context):
     control_broker_request_status = {
         "Request":{
             "Requestor": {
-                "IsAuthorized": "",
+                "IsAuthorized": r.requestor_is_authorized(),
             },
             "Input": {
-                "GrantsRequiredReadAccess": control_broker_has_read_acces_to_input(event),
+                "GrantsRequiredReadAccess": r.input_grants_required_read_access()
             },
             "InputType":{
-                "Validated":""
+                "Validated":bool(r.get_validated_input_type())
             },
             "Context":{
-                "IsApproved":""
+                "IsApproved":bool(r.approved_context)
             }
         },
         "Response": {
