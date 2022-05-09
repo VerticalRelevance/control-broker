@@ -266,7 +266,7 @@ class HandlersStack(Stack):
             ],
         )
 
-        # integration - cloudformation
+        # integration - CloudFormation
 
         lambda_invoked_by_apigw_cloudformation = aws_lambda.Function(
             self,
@@ -299,10 +299,52 @@ class HandlersStack(Stack):
                 self.layers['requests']
             ]
         )
+        
+        # integration - ConfigEvent
+        
+        lambda_invoked_by_apigw_config_event = aws_lambda.Function(
+            self,
+            "InvokedByApigwConfigEvent",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/handlers_stack/lambdas/invoked_by_apigw_config_event"
+            ),
+            environment={
+                "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
+                "OutputHandlers": json.dumps([
+                    {
+                        "HandlerName":"CloudFormationOPA",
+                        "AccessPointArn": self.access_point.access_point_arn
+                    }
+                ])
+            },
+            layers=[
+                aws_lambda_python_alpha.PythonLayerVersion(
+                    self,
+                    "aws_requests_auth",
+                    entry="./supplementary_files/lambda_layers/aws_requests_auth",
+                    compatible_runtimes=[
+                        aws_lambda.Runtime.PYTHON_3_9
+                    ]
+                ),
+                self.layers['requests']
+            ]
+        )
 
         self.api.add_api_handler(
             "CloudFormation", lambda_invoked_by_apigw_cloudformation, "/CloudFormation"
         )
+
+        self.api.add_api_handler(
+            "ConfigEvent", lambda_invoked_by_apigw_cloudformation, "/ConfigEvent"
+        )
+        
+        # self.api.add_api_handler(
+        #     "CfnHooks", lambda_invoked_by_apigw_cloudformation, "/CfnHooks"
+        # )
 
     def eval_engine(self):
 
