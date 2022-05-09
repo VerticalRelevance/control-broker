@@ -7,6 +7,7 @@ from aws_cdk import (
     Duration,
     Stack,
     CfnOutput,
+    RemovalPolicy,
     aws_lambda,
     aws_iam,
     aws_s3,
@@ -15,12 +16,12 @@ from aws_cdk import (
     aws_logs,
     aws_events,
     aws_apigatewayv2,
-    aws_apigatewayv2_alpha,  # experimental as of 4.25.22
+    # experimental
+    aws_apigatewayv2_alpha,
     aws_apigatewayv2_authorizers_alpha,
-    aws_apigatewayv2_integrations_alpha,  # experimental as of 4.25.22,
+    aws_apigatewayv2_integrations_alpha,
     aws_lambda_python_alpha,
-    aws_logs,
-    RemovalPolicy,
+    aws_s3objectlambda_alpha,
 )
 
 from components.control_broker_api import ControlBrokerApi
@@ -272,4 +273,15 @@ class HandlersStack(Stack):
         self.bucket_raw_pac_results.add_event_notification(aws_s3.EventType.OBJECT_CREATED,
             aws_s3_notifications.LambdaDestination(self.lambda_output_handler),
             # prefix="home/myusername/*"
+        )
+        
+        aws_s3objectlambda_alpha.AccessPoint(
+            self,
+            "OuputHandlerCloudFormationOPA",
+            bucket=self.bucket_raw_pac_results,
+            handler=self.lambda_output_handler,
+            access_point_name="OuputHandlerCloudFormationOPA",
+            # payload={
+            #     "prop": "value"
+            # }
         )

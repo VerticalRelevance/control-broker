@@ -222,7 +222,7 @@ def lambda_handler(event,context):
                 "Raw": os.environ['RawPaCResultsBucket'],
                 "OutputHandlers":[
                     {
-                        'OuputHandler-CloudFormation-OPA':                        os.environ.get('OuputHandler-CloudFormation-OPA')
+                        'OuputHandlerCloudFormationOPA':                        os.environ.get('OuputHandlerCloudFormationOPA')
                     },
                 ]
             }
