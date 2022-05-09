@@ -81,7 +81,39 @@ class RequestParser():
             return consumer_request_context
         else:
             return False
+    
+    def fail_fast(self):
 
+        fail_fast=None
+        
+        request = {
+            "Request":{
+                "Requestor": {
+                    "IsAuthorized": r.requestor_is_authorized(),
+                },
+                "Input": {
+                    "GrantsRequiredReadAccess": r.input_grants_required_read_access()
+                },
+                "InputType":{
+                    "Validated":bool(r.get_validated_input_type())
+                },
+                "Context":{
+                    "IsApproved":bool(r.approved_context)
+                }
+            }
+        }
+        
+        def any_false_leaf(d):
+            if isinstance(d, dict):
+                return any(any_false_leaf(v) for v in d.values())
+            return not d
+            
+        if any_false_leaf(request):
+            fail_fast = request
+            
+        print(f'fail_fast:{fail_fast}')
+        return fail_fast
+            
 def sign_request(*,
     full_invoke_url:str,
     region:str,
@@ -137,20 +169,11 @@ def lambda_handler(event,context):
     
     print(f'authorization_header:\n{authorization_header}')
     
-    if not approved_context:
-        fail_fast = {
-            "RequestorAuthorizedForProvidedContext": False
-        }
-        print(f'fail_fast:{fail_fast}')
+    fail_fast = r.fail_fast()
+    
+    if fail_fast:
         return fail_fast
     
-    if not control_broker_has_read_acces_to_input(event):
-        fail_fast = {
-            "ControlBrokerHasReadAccessToInputS3Path": False
-        }
-        print(f'fail_fast:{fail_fast}')
-        return fail_fast
-
     eval_engine_input =  {
         "Input":request_json_body['Input'],
         "ConsumerMetadata": r.consumer_metadata, 
