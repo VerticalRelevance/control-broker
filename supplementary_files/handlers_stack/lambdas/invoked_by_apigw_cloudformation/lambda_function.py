@@ -24,20 +24,60 @@ class RequestParser():
         
         self.request_json_body = json.loads(event['body'])
         self.headers = event['headers']
-        
         self.consumer_request_context = self.request_json_body['Context']
+        
+        self.main()
 
     def requestor_is_authorized(self):
+        # TODO
+        self.requestor_is_authorized = True
         return True
     
     def input_grants_required_read_access(self):
+        # TODO
+        self.input_grants_required_read_access = True
         return True
         
     def get_validated_input_type(self):
+        # TODO
+        
         # go to that provided object
         
         # validate it matches type expected by this handler i.e. CloudFormation
+        self.validated_input_type = "CloudFormation"
         return "CloudFormation"
+    
+    def fail_fast(self):
+
+        fail_fast=None
+        
+        request = {
+            "Request":{
+                "Requestor": {
+                    "IsAuthorized": r.requestor_is_authorized,
+                },
+                "Input": {
+                    "GrantsRequiredReadAccess": r.input_grants_required_read_access
+                },
+                "InputType":{
+                    "Validated":bool(r.validated_input_type)
+                },
+                "Context":{
+                    "IsApproved":bool(r.approved_context)
+                }
+            }
+        }
+        
+        def any_false_leaf(d):
+            if isinstance(d, dict):
+                return any(any_false_leaf(v) for v in d.values())
+            return not d
+            
+        if any_false_leaf(request):
+            fail_fast = request
+            
+        print(f'fail_fast:{fail_fast}')
+        return fail_fast
     
     def get_consumer_metadata(self):
 
@@ -82,37 +122,13 @@ class RequestParser():
         else:
             return False
     
-    def fail_fast(self):
-
-        fail_fast=None
         
-        request = {
-            "Request":{
-                "Requestor": {
-                    "IsAuthorized": r.requestor_is_authorized(),
-                },
-                "Input": {
-                    "GrantsRequiredReadAccess": r.input_grants_required_read_access()
-                },
-                "InputType":{
-                    "Validated":bool(r.get_validated_input_type())
-                },
-                "Context":{
-                    "IsApproved":bool(r.approved_context)
-                }
-            }
-        }
+    def main(self):
         
-        def any_false_leaf(d):
-            if isinstance(d, dict):
-                return any(any_false_leaf(v) for v in d.values())
-            return not d
-            
-        if any_false_leaf(request):
-            fail_fast = request
-            
-        print(f'fail_fast:{fail_fast}')
-        return fail_fast
+        self.get_consumer_metadata()
+        
+        self.get_approved_context()
+        
             
 def sign_request(*,
     full_invoke_url:str,
@@ -178,7 +194,7 @@ def lambda_handler(event,context):
         "Input":request_json_body['Input'],
         "ConsumerMetadata": r.consumer_metadata, 
         "Context": r.approved_context,
-        "InputType": r.get_validated_input_type(),
+        "InputType": r.validated_input_type,
             # NB renamed from an object manually provided by the user to things we know about requestor based on the authentication system
     }
     
@@ -193,13 +209,13 @@ def lambda_handler(event,context):
     control_broker_request_status = {
         "Request":{
             "Requestor": {
-                "IsAuthorized": r.requestor_is_authorized(),
+                "IsAuthorized": r.requestor_is_authorized
             },
             "Input": {
-                "GrantsRequiredReadAccess": r.input_grants_required_read_access()
+                "GrantsRequiredReadAccess": r.input_grants_required_read_access
             },
             "InputType":{
-                "Validated":bool(r.get_validated_input_type())
+                "Validated":bool(r.validated_input_type)
             },
             "Context":{
                 "IsApproved":bool(r.approved_context)
