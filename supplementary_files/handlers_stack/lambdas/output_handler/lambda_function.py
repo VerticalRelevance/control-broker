@@ -62,7 +62,7 @@ def s3_object_lambda_send_response(*,request_route,request_token,response_object
         s3.write_get_object_response(
             RequestRoute=request_route,
             RequestToken=request_token,
-            Body=response_object,
+            Body=json.dumps(response_object).encode('utf-8'),
         )
     except ClientError as e:
         print(f'ClientError:\nrequest_route:\n{request_route}\nrequest_token:\n{request_token}\n{e}')
@@ -97,13 +97,13 @@ def lambda_handler(event,context):
     object_get_context = event["getObjectContext"]
     request_route = object_get_context["outputRoute"]
     request_token = object_get_context["outputToken"]
-    s3_url = object_get_context["inputS3Url"]
+    original_object_s3_url = object_get_context["inputS3Url"]
 
     # Get object from S3
     
-    response = requests.get(s3_url)
+    original_object_response = requests.get(original_object_s3_url)
     
-    original_object = response.content.decode('utf-8')
+    original_object = json.loads(original_object_response.content.decode('utf-8'))
     
     print(f'original_object:\n{original_object}\n')
 

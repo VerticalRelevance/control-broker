@@ -39,6 +39,16 @@ class HandlersStack(Stack):
 
         self.pac_framework = pac_framework
 
+        self.layers = {
+            'requests': aws_lambda_python_alpha.PythonLayerVersion(self,
+                    "requests",
+                    entry="./supplementary_files/lambda_layers/requests",
+                    compatible_runtimes=[
+                        aws_lambda.Runtime.PYTHON_3_9
+                    ]
+                ),
+        }
+        
         self.pac_frameworks()
         self.output_handler()
         self.eval_engine()
@@ -49,6 +59,7 @@ class HandlersStack(Stack):
             control_broker_results_bucket=None,
         )
         self.endpoint()
+        
 
     def pac_frameworks(self):
         
@@ -136,13 +147,7 @@ class HandlersStack(Stack):
                 "./supplementary_files/handlers_stack/lambdas/output_handler"
             ),
             layers=[
-                aws_lambda_python_alpha.PythonLayerVersion(self,
-                    "requests",
-                    entry="./supplementary_files/lambda_layers/requests",
-                    compatible_runtimes=[
-                        aws_lambda.Runtime.PYTHON_3_9
-                    ]
-                ),
+                self.layers['requests']
             ]
             # environment={},
         )
@@ -245,13 +250,7 @@ class HandlersStack(Stack):
                         aws_lambda.Runtime.PYTHON_3_9
                     ]
                 ),
-                aws_lambda_python_alpha.PythonLayerVersion(self,
-                    "requests",
-                    entry="./supplementary_files/lambda_layers/requests",
-                    compatible_runtimes=[
-                        aws_lambda.Runtime.PYTHON_3_9
-                    ]
-                ),
+                self.layers['requests']
             ]
         )
 
