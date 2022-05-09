@@ -160,6 +160,14 @@ class HandlersStack(Stack):
                 ],
             )
         )
+        self.lambda_output_handler.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:WriteGetObjectResponse",
+                ],
+                resources=["*"],
+            )
+        )
         
         # self.bucket_raw_pac_results.add_event_notification(aws_s3.EventType.OBJECT_CREATED,
         #     aws_s3_notifications.LambdaDestination(self.lambda_output_handler),
