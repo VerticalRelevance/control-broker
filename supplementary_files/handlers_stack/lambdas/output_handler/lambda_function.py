@@ -27,69 +27,56 @@ def get_object(*,bucket,key):
         content = json.loads(body.read().decode('utf-8'))
         return content
 
-def s3_download(*,bucket,key,local_path):
-    
-    try:
-        s3.download_file(
-            bucket,
-            key,
-            local_path
-        )
-    except ClientError as e:
-        print(f'ClientError:\nbucket: {bucket}\nkey:\n{key}\n{e}')
-        raise
-    else:
-        # print(f'No ClientError download_file\nbucket:\n{bucket}\nkey:\n{key}')
-        return True
 
-def s3_download_dir(*,bucket, prefix=None, local_path):
-    # print(f'Begin s3_download_dir\nbucket:\n{bucket}\nprefix:\n{prefix}\nlocal_path:\n{local_path}')
-    paginator = s3.get_paginator('list_objects')
+def handle_infractions(infractions):
     
-    if prefix:
-        pagination = paginator.paginate(Bucket=bucket, Delimiter='/', Prefix=prefix)
-    else:
-        pagination = paginator.paginate(Bucket=bucket, Delimiter='/')
-            
-    for result in pagination:
-        if result.get('CommonPrefixes') is not None:
-            for subdir in result.get('CommonPrefixes'):
-                s3_download_dir(
-                    prefix = subdir.get('Prefix'),
-                    local_path = local_path,
-                    bucket = bucket
-                )
-        for file in result.get('Contents', []):
-            dest_pathname = os.path.join(local_path, file.get('Key'))
-            if not os.path.exists(os.path.dirname(dest_pathname)):
-                os.makedirs(os.path.dirname(dest_pathname))
-            if not file.get('Key').endswith('/'):
-                s3_download(
-                    bucket=bucket,
-                    key=file.get('Key'),
-                    local_path=dest_pathname
-                )
+    for infraction in infractions:
+        
+        print(f'begin processing infractions:\n{infraction}')
 
+        # TODO
 
 def lambda_handler(event,context):
     print(f'event\n{event}\ncontext:\n{context}')
     
-    # reserved_keys = ['ApprovedContext','EvaluationContext','InputType']
+    invoked_by = {
+        'Bucket': event['Records'][0]['s3']['bucket']['name'],
+        'Key': event['Records'][0]['s3']['object']['key']
+    }
+    
+    print(f'invoked_by:\n{invoked_by}')
 
-    # for k in reserved_keys:
-    #     opa_eval_results.pop(k,None)
+    invoked_by_object = get_object(
+        bucket = invoked_by['Bucket'],
+        key = invoked_by['Key']
+    )
     
-    # print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
-    
-    # infractions = [ {i:opa_eval_results[i]}for i in opa_eval_results if opa_eval_results[i].get('allow') == False]
+    print(f'invoked_by_object:\n{invoked_by_object}')
 
-    # print(f'infractions:\n{infractions}\n{type(infractions)}')
+
+    opa_eval_results = invoked_by_object
+
+    reserved_keys = ['ApprovedContext','EvaluationContext','InputType']
+
+    for k in reserved_keys:
+        opa_eval_results.pop(k,None)
     
-    # return {
-    #     "EvalEngineLambdalith": {
-    #         "Evaluation": {
-    #             "IsAllowed": not bool(infractions)
-    #         },
-    #         "Infractions":infractions
-    #     }
-    # }
+    print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
+    
+    infractions = [ {i:opa_eval_results[i]}for i in opa_eval_results if opa_eval_results[i].get('allow') == False]
+    
+    handle_infractions(infractions)
+
+    print(f'infractions:\n{infractions}\n')
+    
+    results_report = {
+        "EvalEngineLambdalith": {
+            "Evaluation": {
+                "IsAllowed": not bool(infractions)
+            },
+            "Infractions":infractions
+        }
+    }
+    
+    print(f'results_report:\n{results_report}\n')
+    

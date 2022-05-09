@@ -12,9 +12,6 @@ s3 = boto3.client('s3')
 s3r = boto3.resource('s3')
 
 def put_object(*,bucket,key,object_:dict):
-    
-    print(f'begin put_object\nbucket:\n{bucket}\nkey:\n{key}')
-    
     try:
         r = s3.put_object(
             Bucket = bucket,
