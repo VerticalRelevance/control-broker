@@ -36,6 +36,25 @@ def handle_infractions(infractions):
 
         # TODO
 
+def parse_pac_results(pac_results):
+    
+    opa_eval_results = pac_results
+    
+    reserved_keys = ['ApprovedContext','EvaluationContext','InputType']
+
+    for k in reserved_keys:
+        opa_eval_results.pop(k,None)
+    
+    print(f'opa_eval_results:\n{opa_eval_results}')
+    
+    infractions = [ {i:opa_eval_results[i]}for i in opa_eval_results if opa_eval_results[i].get('allow') == False]
+    
+    print(f'infractions:\n{infractions}\n')
+    
+    is_allowed = not bool(infractions)
+    
+    return infractions, is_allowed  
+
 def lambda_handler(event,context):
     print(f'event\n{event}\ncontext:\n{context}')
     
@@ -53,26 +72,16 @@ def lambda_handler(event,context):
     
     print(f'invoked_by_object:\n{invoked_by_object}')
 
-
-    opa_eval_results = invoked_by_object
-
-    reserved_keys = ['ApprovedContext','EvaluationContext','InputType']
-
-    for k in reserved_keys:
-        opa_eval_results.pop(k,None)
+    pac_results = invoked_by_object
     
-    print(f'opa_eval_results:\n{opa_eval_results}\n{type(opa_eval_results)}')
-    
-    infractions = [ {i:opa_eval_results[i]}for i in opa_eval_results if opa_eval_results[i].get('allow') == False]
+    infractions, is_allowed = parse_pac_results(pac_results)
     
     handle_infractions(infractions)
 
-    print(f'infractions:\n{infractions}\n')
-    
     results_report = {
         "EvalEngineLambdalith": {
             "Evaluation": {
-                "IsAllowed": not bool(infractions)
+                "IsAllowed": is_allowed
             },
             "Infractions":infractions
         }
