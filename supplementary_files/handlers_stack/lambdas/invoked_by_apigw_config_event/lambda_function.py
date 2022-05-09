@@ -13,6 +13,36 @@ session = boto3.session.Session()
 region = session.region_name
 account_id = boto3.client('sts').get_caller_identity().get('Account')
 
+def get_object(*,bucket,key):
+    
+    try:
+        r = s3.get_object(
+            Bucket = bucket,
+            Key = key
+        )
+    except ClientError as e:
+        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
+        raise
+    else:
+        print(f'no ClientError get_object:\nbucket:\n{bucket}\nkey:\n{key}')
+        body = r['Body']
+        content = json.loads(body.read().decode('utf-8'))
+        return content
+
+def put_object(*,bucket,key,object_:dict):
+    try:
+        r = s3.put_object(
+            Bucket = bucket,
+            Key = key,
+            Body = json.dumps(object_)
+        )
+    except ClientError as e:
+        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
+        raise
+    else:
+        print(f'no ClientError put_object:\nbucket:\n{bucket}\nkey:\n{key}')
+        return True
+
 class RequestParser():
     
     def __init__(self,*,
@@ -248,7 +278,7 @@ class ConfigEventToCloudFormationConverter():
     
         self.cfn = c.get_cfn()
         
-        return cfn
+        return self.cfn
         
     def put_converted_cloudformation(self):
         
@@ -273,27 +303,12 @@ class ConfigEventToCloudFormationConverter():
     
 def convert_config_event_to_cfn(*,original_input_analyzed):
         
-    c = ConfigEventToCloudFormationConverter(original_consumer_input_s3_path)
+    c = ConfigEventToCloudFormationConverter(original_input_analyzed)
     
-    modified_input_s3_path = c.get_converted_s3_path()
+    modified_input_analyzed = c.get_converted_s3_path()
     
-    return modified_input_s3_path
+    return modified_input_analyzed
     
-def get_object(*,bucket,key):
-    
-    try:
-        r = s3.get_object(
-            Bucket = bucket,
-            Key = key
-        )
-    except ClientError as e:
-        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
-        raise
-    else:
-        print(f'no ClientError get_object:\nbucket:\n{bucket}\nkey:\n{key}')
-        body = r['Body']
-        content = json.loads(body.read().decode('utf-8'))
-        return content
           
 def sign_request(*,
     full_invoke_url:str,

@@ -48,6 +48,14 @@ class HandlersStack(Stack):
                         aws_lambda.Runtime.PYTHON_3_9
                     ]
                 ),
+            'aws_requests_auth':aws_lambda_python_alpha.PythonLayerVersion(
+                    self,
+                    "aws_requests_auth",
+                    entry="./supplementary_files/lambda_layers/aws_requests_auth",
+                    compatible_runtimes=[
+                        aws_lambda.Runtime.PYTHON_3_9
+                    ]
+                ),
         }
         
         self.pac_frameworks()
@@ -59,8 +67,21 @@ class HandlersStack(Stack):
             lambda_invoked_by_apigw_eval_engine_endpoint=self.lambda_eval_engine_lambdalith,
             control_broker_results_bucket=None,
         )
+        self.input_handler_cloudformation()
+        self.input_handler_config_event()
+        
         self.endpoint()
         
+        self.Input_reader_roles: List[aws_iam.Role] = [
+            self.lambda_invoked_by_apigw_config_event.role,
+            self.lambda_eval_engine_lambdalith.role,
+        ]
+
+        CfnOutput(
+            self,
+            "GrantMeReadAccesToInputAnalyzed",
+            value=json.dumps([r.role_arn for r in self.Input_reader_roles]),
+        )
 
     def pac_frameworks(self):
         
@@ -238,7 +259,7 @@ class HandlersStack(Stack):
 
         CfnOutput(self, "OuputHandlerCloudFormationOPAAccessPointArn", value=self.access_point.access_point_arn)
         
-    def endpoint(self):
+    def authorizer_lambda(self):
 
         # auth - lambda
 
@@ -265,10 +286,10 @@ class HandlersStack(Stack):
                 "$request.header.Authorization",  # Authorization must be present in headers or 401, e.g. r = requests.post(url,auth = auth, ...)
             ],
         )
+        
+    def input_handler_cloudformation(self):
 
-        # integration - CloudFormation
-
-        lambda_invoked_by_apigw_cloudformation = aws_lambda.Function(
+        self.lambda_invoked_by_apigw_cloudformation = aws_lambda.Function(
             self,
             "InvokedByApigwCloudFormation",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
@@ -296,13 +317,31 @@ class HandlersStack(Stack):
                         aws_lambda.Runtime.PYTHON_3_9
                     ]
                 ),
-                self.layers['requests']
+                self.layers['requests'],
+                self.layers['aws_requests_auth']
             ]
         )
         
-        # integration - ConfigEvent
+        self.api.add_api_handler(
+            "CloudFormation", self.lambda_invoked_by_apigw_cloudformation, "/CloudFormation"
+        )
         
-        lambda_invoked_by_apigw_config_event = aws_lambda.Function(
+    def input_handler_config_event(self):
+    
+        self.bucket_converted_inputs = aws_s3.Bucket(
+            self,
+            "ConfigEventsConvertedInput",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+    
+        self.lambda_invoked_by_apigw_config_event = aws_lambda.Function(
             self,
             "InvokedByApigwConfigEvent",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
@@ -322,19 +361,12 @@ class HandlersStack(Stack):
                 ])
             },
             layers=[
-                aws_lambda_python_alpha.PythonLayerVersion(
-                    self,
-                    "aws_requests_auth",
-                    entry="./supplementary_files/lambda_layers/aws_requests_auth",
-                    compatible_runtimes=[
-                        aws_lambda.Runtime.PYTHON_3_9
-                    ]
-                ),
-                self.layers['requests']
+                self.layers['requests'],
+                self.layers['aws_requests_auth']
             ]
         )
         
-        lambda_invoked_by_apigw_config_event.role.add_to_policy(
+        self.lambda_invoked_by_apigw_config_event.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "cloudformation:ValidateTemplate",
@@ -345,7 +377,8 @@ class HandlersStack(Stack):
                 resources=["*"],
             )
         )
-        lambda_invoked_by_apigw_config_event.role.add_to_policy(
+        
+        self.lambda_invoked_by_apigw_config_event.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "cloudcontrol:GetResource",
@@ -355,17 +388,12 @@ class HandlersStack(Stack):
             )
         )
         
-
-        # add handlers
-
         self.api.add_api_handler(
-            "CloudFormation", lambda_invoked_by_apigw_cloudformation, "/CloudFormation"
-        )
-
-        self.api.add_api_handler(
-            "ConfigEvent", lambda_invoked_by_apigw_cloudformation, "/ConfigEvent"
+            "ConfigEvent", self.lambda_invoked_by_apigw_config_event, "/ConfigEvent"
         )
         
+    def input_handler_cfn_hooks(self):
+        pass # TODO
         # self.api.add_api_handler(
         #     "CfnHooks", lambda_invoked_by_apigw_cloudformation, "/CfnHooks"
         # )
