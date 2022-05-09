@@ -255,6 +255,20 @@ class HandlersStack(Stack):
             # environment={},
         )
         
+        self.lambda_output_handler.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject",
+                    "s3:GetBucket",
+                    "s3:List*",
+                ],
+                resources=[
+                    self.bucket_raw_pac_results.bucket_arn,
+                    self.bucket_raw_pac_results.arn_for_objects("*"),
+                ],
+            )
+        )
+        
         self.bucket_raw_pac_results.add_event_notification(aws_s3.EventType.OBJECT_CREATED,
             aws_s3_notifications.LambdaDestination(self.lambda_output_handler),
             # prefix="home/myusername/*"

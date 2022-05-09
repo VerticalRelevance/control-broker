@@ -65,7 +65,7 @@ def get_consumer_metadata(event):
         "SSOAttributes": integrate_with_my_identity_provider(event)
     }
 
-def control_broker_has_read_acces_to_input(even):
+def control_broker_has_read_acces_to_input(event):
     #TODO
     return True
     
@@ -151,4 +151,32 @@ def lambda_handler(event,context):
     
     print(f'apigw formatted response:\n{r}')
     
-    return content
+    control_broker_request_status = {
+        "Request":{
+            "Requestor": {
+                "IsAuthorized": "",
+            },
+            "Input": {
+                "GrantsRequiredReadAccess": control_broker_has_read_acces_to_input(event),
+            },
+            "Context":{
+                "IsApproved":""
+            }
+        },
+        "Response": {
+            "ResultReport":{
+                "Raw":{
+                    "S3Uri":""
+                },
+                "OutputHandlers":[
+                    {
+                        "DefaultParsed": {
+                            "S3Uri":""
+                        }
+                    }
+                ]
+            }
+        }   
+    }
+    
+    return control_broker_request_status
