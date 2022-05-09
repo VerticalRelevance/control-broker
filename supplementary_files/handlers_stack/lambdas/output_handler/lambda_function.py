@@ -56,21 +56,25 @@ def put_event_entry(*,
         print(f'no ClientError: put_events')
         return True
 
-def handle_infraction(infraction:dict):
+def handle_infraction(*,infraction:dict,original_object_key:str):
     
     print(f'begin processing infraction:\n{infraction}')
 
     put_event_entry(
         event_bus_name = os.environ['InfractionsEventBusName'],
-        detail = infraction
+        source='ControlBroker',
+        detail = infraction,
+        detail_type=original_object_key
     )
     
-
-def handle_infractions(infractions:list):
+def handle_infractions(*,infractions:list,original_object_key:str):
     
     for infraction in infractions:
         
-        handle_infraction(infraction)
+        handle_infraction(
+            infraction=infraction,
+            original_object_key=original_object_key
+        )
 
 def s3_object_lambda_send_response(*,request_route,request_token,response_object:dict):
     
@@ -133,6 +137,9 @@ def lambda_handler(event,context):
     request_route = object_get_context["outputRoute"]
     request_token = object_get_context["outputToken"]
     original_object_s3_url = object_get_context["inputS3Url"]
+    user_request_url = event['userRequest']['url']
+
+    original_object_key = user_request_url.rsplit('/', 1)[-1]
 
     # get original
     
@@ -148,7 +155,10 @@ def lambda_handler(event,context):
     
     infractions, is_allowed = parse_pac_results(pac_results)
     
-    handle_infractions(infractions)
+    handle_infractions(
+        infractions=infractions,
+        original_object_key=original_object_key
+    )
 
     results_report = {
         "EvalEngineLambdalith": {
