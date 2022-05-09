@@ -133,6 +133,8 @@ def lambda_handler(event,context):
         "ApprovedContext":request_json_body['Context']
     }
     
+    print(f'approved_context:\n{approved_context}')
+    
     with open(approved_context_path,'w') as f:
         json.dump(approved_context,f,indent=2)
     

@@ -24,7 +24,7 @@ def get_object(*,bucket,key):
         print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
         raise
     else:
-        print(f'no ClientError get_object:\nbucket:\n{bucket}\nkey:\n{key}')
+        print(f'no ClientError get_object:\nbucket:\n{bucket}\nkey:\n{key}\n')
         body = r['Body']
         content = json.loads(body.read().decode('utf-8'))
         return content
@@ -36,6 +36,21 @@ def handle_infractions(infractions):
         print(f'begin processing infractions:\n{infraction}')
 
         # TODO
+def s3_object_lambda_send_response(*,request_route,request_token,response_object:dict):
+    
+    try:
+        s3.write_get_object_response(
+            RequestRoute=request_route,
+            RequestToken=request_token,
+            Body=json.dumps(response_object).encode('utf-8'),
+        )
+    except ClientError as e:
+        print(f'ClientError:\nrequest_route:\n{request_route}\nrequest_token:\n{request_token}\n{e}')
+        raise
+    else:
+        print(f'no ClientError write_get_object_response:\nrequest_route:\n{request_route}\nrequest_token:\n{request_token}\n{e}')
+
+    return {'status_code': 200}    
 
 def parse_pac_results(pac_results):
     
@@ -55,22 +70,6 @@ def parse_pac_results(pac_results):
     is_allowed = not bool(infractions)
     
     return infractions, is_allowed  
-
-def s3_object_lambda_send_response(*,request_route,request_token,response_object:dict):
-    
-    try:
-        s3.write_get_object_response(
-            RequestRoute=request_route,
-            RequestToken=request_token,
-            Body=json.dumps(response_object).encode('utf-8'),
-        )
-    except ClientError as e:
-        print(f'ClientError:\nrequest_route:\n{request_route}\nrequest_token:\n{request_token}\n{e}')
-        raise
-    else:
-        print(f'no ClientError write_get_object_response:\nrequest_route:\n{request_route}\nrequest_token:\n{request_token}\n{e}')
-
-    return {'status_code': 200}    
 
 def lambda_handler(event,context):
     
@@ -99,13 +98,15 @@ def lambda_handler(event,context):
     request_token = object_get_context["outputToken"]
     original_object_s3_url = object_get_context["inputS3Url"]
 
-    # Get object from S3
+    # get original
     
     original_object_response = requests.get(original_object_s3_url)
     
     original_object = json.loads(original_object_response.content.decode('utf-8'))
     
     print(f'original_object:\n{original_object}\n')
+
+    # parse pac results
 
     pac_results = original_object
     
@@ -123,6 +124,8 @@ def lambda_handler(event,context):
     }
     
     print(f'results_report:\n{results_report}\n')
+    
+    # put response
     
     return s3_object_lambda_send_response(
         request_route=request_route,
