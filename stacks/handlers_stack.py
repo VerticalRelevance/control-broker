@@ -733,8 +733,6 @@ class HandlersStack(Stack):
         with open(toggled_boolean_path,'w') as f:
             json.dump({'ToggledBoolean':not toggled_boolean},f)
         
-    
-        
         self.lambda_invoked_by_config = aws_lambda.Function(
             self,
             f"InvokedByConfig",
@@ -743,13 +741,14 @@ class HandlersStack(Stack):
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             environment={
                 "ControlBrokerInvokeUrl": handler_url_config_event,
-                "ConfigEventsRawInput":self.bucket_config_events_raw_inputs.bucket_name
+                "ConfigEventsRawInputBucket":self.bucket_config_events_raw_inputs.bucket_name
             },
             layers=[
                 self.layers['requests'],
                 self.layers['aws_requests_auth']
             ]
         )
+        
         self.lambda_invoked_by_config.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
