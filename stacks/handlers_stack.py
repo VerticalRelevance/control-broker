@@ -333,6 +333,30 @@ class HandlersStack(Stack):
                 self.layers['requests']
             ]
         )
+        
+        lambda_invoked_by_apigw_config_event.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "cloudformation:ValidateTemplate",
+                    "cloudformation:DescribeType",
+                    # "cloudformation:Get*",  # FIXME
+                    # "cloudformation:Describe*",  # FIXME
+                ],
+                resources=["*"],
+            )
+        )
+        lambda_invoked_by_apigw_config_event.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "cloudcontrol:GetResource",
+                    # "cloudcontrol:*",  # FIXME
+                ],
+                resources=["*"],
+            )
+        )
+        
+
+        # add handlers
 
         self.api.add_api_handler(
             "CloudFormation", lambda_invoked_by_apigw_cloudformation, "/CloudFormation"
