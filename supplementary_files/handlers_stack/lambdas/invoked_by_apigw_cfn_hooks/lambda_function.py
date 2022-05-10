@@ -13,6 +13,38 @@ session = boto3.session.Session()
 region = session.region_name
 account_id = boto3.client('sts').get_caller_identity().get('Account')
 
+s3 = boto3.client('s3')
+
+def get_object(*,bucket,key):
+    
+    try:
+        r = s3.get_object(
+            Bucket = bucket,
+            Key = key
+        )
+    except ClientError as e:
+        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
+        raise
+    else:
+        print(f'no ClientError get_object:\nbucket:\n{bucket}\nkey:\n{key}')
+        body = r['Body']
+        content = json.loads(body.read().decode('utf-8'))
+        return content
+
+def put_object(*,bucket,key,object_:dict):
+    try:
+        r = s3.put_object(
+            Bucket = bucket,
+            Key = key,
+            Body = json.dumps(object_)
+        )
+    except ClientError as e:
+        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
+        raise
+    else:
+        print(f'no ClientError put_object:\nbucket:\n{bucket}\nkey:\n{key}')
+        return True
+
 class RequestParser():
     
     def __init__(self,*,
@@ -131,8 +163,7 @@ class RequestParser():
         self.get_consumer_metadata()
         
         self.get_approved_context()
-        
-            
+
 def sign_request(*,
     full_invoke_url:str,
     region:str,
@@ -182,7 +213,7 @@ def generate_s3_uuid_uri(*,bucket):
     s3_uri = f's3://{bucket}/{uuid}'
     
     return s3_uri
-    
+
 def lambda_handler(event,context):
     
     print(f'event:\n{event}\ncontext:\n{context}')
@@ -223,6 +254,14 @@ def lambda_handler(event,context):
             }
         }
     }
+    
+    original_input_analyzed = request_json_body['Input']
+    
+    print(f'original_input_analyzed:\n{original_input_analyzed}')
+    
+    # any transformation
+    
+    # TODO
     
     # set input
     
