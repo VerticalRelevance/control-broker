@@ -27,18 +27,23 @@ from aws_cdk import (
     aws_s3objectlambda_alpha,
 )
 
+from constructs import Construct
+
 from components.control_broker_api import ControlBrokerApi
 
+from utils.mixins import SecretConfigStackMixin
 
-class HandlersStack(Stack):
+
+class HandlersStack(Stack, SecretConfigStackMixin):
     def __init__(
         self,
-        *args,
-        pac_framework,
+        scope: Construct,
+        construct_id: str,
+        pac_framework: str,
         **kwargs,
-    ):
+    ) -> None:
 
-        super().__init__(*args, **kwargs)
+        super().__init__(scope, construct_id, **kwargs)
 
         self.pac_framework = pac_framework
 
@@ -154,6 +159,27 @@ class HandlersStack(Stack):
                 restrict_public_buckets=True,
             ),
             event_bridge_enabled=True
+        )
+        
+        self.bucket_raw_pac_results.add_to_resource_policy(
+            aws_iam.PolicyStatement(
+                principals=[
+                    aws_iam.AnyPrincipal().with_conditions(
+                        {
+                            "ForAnyValue:StringLike": {
+                                "aws:PrincipalOrgPaths": [self.secrets.allowed_org_path]
+                            }
+                        }
+                    )
+                ],
+                actions=[
+                    "s3:GetObject",
+                ],
+                resources=[
+                    self.bucket_raw_pac_results.bucket_arn,
+                    self.bucket_raw_pac_results.arn_for_objects("*"),
+                ],
+            )
         )
     
     def output_handler(self):
