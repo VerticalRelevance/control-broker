@@ -531,7 +531,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                         "Bucket": self.bucket_output_handler.bucket_name
                     }
                 ]),
-                "ConfigEventsConvertedInputBucket":self.bucket_config_events_converted_inputs.bucket_name
+                "ConfigEventsConvertedInputsBucket":self.bucket_config_events_converted_inputs.bucket_name
             },
             layers=[
                 self.layers['requests'],

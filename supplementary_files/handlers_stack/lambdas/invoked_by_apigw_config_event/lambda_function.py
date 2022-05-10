@@ -250,11 +250,6 @@ class ConfigEventToCloudFormationConverter():
         invoking_event = json.loads(self.config_event["invokingEvent"])
         print(f'invoking_event:\n{invoking_event}')
         
-        rule_parameters = self.config_event.get("ruleParameters")
-        if rule_parameters:
-            rule_parameters = json.loads(rule_parameters)
-            print(f'rule_parameters:\n{rule_parameters}')
-        
         configuration_item = invoking_event["configurationItem"]
         print(f'configuration_item:\n{configuration_item}')
         
@@ -267,10 +262,6 @@ class ConfigEventToCloudFormationConverter():
         resource_configuration = configuration_item['configuration']
         print(f'resource_configuration:\n{resource_configuration}')
         
-        if resource_configuration:
-            resource_configuration_keys = list(resource_configuration.keys())
-            print(f'resource_configuration_keys:\n{resource_configuration_keys}')
-        
         self.resource_id = configuration_item['resourceId']
         print(f'resource_id:\n{self.resource_id}')
     
@@ -280,12 +271,14 @@ class ConfigEventToCloudFormationConverter():
     
         self.cfn = c.get_cfn()
         
+        print(f'cfn:\n{self.cfn}')
+        
         return self.cfn
         
     def put_converted_cloudformation(self):
         
         self.converted_s3_path = {
-            'Bucket' : os.environ['ConfigEventsConvertedInputBucket'],
+            'Bucket' : os.environ['ConfigEventsConvertedInputsBucket'],
             'Key' : self.config_event_s3_path['Key'],
         }
         
@@ -410,10 +403,12 @@ def lambda_handler(event,context):
         config_event_input_analyzed = original_input_analyzed
     )
     
+    print(f'converted_input_analyzed:\n{converted_input_analyzed}')
+    
     # set input
     
     eval_engine_input =  {
-        "InputAnalyzed":request_json_body['Input'],
+        "InputAnalyzed":converted_input_analyzed,
         "ConsumerMetadata": r.consumer_metadata, 
         "Context": r.approved_context,
         "InputType": r.validated_input_type,
