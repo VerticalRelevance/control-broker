@@ -70,7 +70,12 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         # self.output_handler_s3_object_lambda()
         self.output_handler_event_driven()
         
+        
+        self.input_handler_cloudformation()
+        self.input_handler_config_event()
+        
         self.eval_engine()
+        
         self.api = ControlBrokerApi(
             self,
             "ControlBrokerApi",
@@ -78,13 +83,13 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             control_broker_results_bucket=None,
         )
         
-        self.input_handler_cloudformation()
-        self.input_handler_config_event()
+        self.add_apis()
         
         self.Input_reader_roles: List[aws_iam.Role] = [
             self.lambda_invoked_by_apigw_config_event.role,
             self.lambda_eval_engine_lambdalith.role,
         ]
+        
 
         CfnOutput(
             self,
@@ -478,10 +483,6 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             ]
         )
         
-        self.api.add_api_handler(
-            "CloudFormation", self.lambda_invoked_by_apigw_cloudformation, "/CloudFormation"
-        )
-        
     def input_handler_config_event(self):
         
         self.bucket_config_events_converted_inputs = aws_s3.Bucket(
@@ -496,6 +497,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 restrict_public_buckets=True,
             ),
         )
+        
         self.bucket_config_events_raw_inputs = aws_s3.Bucket(
             self,
             "ConfigEventsRawInput",
@@ -862,12 +864,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 resources=["*"],
             )
         )
-
         
-        handler_url_config_event = self.api.add_api_handler(
-            "ConfigEvent", self.lambda_invoked_by_apigw_config_event, "/ConfigEvent"
-        )
-      
     def input_handler_cfn_hooks(self):
         
         self.lambda_invoked_by_apigw_cfn_hooks = aws_lambda.Function(
@@ -922,6 +919,8 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                     self.bucket_pac_policies.arn_for_objects("*"),
                     self.bucket_evaluation_context.bucket_arn,
                     self.bucket_evaluation_context.arn_for_objects("*"),
+                    self.bucket_config_events_converted_inputs.bucket_arn,
+                    self.bucket_config_events_converted_inputs.arn_for_objects("*"),
                 ],
             )
         )
@@ -938,4 +937,14 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                     self.bucket_raw_pac_results.arn_for_objects("*"),
                 ],
             )
+        )
+    
+    def add_apis(self):
+        
+        handler_url_config_event = self.api.add_api_handler(
+            "ConfigEvent", self.lambda_invoked_by_apigw_config_event, "/ConfigEvent"
+        )
+        
+        handler_url_cloudformation = self.api.add_api_handler(
+            "CloudFormation", self.lambda_invoked_by_apigw_cloudformation, "/CloudFormation"
         )
