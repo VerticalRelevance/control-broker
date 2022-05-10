@@ -1,5 +1,5 @@
 from aws_cdk import SecretValue
-from components import Construct
+from constructs import Construct
 
 class SecretConfigJson:
     """Provide easy access to the JSON keys stored in a SecretsManager JSON document."""
