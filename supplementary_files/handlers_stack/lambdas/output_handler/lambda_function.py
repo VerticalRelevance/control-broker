@@ -163,7 +163,7 @@ def lambda_handler(event,context):
     results_report = {
         "EvalEngineLambdalith": {
             "Evaluation": {
-                "IsAllowed": is_allowed
+                "IsCompliant": is_allowed
             },
             "Infractions":infractions
         }
