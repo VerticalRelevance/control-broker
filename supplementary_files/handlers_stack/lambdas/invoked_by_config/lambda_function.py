@@ -16,16 +16,6 @@ account_id = boto3.client('sts').get_caller_identity().get('Account')
 sfn = boto3.client("stepfunctions")
 s3 = boto3.client("s3")
 
-def async_sfn(*, sfn_arn, input: dict):
-    try:
-        r = sfn.start_execution(stateMachineArn=sfn_arn, input=json.dumps(input))
-    except ClientError as e:
-        print(f"ClientError\n{e}")
-        raise
-    else:
-        print(f'no ClientError start_execution:\nsfn_arn:\n{sfn_arn}\ninput:\n{input}')
-        return r["executionArn"]
-
 def put_object(bucket,key,object_:dict):
     print(f'put_object\nbucket:\n{bucket}\nKey:\n{key}')
     try:
