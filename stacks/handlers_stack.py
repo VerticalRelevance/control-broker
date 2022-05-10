@@ -701,10 +701,26 @@ class HandlersStack(Stack):
         )
       
     def input_handler_cfn_hooks(self):
-        pass # TODO
-        # self.api.add_api_handler(
-        #     "CfnHooks", lambda_invoked_by_apigw_cloudformation, "/CfnHooks"
-        # )
+        
+        self.lambda_invoked_by_apigw_cfn_hooks = aws_lambda.Function(
+            self,
+            "InvokedByApigwCfnHooks",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/handlers_stack/lambdas/invoked_by_apigw_cfn_hooks"
+            ),
+            layers=[
+                self.layers['requests'],
+                self.layers['aws_requests_auth']
+            ]
+        )
+        
+        self.api.add_api_handler(
+            "CfnHooks", self.lambda_invoked_by_apigw_cfn_hooks, "/CfnHooks"
+        )
 
     def eval_engine(self):
 
