@@ -165,29 +165,29 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             event_bridge_enabled=True
         )
         
-        self.bucket_raw_pac_results.add_to_resource_policy(
-            aws_iam.PolicyStatement(
-                principals=[
-                    # aws_iam.AnyPrincipal()
-                    aws_iam.AnyPrincipal().with_conditions(
-                        {
-                            "ForAnyValue:StringLike": {
-                                "aws:PrincipalOrgPaths": [self.secrets.allowed_org_path]
-                            }
-                        }
-                    )
-                ],
-                actions=[
-                    "s3:GetObject",
-                    "s3:Get*",
-                    "s3:List*",
-                ],
-                resources=[
-                    self.bucket_raw_pac_results.bucket_arn,
-                    self.bucket_raw_pac_results.arn_for_objects("*"),
-                ],
-            )
-        )   
+        # self.bucket_raw_pac_results.add_to_resource_policy(
+        #     aws_iam.PolicyStatement(
+        #         principals=[
+        #             # aws_iam.AnyPrincipal()
+        #             aws_iam.AnyPrincipal().with_conditions(
+        #                 {
+        #                     "ForAnyValue:StringLike": {
+        #                         "aws:PrincipalOrgPaths": [self.secrets.allowed_org_path]
+        #                     }
+        #                 }
+        #             )
+        #         ],
+        #         actions=[
+        #             "s3:GetObject",
+        #             "s3:Get*",
+        #             "s3:List*",
+        #         ],
+        #         resources=[
+        #             self.bucket_raw_pac_results.bucket_arn,
+        #             self.bucket_raw_pac_results.arn_for_objects("*"),
+        #         ],
+        #     )
+        # )   
     
     def output_handler(self):
         
@@ -222,7 +222,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
 
         # output handler
 
-        self.lambda_output_handler = aws_lambda.Function(
+        self.lambda_output_handler_object_lambda = aws_lambda.Function(
             self,
             "OutputHandler",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
@@ -230,7 +230,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/handlers_stack/lambdas/output_handler"
+                "./supplementary_files/handlers_stack/lambdas/object_lambda_output_handler_object_lambda"
             ),
             layers=[
                 self.layers['requests']
@@ -241,7 +241,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         )
         
         
-        self.lambda_output_handler.role.add_to_policy(
+        self.lambda_output_handler_object_lambda.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:GetObject",
@@ -255,7 +255,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             )
         )
         
-        self.lambda_output_handler.role.add_to_policy(
+        self.lambda_output_handler_object_lambda.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:WriteGetObjectResponse",
@@ -264,7 +264,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             )
         )
         
-        self.lambda_output_handler.role.add_to_policy(
+        self.lambda_output_handler_object_lambda.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "events:PutEvents",
@@ -276,17 +276,17 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             )
         )
         
-        # self.bucket_raw_pac_results.add_event_notification(aws_s3.EventType.OBJECT_CREATED,
-        #     aws_s3_notifications.LambdaDestination(self.lambda_output_handler),
-        #     # prefix="home/myusername/*"
-        # )
+        self.bucket_raw_pac_results.add_event_notification(aws_s3.EventType.OBJECT_CREATED,
+            aws_s3_notifications.LambdaDestination(self.lambda_output_handler_object_lambda),
+            # prefix="home/myusername/*"
+        )
         
         
         self.access_point = aws_s3objectlambda_alpha.AccessPoint(
             self,
             "OuputHandlerCloudFormationOPA",
             bucket=self.bucket_raw_pac_results,
-            handler=self.lambda_output_handler,
+            handler=self.lambda_output_handler_object_lambda,
             access_point_name="ouput-handler-cloudformation-opa",
             # payload={
             #     "prop": "value"
