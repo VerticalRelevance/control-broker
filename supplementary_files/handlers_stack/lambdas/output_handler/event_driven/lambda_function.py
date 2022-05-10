@@ -133,7 +133,7 @@ def lambda_handler(event,context):
     
     handle_infractions(
         infractions=infractions,
-        original_object_key=invoked_by['key']
+        original_object_key=invoked_by['Key']
     )
 
     results_report = {
@@ -149,6 +149,6 @@ def lambda_handler(event,context):
     
     return put_object(
         bucket = os.environ['OutputHandlerProcessedResultsBucket'],
-        key = invoked_by['key'],
+        key = invoked_by['Key'],
         object_ = results_report
     )
