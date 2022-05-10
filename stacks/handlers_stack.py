@@ -67,7 +67,9 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         }
         
         self.pac_frameworks()
-        self.output_handler()
+        # self.output_handler_s3_object_lambda()
+        self.output_handler_event_driven()
+        
         self.eval_engine()
         self.api = ControlBrokerApi(
             self,
@@ -75,6 +77,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             lambda_invoked_by_apigw_eval_engine_endpoint=self.lambda_eval_engine_lambdalith,
             control_broker_results_bucket=None,
         )
+        
         self.input_handler_cloudformation()
         self.input_handler_config_event()
         
@@ -188,11 +191,11 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             )
         )   
     
-    def output_handler(self):
+    def output_handler_event_driven(self):
         
         self.bucket_output_handler = aws_s3.Bucket(
             self,
-            "OutputHandler",
+            "OutputHandlerProcessedResults",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
             block_public_access=aws_s3.BlockPublicAccess(
@@ -220,8 +223,8 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                     "s3:List*",
                 ],
                 resources=[
-                    self.bucket_raw_pac_results.bucket_arn,
-                    self.bucket_raw_pac_results.arn_for_objects("*"),
+                    self.bucket_output_handler.bucket_arn,
+                    self.bucket_output_handler.arn_for_objects("*"),
                 ],
             )
         )   
@@ -254,80 +257,22 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 self.log_group_infractions
             )
         )
-
-        # output handler - s3 object lambda
-
-        # self.lambda_output_handler_s3_object_lambda = aws_lambda.Function(
-        #     self,
-        #     "OutputHandler",
-        #     runtime=aws_lambda.Runtime.PYTHON_3_9,
-        #     handler="lambda_function.lambda_handler",
-        #     timeout=Duration.seconds(60),
-        #     memory_size=1024,
-        #     code=aws_lambda.Code.from_asset(
-        #         "./supplementary_files/handlers_stack/lambdas/output_handler/s3_object_lambda"
-        #     ),
-        #     layers=[
-        #         self.layers['requests']
-        #     ],
-        #     environment={
-        #         "InfractionsEventBusName":self.event_bus_infractions.event_bus_name
-        #     },
-        # )
-        
-        
-        # self.lambda_output_handler_s3_object_lambda.role.add_to_policy(
-        #     aws_iam.PolicyStatement(
-        #         actions=[
-        #             "s3:GetObject",
-        #             "s3:GetBucket",
-        #             "s3:List*",
-        #         ],
-        #         resources=[
-        #             self.bucket_raw_pac_results.bucket_arn,
-        #             self.bucket_raw_pac_results.arn_for_objects("*"),
-        #         ],
-        #     )
-        # )
-        
-        # self.lambda_output_handler_s3_object_lambda.role.add_to_policy(
-        #     aws_iam.PolicyStatement(
-        #         actions=[
-        #             "s3:WriteGetObjectResponse",
-        #         ],
-        #         resources=["*"],
-        #     )
-        # )
-        
-        # self.lambda_output_handler_s3_object_lambda.role.add_to_policy(
-        #     aws_iam.PolicyStatement(
-        #         actions=[
-        #             "events:PutEvents",
-        #         ],
-        #         resources=[
-        #             self.event_bus_infractions.event_bus_arn,
-        #             f"{self.event_bus_infractions.event_bus_arn}*",
-        #         ],
-        #     )
-        # )
         
         # output handler - event-driven
         
         self.lambda_output_handler_event_driven = aws_lambda.Function(
             self,
-            "OutputHandler",
+            "OutputHandlerEventDriven",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/handlers_stack/lambdas/output_handler/s3_object_lambda"
+                "./supplementary_files/handlers_stack/lambdas/output_handler/event_driven"
             ),
-            layers=[
-                self.layers['requests']
-            ],
             environment={
-                "InfractionsEventBusName":self.event_bus_infractions.event_bus_name
+                "InfractionsEventBusName":self.event_bus_infractions.event_bus_name,
+                "OutputHandlerProcessedResultsBucket":self.bucket_output_handler.bucket_name
             },
         )
         
@@ -361,7 +306,62 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             aws_s3_notifications.LambdaDestination(self.lambda_output_handler_event_driven),
             # prefix="home/myusername/*"
         )
+
+    def output_handler_s3_object_lambda(self):
         
+        self.lambda_output_handler_s3_object_lambda = aws_lambda.Function(
+            self,
+            "OutputHandlerS3ObjectLambda",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/handlers_stack/lambdas/output_handler/s3_object_lambda"
+            ),
+            layers=[
+                self.layers['requests']
+            ],
+            environment={
+                "InfractionsEventBusName":self.event_bus_infractions.event_bus_name
+            },
+        )
+        
+        
+        self.lambda_output_handler_s3_object_lambda.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject",
+                    "s3:GetBucket",
+                    "s3:List*",
+                ],
+                resources=[
+                    self.bucket_raw_pac_results.bucket_arn,
+                    self.bucket_raw_pac_results.arn_for_objects("*"),
+                ],
+            )
+        )
+        
+        self.lambda_output_handler_s3_object_lambda.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:WriteGetObjectResponse",
+                ],
+                resources=["*"],
+            )
+        )
+        
+        self.lambda_output_handler_s3_object_lambda.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "events:PutEvents",
+                ],
+                resources=[
+                    self.event_bus_infractions.event_bus_arn,
+                    f"{self.event_bus_infractions.event_bus_arn}*",
+                ],
+            )
+        )
         
         self.access_point = aws_s3objectlambda_alpha.AccessPoint(
             self,
@@ -449,9 +449,13 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             environment={
                 "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
                 "OutputHandlers": json.dumps([
+                    # {
+                    #     "HandlerName":"CloudFormationOPA",
+                    #     "AccessPointArn": self.access_point.access_point_arn
+                    # }
                     {
                         "HandlerName":"CloudFormationOPA",
-                        "AccessPointArn": self.access_point.access_point_arn
+                        "Bucket": self.bucket_output_handler.bucket_name
                     }
                 ])
             },
@@ -505,9 +509,13 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             environment={
                 "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
                 "OutputHandlers": json.dumps([
+                    # {
+                    #     "HandlerName":"CloudFormationOPA",
+                    #     "AccessPointArn": self.access_point.access_point_arn
+                    # }
                     {
                         "HandlerName":"CloudFormationOPA",
-                        "AccessPointArn": self.access_point.access_point_arn
+                        "Bucket": self.bucket_output_handler.bucket_name
                     }
                 ]),
                 "ConfigEventsConvertedInputBucket":self.bucket_config_events_converted_inputs.bucket_name
