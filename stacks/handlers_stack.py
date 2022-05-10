@@ -289,6 +289,19 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 ],
             )
         )
+        self.lambda_output_handler_event_driven.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                    "s3:GetBucket",
+                    "s3:List*",
+                ],
+                resources=[
+                    self.bucket_output_handler.bucket_arn,
+                    self.bucket_output_handler.arn_for_objects("*"),
+                ],
+            )
+        )
         
         self.lambda_output_handler_event_driven.role.add_to_policy(
             aws_iam.PolicyStatement(
