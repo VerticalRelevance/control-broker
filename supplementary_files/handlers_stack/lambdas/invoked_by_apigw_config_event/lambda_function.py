@@ -434,6 +434,7 @@ def lambda_handler(event,context):
     
     control_broker_request_status = {
         "Request":{
+            "Content": request_json_body,
             "Requestor": {
                 "IsAuthorized": r._requestor_is_authorized
             },
