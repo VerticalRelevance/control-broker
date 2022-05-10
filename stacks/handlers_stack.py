@@ -19,6 +19,7 @@ from aws_cdk import (
     aws_events,
     aws_events_targets,
     aws_apigatewayv2,
+    aws_s3objectlambda,
     # experimental
     aws_apigatewayv2_alpha,
     aws_apigatewayv2_authorizers_alpha,
@@ -135,6 +136,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             ),
         )
 
+
         aws_s3_deployment.BucketDeployment(
             self,
             "PaCPoliciesDeployment",
@@ -155,8 +157,10 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             block_public_access=aws_s3.BlockPublicAccess(
                 block_public_acls=True,
                 ignore_public_acls=True,
-                block_public_policy=True,
-                restrict_public_buckets=True,
+                # block_public_policy=True,
+                # restrict_public_buckets=True,
+                block_public_policy=False,
+                restrict_public_buckets=False,
             ),
             event_bridge_enabled=True
         )
@@ -164,6 +168,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         self.bucket_raw_pac_results.add_to_resource_policy(
             aws_iam.PolicyStatement(
                 principals=[
+                    # aws_iam.AnyPrincipal()
                     aws_iam.AnyPrincipal().with_conditions(
                         {
                             "ForAnyValue:StringLike": {
@@ -174,15 +179,18 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 ],
                 actions=[
                     "s3:GetObject",
+                    "s3:Get*",
+                    "s3:List*",
                 ],
                 resources=[
                     self.bucket_raw_pac_results.bucket_arn,
                     self.bucket_raw_pac_results.arn_for_objects("*"),
                 ],
             )
-        )
+        )   
     
     def output_handler(self):
+        
         
         self.event_bus_infractions = aws_events.EventBus(
             self,
@@ -232,6 +240,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             },
         )
         
+        
         self.lambda_output_handler.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
@@ -272,6 +281,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         #     # prefix="home/myusername/*"
         # )
         
+        
         self.access_point = aws_s3objectlambda_alpha.AccessPoint(
             self,
             "OuputHandlerCloudFormationOPA",
@@ -282,6 +292,36 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             #     "prop": "value"
             # }
         )
+
+        # policy_document_access_point = aws_iam.PolicyStatement(
+        #     principals=[
+        #         aws_iam.AnyPrincipal().with_conditions(
+        #             {
+        #                 "ForAnyValue:StringLike": {
+        #                     "aws:PrincipalOrgPaths": [
+        #                         # self.secrets.allowed_org_path,
+        #                         "o-9txpghbplo/*"
+        #                         ]
+        #                 }
+        #             }
+        #         )
+        #     ],
+        #     actions=[
+        #         "s3:GetObject",
+        #     ],
+        #     resources=["*"
+        #         # self.bucket_raw_pac_results.bucket_arn,
+        #         # self.bucket_raw_pac_results.arn_for_objects("*"),
+        #     ],
+        # )
+
+        # cfn_access_point_policy = aws_s3objectlambda.CfnAccessPointPolicy(
+        #     self,
+        #     "OuputHandlerSameOrgPolicy",
+        #     object_lambda_access_point=self.access_point.access_point_name,
+        #     policy_document=policy_document_access_point.to_json()
+        #     # policy_document={}
+        # )
 
         CfnOutput(self, "OuputHandlerCloudFormationOPAAccessPointArn", value=self.access_point.access_point_arn)
         
