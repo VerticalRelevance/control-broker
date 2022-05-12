@@ -5,7 +5,7 @@
     "version" : "2022-05-05 12:19:57UTC"
   },
   "servers" : [ {
-    "url" : "https://v8i28ze8df.execute-api.us-east-1.amazonaws.com/{basePath}",
+    "url" : "https://API_ID.execute-api.us-east-1.amazonaws.com/{basePath}",
     "variables" : {
       "basePath" : { }
     }
@@ -50,38 +50,117 @@
   },
   "components" : {
     "schemas" : {
-      "ControlBrokerConsumerInputs" : {
+      "Input" : {
         "properties":{
-          "InputType": {
-            "type":"string"
-          },
           "Bucket": {
             "type":"string"
           },
-          "InputKeys": {
-            "type":"array"
-          },
-          "ConsumerMetadata": {
-            "type":"object"
+          "Key": {
+            "type":"string"
+          }
+        }
+      },
+      "Context" : {
+        "properties":{
+          "EnvironmentEvaluation": {
+            "type":"string"
           }
         }
       },
       "ControlBrokerRequestStatus": {
         "properties":{
-          "RequestorIsAuthorized": {
-            "type":"boolean"
+          "Request": {
+            "type":"object"
           },
-          "EvalEngineHasReadAccessToinputs": {
-            "type":"boolean"
-          },
-          "ResultsReportS3Uri": {
-            "type":"string"
-          },
-          "EvalEngineSfnExecutionArn": {
-            "type":"string"
+          "Response": {
+            "type":"object"
           }
         }
       }
+      "Request":{
+        "properties":{
+          "Content": {
+            "type":"object"
+          },
+          "Requestor": {
+            "type":"object"
+          },
+          "Input": {
+            "type":"object"
+          },
+          "InputType": {
+            "type":"object"
+          },
+          "Context": {
+            "type":"object"
+          },
+        }
+      },
+      "Requestor": {
+        "properties":{
+          "IsAuthorized": {
+            "type":"boolean"
+          }
+        }
+      },
+      "Input": {
+        "properties":{
+          "GrantsRequiredReadAccess": {
+            "type":"boolean"
+          }
+        }
+      },
+      "InputType": {
+        "properties":{
+          "Validated": {
+            "type":"boolean"
+          }
+        }
+      },
+      "Context": {
+        "properties":{
+          "IsApproved": {
+            "type":"boolean"
+          }
+        }
+      },
+      "Reponse": {
+        "properties":{
+          "ResultsReport": {
+            "type":"object"
+          }
+        }
+      },
+      "ResultsReport": {
+        "properties":{
+          "Key": {
+            "type":"string"
+          },
+          "Buckets": {
+            "type":"object"
+          }
+        }
+      },
+      "Buckets": {
+        "properties":{
+          "Raw": {
+            "type":"string"
+          },
+          "OutputHandlers": {
+            "type":"array"
+          }
+        }
+      },
+      "OutputHandler": {
+        "properties":{
+          "HandlerName": {
+            "type":"string"
+          },
+          "Bucket": {
+            "type":"array"
+          }
+        }
+      },
     },
     "securitySchemes" : {
       "ControlBrokerClientAuthorizer" : {
