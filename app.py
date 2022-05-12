@@ -5,8 +5,7 @@ import aws_cdk as cdk
 
 from stacks.handlers_stack import HandlersStack
 
-STACK_VERSION = "V0x8x0" #FIXME
-# STACK_VERSION = "V0x9x1"
+STACK_VERSION = "V0x9x1"
 
 app = cdk.App()
 
