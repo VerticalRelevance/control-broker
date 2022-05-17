@@ -15,7 +15,7 @@ from aws_cdk import (
     aws_apigatewayv2_integrations_alpha,  # experimental as of 4.25.22
     aws_apigatewayv2_authorizers_alpha,  # experimental as of 4.25.22
 )
-from constructs import Construct
+from components import Construct
 
 
 class EndpointStack(Stack):

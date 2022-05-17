@@ -33,6 +33,7 @@
     },
     "control-broker/post-deployment-testing/enabled": false,
     "control-broker/client/enabled": true,
-    "control-broker/secret-config/secrets-manager-secret-id": "control-broker/secret-config"
+    "control-broker/secret-config/secrets-manager-secret-id": "control-broker/secret-config",
+    "control-broker/pac-framework":"OPA"
   }
 }
