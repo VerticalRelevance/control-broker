@@ -886,7 +886,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         self.api.add_api_handler(
             "CfnHooks", self.lambda_invoked_by_apigw_cfn_hooks, "/CfnHooks"
         )
-
+    
     def eval_engine(self):
 
         self.lambda_eval_engine_lambdalith = aws_lambda.Function(
