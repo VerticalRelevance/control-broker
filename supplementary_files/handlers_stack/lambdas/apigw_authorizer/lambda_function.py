@@ -3,7 +3,7 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 
-def determine_is_authorized():
+def determine_is_authorized(auth_header):
     # TODO
     return True
 
@@ -12,9 +12,9 @@ def lambda_handler(event,context):
     
     headers = event.get('headers')
     
-    auth_header = headers.get('authorization')
+    auth_header = headers.get('Authorization')
     
-    is_authorized = determine_is_authorized()
+    is_authorized = determine_is_authorized(auth_header)
     
     auth_decision = {
       "isAuthorized": is_authorized,
