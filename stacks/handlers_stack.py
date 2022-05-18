@@ -84,18 +84,6 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         
         self.add_apis()
         
-        self.Input_reader_roles: List[aws_iam.Role] = [
-            self.lambda_invoked_by_apigw_config_event.role,
-            self.lambda_eval_engine_lambdalith.role,
-        ]
-        
-
-        CfnOutput(
-            self,
-            "GrantMeReadAccesToInputAnalyzed",
-            value=json.dumps([r.role_arn for r in self.Input_reader_roles]),
-        )
-
     def pac_frameworks(self):
         
         # EvaluationContext - owned by Security Team
