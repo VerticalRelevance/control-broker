@@ -200,8 +200,8 @@ def lambda_handler(event,context):
     response_expected_by_consumer = request_json_body['ResponseExpectedByConsumer']
     
     put_object(
-        bucket=response_expected_by_consumer['ResultsReport']['Buckets']['Raw'],
-        key=response_expected_by_consumer['ResultsReport']['Key'],
+        bucket=response_expected_by_consumer['ControlBrokerEvaluation']['Raw']['Bucket'],
+        key=response_expected_by_consumer['ControlBrokerEvaluation']['Raw']['Key'],
         object_ = opa_eval_results
     )
     

@@ -216,6 +216,23 @@ def generate_presigned_url(bucket,key,client_method="get_object",ttl=3600):
     else:
         print(f"Presigned URL:\n{url}")
         return url
+
+def format_response_expected_by_consumer(response_expected_by_consumer):
+    
+    from collections.abc import MutableMapping
+    from contextlib import suppress
+    
+    def delete_keys_from_dict(dictionary, keys):
+        for key in keys:
+            with suppress(KeyError):
+                del dictionary[key]
+        for value in dictionary.values():
+            if isinstance(value, MutableMapping):
+                delete_keys_from_dict(value, keys)
+    
+    delete_keys_from_dict(response_expected_by_consumer,['Bucket','Key'])
+    
+    return response_expected_by_consumer
     
 def lambda_handler(event,context):
     
@@ -252,15 +269,23 @@ def lambda_handler(event,context):
     
     response_expected_by_consumer = {
         "ControlBrokerEvaluation": {
-            "Raw": generate_presigned_url(
-                bucket = os.environ['RawPaCResultsBucket'],
-                key = evaluation_key
-            ),
-            "OutputHandlers":{
-                "CloudFormationOPA": generate_presigned_url(
-                    bucket = json.loads(os.environ['OutputHandlers'])['CloudFormationOPA']['Bucket'],
+            "Raw": {
+                "PresignedUrl": generate_presigned_url(
+                    bucket = os.environ['RawPaCResultsBucket'],
                     key = evaluation_key
                 ),
+                "Bucket": os.environ['RawPaCResultsBucket'],
+                "Key": evaluation_key
+            },
+            "OutputHandlers":{
+                "CloudFormationOPA": {
+                    "PresignedUrl": generate_presigned_url(
+                        bucket = json.loads(os.environ['OutputHandlers'])['CloudFormationOPA']['Bucket'],
+                        key = evaluation_key
+                    ),
+                    "Bucket": json.loads(os.environ['OutputHandlers'])['CloudFormationOPA']['Bucket'],
+                    "Key": evaluation_key
+                }
             }
         }
     }
@@ -314,7 +339,7 @@ def lambda_handler(event,context):
                 "IsApproved":bool(r.approved_context)
             }
         },
-        "Response": response_expected_by_consumer
+        "Response": format_response_expected_by_consumer(response_expected_by_consumer)
     }
     
     print(f'control_broker_request_status:\n{control_broker_request_status}')
