@@ -453,6 +453,19 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         
     def input_handler_cloudformation(self):
 
+        self.bucket_cloudformation_raw_inputs = aws_s3.Bucket(
+            self,
+            "CloudFormationRawInputs",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+        
         self.lambda_invoked_by_apigw_cloudformation = aws_lambda.Function(
             self,
             "InvokedByApigwCloudFormation",
@@ -471,7 +484,8 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                             "Bucket": self.bucket_output_handler.bucket_name
                         }
                     }
-                )
+                ),
+                "CloudFormationRawInputsBucket": self.bucket_cloudformation_raw_inputs.bucket_name,
             },
             layers=[
                 self.layers['requests'],
@@ -492,6 +506,19 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 ],
             )
         )
+        
+        self.lambda_invoked_by_apigw_cloudformation.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                ],
+                resources=[
+                    self.bucket_cloudformation_raw_inputs.bucket_arn,
+                    self.bucket_cloudformation_raw_inputs.arn_for_objects("*"),
+                ],
+            )
+        )
+        
     def input_handler_config_event(self):
         
         self.bucket_config_events_converted_inputs = aws_s3.Bucket(
@@ -532,16 +559,13 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             ),
             environment={
                 "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
-                "OutputHandlers": json.dumps([
-                    # {
-                    #     "HandlerName":"CloudFormationOPA",
-                    #     "AccessPointArn": self.access_point.access_point_arn
-                    # }
+                "OutputHandlers": json.dumps(
                     {
-                        "HandlerName":"CloudFormationOPA",
-                        "Bucket": self.bucket_output_handler.bucket_name
+                        "CloudFormationOPA": {
+                            "Bucket": self.bucket_output_handler.bucket_name
+                        }
                     }
-                ]),
+                ),
                 "ConfigEventsConvertedInputsBucket":self.bucket_config_events_converted_inputs.bucket_name
             },
             layers=[
@@ -555,8 +579,6 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 actions=[
                     "cloudformation:ValidateTemplate",
                     "cloudformation:DescribeType",
-                    # "cloudformation:Get*",  # FIXME
-                    # "cloudformation:Describe*",  # FIXME
                 ],
                 resources=["*"],
             )
@@ -566,7 +588,6 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             aws_iam.PolicyStatement(
                 actions=[
                     "cloudcontrol:GetResource",
-                    # "cloudcontrol:*",  # FIXME
                 ],
                 resources=["*"],
             )
