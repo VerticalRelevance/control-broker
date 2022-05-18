@@ -1052,6 +1052,8 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                     self.bucket_config_events_converted_inputs.arn_for_objects("*"),
                     self.bucket_cloudformation_raw_inputs.bucket_arn,
                     self.bucket_cloudformation_raw_inputs.arn_for_objects("*"),
+                    self.bucket_cross_cloud_inputs.bucket_arn,
+                    self.bucket_cross_cloud_inputs.arn_for_objects("*"),
                 ],
             )
         )
