@@ -11,8 +11,9 @@ def lambda_handler(event,context):
     print(event)
     
     headers = event.get('headers')
+    print(f'headers:\n{headers}')
     
-    auth_header = headers.get('Authorization')
+    auth_header = headers.get('authorization') # undercase here, even if request is uppercase
     
     is_authorized = determine_is_authorized(auth_header)
     
