@@ -72,6 +72,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         
         self.input_handler_cloudformation()
         self.input_handler_config_event()
+        self.input_handler_cross_cloud_custom_auth()
         
         self.eval_engine()
         
@@ -905,6 +906,32 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             "CfnHooks", self.lambda_invoked_by_apigw_cfn_hooks, "/CfnHooks"
         )
     
+    def input_handler_cross_cloud_custom_auth(self):
+        
+        lambda_authorizer = aws_lambda.Function(
+            self,
+            "CrossCloudCustomAuthorizerLambda",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/handlers_stack/lambdas/apigw_authorizer"
+            ),
+        )
+
+        authorizer_lambda = aws_apigatewayv2_authorizers_alpha.HttpLambdaAuthorizer(
+            "CrossCloudCustomAuthorizer",
+            lambda_authorizer,
+            response_types=[
+                aws_apigatewayv2_authorizers_alpha.HttpLambdaResponseType.SIMPLE
+            ],
+            results_cache_ttl=Duration.seconds(0),
+            identity_source=[
+                "$request.header.Authorization",  # Authorization must be present in headers or 401, e.g. r = requests.post(url,auth = auth, ...)
+            ],
+        )
+    
     def eval_engine(self):
 
         self.lambda_eval_engine_lambdalith = aws_lambda.Function(
@@ -967,4 +994,8 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         
         handler_url_cloudformation = self.api.add_api_handler(
             "CloudFormation", self.lambda_invoked_by_apigw_cloudformation, "/CloudFormation"
+        )
+        
+        handler_url_cloudformation = self.api.add_api_handler(
+            "CrossCloudCustomAuth", self.lambda_invoked_by_apigw_cloudformation, "/CrossCloudCustomAuth"
         )
