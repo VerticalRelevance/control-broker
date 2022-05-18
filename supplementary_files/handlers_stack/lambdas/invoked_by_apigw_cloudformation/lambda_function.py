@@ -231,6 +231,7 @@ def lambda_handler(event,context):
         return fail_fast
     
     # set response
+    
     evaluation_key = f'cb-{generate_uuid()}'
     
     response_expected_by_consumer = {
@@ -241,7 +242,7 @@ def lambda_handler(event,context):
             ),
             "OutputHandlers":{
                 "CloudFormationOPA": generate_presigned_url(
-                    bucket = os.environ['OutputHandlers']['CloudFormationOPA'],
+                    bucket = json.loads(os.environ['OutputHandlers'])['CloudFormationOPA']['Bucket'],
                     key = evaluation_key
                 ),
             }
@@ -250,8 +251,10 @@ def lambda_handler(event,context):
     
     # set input
     
+    input_to_be_evaluated = request_json_body['Input']
+    
     eval_engine_input =  {
-        "InputAnalyzed":request_json_body['Input'],
+        "InputToBeEvaluated": input_to_be_evaluated,
         "ConsumerMetadata": r.consumer_metadata, 
         "Context": r.approved_context,
         "InputType": r.validated_input_type,
@@ -272,7 +275,7 @@ def lambda_handler(event,context):
     
     control_broker_request_status = {
         "Request":{
-            "Content": request_json_body,
+            # "Content": request_json_body,
             "Requestor": {
                 "IsAuthorized": r._requestor_is_authorized
             },

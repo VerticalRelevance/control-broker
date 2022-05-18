@@ -67,7 +67,6 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         }
         
         self.pac_frameworks()
-        # self.output_handler_s3_object_lambda()
         self.output_handler_event_driven()
         
         
@@ -466,12 +465,13 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             ),
             environment={
                 "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
-                "OutputHandlers": json.dumps([
+                "OutputHandlers": json.dumps(
                     {
-                        "HandlerName":"CloudFormationOPA",
-                        "Bucket": self.bucket_output_handler.bucket_name
+                        "CloudFormationOPA": {
+                            "Bucket": self.bucket_output_handler.bucket_name
+                        }
                     }
-                ])
+                )
             },
             layers=[
                 self.layers['requests'],
