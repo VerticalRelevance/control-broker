@@ -134,7 +134,6 @@ class RequestParser():
         
         self.get_approved_context()
         
-            
 def sign_request(*,
     full_invoke_url:str,
     region:str,
@@ -173,6 +172,23 @@ def sign_request(*,
     print(f'formatted response:\n{r}')
     
     return True
+
+def put_object(*,bucket,key,object_:dict):
+    
+    print(f'begin put_object\nbucket:\n{bucket}\nkey:\n{key}')
+    
+    try:
+        r = s3.put_object(
+            Bucket = bucket,
+            Key = key,
+            Body = json.dumps(object_)
+        )
+    except ClientError as e:
+        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
+        raise
+    else:
+        print(f'no ClientError put_object:\nbucket:\n{bucket}\nkey:\n{key}')
+        return True
     
 def generate_uuid():
     return str(uuid.uuid4())
@@ -251,7 +267,16 @@ def lambda_handler(event,context):
     
     # set input
     
-    input_to_be_evaluated = request_json_body['Input']
+    input_to_be_evaluated = {
+        'Bucket':os.environ['CloudFormationRawInputsBucket'],
+        'Key':evaluation_key
+    }
+    
+    put_object(
+        bucket = input_to_be_evaluated['Bucket'],
+        key = input_to_be_evaluated['Key'],
+        object_ = request_json_body['Input']
+    )
     
     eval_engine_input =  {
         "InputToBeEvaluated": input_to_be_evaluated,
