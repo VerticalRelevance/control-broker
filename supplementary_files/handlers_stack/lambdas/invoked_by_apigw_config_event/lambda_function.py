@@ -233,15 +233,7 @@ class ConfigEventToCloudFormationConverter():
         config_event_input_to_be_evaluated:dict
     ):
         
-        self.config_event_s3_path = {
-            "Bucket":config_event_input_to_be_evaluated['Bucket'],
-            "Key":config_event_input_to_be_evaluated['Key']
-        }
-        
-        self.config_event = get_object(
-            bucket = self.config_event_s3_path['Bucket'],
-            key = self.config_event_s3_path['Key']
-        )
+        self.config_event = config_event_input_to_be_evaluated
         
     def parse_config_event(self):
         
