@@ -449,7 +449,7 @@ def lambda_handler(event,context):
         "ConsumerMetadata": r.consumer_metadata, 
         "Context": r.approved_context,
         "InputType": r.validated_input_type,
-        "Response": format_response_expected_by_consumer(response_expected_by_consumer)
+        "ResponseExpectedByConsumer": response_expected_by_consumer
     }
     
     print(f'eval_engine_input:\n{eval_engine_input}')
@@ -480,7 +480,7 @@ def lambda_handler(event,context):
                 "IsApproved":bool(r.approved_context)
             }
         },
-        "Response": response_expected_by_consumer
+        "Response": format_response_expected_by_consumer(response_expected_by_consumer)
     }
     
     print(f'control_broker_request_status:\n{control_broker_request_status}')
