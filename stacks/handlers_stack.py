@@ -905,10 +905,12 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         self.api.add_api_handler(
             "CfnHooks", self.lambda_invoked_by_apigw_cfn_hooks, "/CfnHooks"
         )
-    
+        
     def input_handler_cross_cloud_custom_auth(self):
         
-        lambda_authorizer = aws_lambda.Function(
+        # auth
+        
+        lambda_authorizer_cross_cloud = aws_lambda.Function(
             self,
             "CrossCloudCustomAuthorizerLambda",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
@@ -920,9 +922,9 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             ),
         )
 
-        authorizer_lambda = aws_apigatewayv2_authorizers_alpha.HttpLambdaAuthorizer(
+        self.authorizer_lambda_cross_cloud = aws_apigatewayv2_authorizers_alpha.HttpLambdaAuthorizer(
             "CrossCloudCustomAuthorizer",
-            lambda_authorizer,
+            lambda_authorizer_cross_cloud,
             response_types=[
                 aws_apigatewayv2_authorizers_alpha.HttpLambdaResponseType.SIMPLE
             ],
@@ -930,6 +932,34 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             identity_source=[
                 "$request.header.Authorization",  # Authorization must be present in headers or 401, e.g. r = requests.post(url,auth = auth, ...)
             ],
+        )
+        
+        # invoked by cross cloud
+        
+        self.lambda_invoked_by_apigw_cross_cloud = aws_lambda.Function(
+            self,
+            "InvokedByApigwCrossCloud",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/handlers_stack/lambdas/invoked_by_apigw_cross_cloud"
+            ),
+            environment={
+                "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
+                "OutputHandlers": json.dumps(
+                    {
+                        "CloudFormationOPA": {
+                            "Bucket": self.bucket_output_handler.bucket_name
+                        }
+                    }
+                ),
+            },
+            layers=[
+                self.layers['requests'],
+                self.layers['aws_requests_auth']
+            ]
         )
     
     def eval_engine(self):
@@ -997,5 +1027,8 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         )
         
         handler_url_cloudformation = self.api.add_api_handler(
-            "CrossCloudCustomAuth", self.lambda_invoked_by_apigw_cloudformation, "/CrossCloudCustomAuth"
+            "CrossCloudCustomAuth",
+            self.lambda_invoked_by_apigw_cross_cloud,
+            "/CrossCloudCustomAuth",
+            authorizer = self.authorizer_lambda_cross_cloud
         )
