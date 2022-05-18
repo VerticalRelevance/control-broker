@@ -467,10 +467,6 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             environment={
                 "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
                 "OutputHandlers": json.dumps([
-                    # {
-                    #     "HandlerName":"CloudFormationOPA",
-                    #     "AccessPointArn": self.access_point.access_point_arn
-                    # }
                     {
                         "HandlerName":"CloudFormationOPA",
                         "Bucket": self.bucket_output_handler.bucket_name
@@ -483,6 +479,19 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             ]
         )
         
+        self.lambda_invoked_by_apigw_cloudformation.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject",
+                ],
+                resources=[
+                    self.bucket_raw_pac_results.bucket_arn,
+                    self.bucket_raw_pac_results.arn_for_objects("*"),
+                    self.bucket_output_handler.bucket_arn,
+                    self.bucket_output_handler.arn_for_objects("*"),
+                ],
+            )
+        )
     def input_handler_config_event(self):
         
         self.bucket_config_events_converted_inputs = aws_s3.Bucket(
