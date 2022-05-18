@@ -157,12 +157,12 @@ def lambda_handler(event,context):
 
     # write input_analyzed_object to /tmp
     
-    input_analyzed_object_path = '/tmp/input_analyzed_object.json'
+    input_to_be_evaluated_object_path = '/tmp/input_to_be_evaluated_object.json'
     
     s3_download(
         bucket = input_to_be_evaluated['Bucket'],
         key = input_to_be_evaluated['Key'],
-        local_path = input_analyzed_object_path
+        local_path = input_to_be_evaluated_object_path
     )
     
     # get PaC Framework Policies
