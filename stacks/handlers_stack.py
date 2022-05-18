@@ -485,7 +485,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         self.lambda_invoked_by_apigw_cloudformation.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
-                    "s3:GetObject",
+                    "s3:GetObject", # required to generate presigned url for get_object ClientMethod
                 ],
                 resources=[
                     self.bucket_raw_pac_results.bucket_arn,
@@ -579,6 +579,20 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                     "cloudcontrol:GetResource",
                 ],
                 resources=["*"],
+            )
+        )
+        
+        self.lambda_invoked_by_apigw_config_event.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject", # required to generate presigned url for get_object ClientMethod
+                ],
+                resources=[
+                    self.bucket_raw_pac_results.bucket_arn,
+                    self.bucket_raw_pac_results.arn_for_objects("*"),
+                    self.bucket_output_handler.bucket_arn,
+                    self.bucket_output_handler.arn_for_objects("*"),
+                ],
             )
         )
         
@@ -908,6 +922,19 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         
     def input_handler_cross_cloud_custom_auth(self):
         
+        self.bucket_cross_cloud_inputs = aws_s3.Bucket(
+            self,
+            "CrossCloudInputs",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+        
         # auth
         
         lambda_authorizer_cross_cloud = aws_lambda.Function(
@@ -955,6 +982,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                         }
                     }
                 ),
+                "CrossCloudInputsBucket": self.bucket_cross_cloud_inputs.bucket_name
             },
             layers=[
                 self.layers['requests'],
@@ -962,6 +990,32 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             ]
         )
     
+        self.lambda_invoked_by_apigw_cross_cloud.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                ],
+                resources=[
+                    self.bucket_cross_cloud_inputs.bucket_arn,
+                    self.bucket_cross_cloud_inputs.arn_for_objects("*"),
+                ],
+            )
+        )
+        
+        self.lambda_invoked_by_apigw_cross_cloud.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject", # required to generate presigned url for get_object ClientMethod
+                ],
+                resources=[
+                    self.bucket_raw_pac_results.bucket_arn,
+                    self.bucket_raw_pac_results.arn_for_objects("*"),
+                    self.bucket_output_handler.bucket_arn,
+                    self.bucket_output_handler.arn_for_objects("*"),
+                ],
+            )
+        )
+        
     def eval_engine(self):
 
         self.lambda_eval_engine_lambdalith = aws_lambda.Function(
@@ -1032,3 +1086,5 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             "/CrossCloudCustomAuth",
             authorizer = self.authorizer_lambda_cross_cloud
         )
+        
+        
