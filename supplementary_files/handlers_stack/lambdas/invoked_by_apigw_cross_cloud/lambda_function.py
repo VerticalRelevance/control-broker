@@ -43,9 +43,9 @@ class RequestParser():
         
         # go to that provided object
         
-        # validate it matches type expected by this handler i.e. CloudFormation
-        self.validated_input_type = "CloudFormation"
-        return "CloudFormation"
+        # validate it matches type expected by this handler
+        self.validated_input_type = "SomeCrossCloudInput"
+        return "SomeCrossCloudInput"
     
     def fail_fast(self):
 
