@@ -275,26 +275,12 @@ class ConfigEventToCloudFormationConverter():
         
         return self.cfn
         
-    def put_converted_cloudformation(self):
-        
-        self.converted_s3_path = {
-            'Bucket' : os.environ['ConfigEventsConvertedInputsBucket'],
-            'Key' : self.config_event_s3_path['Key'],
-        }
-        
-        put_object(
-            bucket = self.converted_s3_path['Bucket'],
-            key = self.converted_s3_path['Key'],
-            object_ = self.cfn
-        )
-    
     def get_converted_s3_path(self):
         
         self.parse_config_event()
         self.get_converted_cloudformation()
-        self.put_converted_cloudformation()
         
-        return self.converted_s3_path
+        return self.cfn
     
 def convert_config_event_to_cfn(*,config_event_input_to_be_evaluated):
         
@@ -354,6 +340,22 @@ def generate_s3_uuid_uri(*,bucket):
     
     return s3_uri
 
+def generate_presigned_url(bucket,key,client_method="get_object",ttl=3600):
+    try:
+        url = s3.generate_presigned_url(
+            ClientMethod=client_method,
+            Params={
+                'Bucket':bucket,
+                'Key':key
+            },
+            ExpiresIn=ttl
+        )
+    except ClientError:
+        raise
+    else:
+        print(f"Presigned URL:\n{url}")
+        return url
+
 def format_response_expected_by_consumer(response_expected_by_consumer):
     
     from collections.abc import MutableMapping
@@ -402,12 +404,27 @@ def lambda_handler(event,context):
     
     # set response
     
+    evaluation_key = f'cb-{generate_uuid()}'
+    
     response_expected_by_consumer = {
-        "ResultsReport": {
-            "Key": f'cb-{generate_uuid()}',
-            "Buckets": {
-                "Raw": os.environ['RawPaCResultsBucket'],
-                "OutputHandlers":json.loads(os.environ['OutputHandlers'])
+        "ControlBrokerEvaluation": {
+            "Raw": {
+                "PresignedUrl": generate_presigned_url(
+                    bucket = os.environ['RawPaCResultsBucket'],
+                    key = evaluation_key
+                ),
+                "Bucket": os.environ['RawPaCResultsBucket'],
+                "Key": evaluation_key
+            },
+            "OutputHandlers":{
+                "CloudFormationOPA": {
+                    "PresignedUrl": generate_presigned_url(
+                        bucket = json.loads(os.environ['OutputHandlers'])['CloudFormationOPA']['Bucket'],
+                        key = evaluation_key
+                    ),
+                    "Bucket": json.loads(os.environ['OutputHandlers'])['CloudFormationOPA']['Bucket'],
+                    "Key": evaluation_key
+                }
             }
         }
     }
@@ -416,13 +433,24 @@ def lambda_handler(event,context):
     
     print(f'original_input_to_be_evaluated:\n{original_input_to_be_evaluated}')
     
-    converted_input_to_be_evaluated = convert_config_event_to_cfn(
+    converted_input_to_be_evaluated_object = convert_config_event_to_cfn(
         config_event_input_to_be_evaluated = original_input_to_be_evaluated
     )
     
-    print(f'converted_input_to_be_evaluated:\n{converted_input_to_be_evaluated}')
+    print(f'converted_input_to_be_evaluated_object:\n{converted_input_to_be_evaluated_object}')
     
     # set input
+    
+    input_to_be_evaluated = {
+        'Bucket' : os.environ['ConfigEventsConvertedInputsBucket'],
+        'Key' : evaluation_key,
+    }
+        
+    put_object(
+        bucket = input_to_be_evaluated['Bucket'],
+        key = input_to_be_evaluated['Key'],
+        object_ = converted_input_to_be_evaluated_object
+    )
     
     eval_engine_input =  {
         "InputToBeEvaluated": input_to_be_evaluated,
