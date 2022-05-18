@@ -9,6 +9,8 @@ from botocore.exceptions import ClientError
 import requests
 from aws_requests_auth.boto_utils import BotoAWSRequestsAuth
 
+s3 = boto3.client('s3')
+
 session = boto3.session.Session()
 region = session.region_name
 account_id = boto3.client('sts').get_caller_identity().get('Account')
@@ -182,6 +184,22 @@ def generate_s3_uuid_uri(*,bucket):
     s3_uri = f's3://{bucket}/{uuid}'
     
     return s3_uri
+
+def generate_presigned_url(bucket,key,client_method="get_object",ttl=3600):
+    try:
+        url = s3.generate_presigned_url(
+            ClientMethod=client_method,
+            Params={
+                'Bucket':bucket,
+                'Key':key
+            },
+            ExpiresIn=ttl
+        )
+    except ClientError:
+        raise
+    else:
+        print(f"Presigned URL:\n{url}")
+        return url
     
 def lambda_handler(event,context):
     
@@ -213,13 +231,19 @@ def lambda_handler(event,context):
         return fail_fast
     
     # set response
+    evaluation_key = f'cb-{generate_uuid()}'
     
     response_expected_by_consumer = {
-        "ResultsReport": {
-            "Key": f'cb-{generate_uuid()}',
-            "Buckets": {
-                "Raw": os.environ['RawPaCResultsBucket'],
-                "OutputHandlers":json.loads(os.environ['OutputHandlers'])
+        "ControlBrokerEvaluation": {
+            "Raw": generate_presigned_url(
+                bucket = os.environ['RawPaCResultsBucket'],
+                key = evaluation_key
+            ),
+            "OutputHandlers":{
+                "CloudFormationOPA": generate_presigned_url(
+                    bucket = os.environ['OutputHandlers']['CloudFormationOPA'],
+                    key = evaluation_key
+                ),
             }
         }
     }
