@@ -230,12 +230,12 @@ class ConfigEventToCloudFormationConverter():
     
     def __init__(
         self,
-        config_event_input_analyzed:dict
+        config_event_input_to_be_evaluated:dict
     ):
         
         self.config_event_s3_path = {
-            "Bucket":config_event_input_analyzed['Bucket'],
-            "Key":config_event_input_analyzed['Key']
+            "Bucket":config_event_input_to_be_evaluated['Bucket'],
+            "Key":config_event_input_to_be_evaluated['Key']
         }
         
         self.config_event = get_object(
@@ -296,13 +296,13 @@ class ConfigEventToCloudFormationConverter():
         
         return self.converted_s3_path
     
-def convert_config_event_to_cfn(*,config_event_input_analyzed):
+def convert_config_event_to_cfn(*,config_event_input_to_be_evaluated):
         
-    c = ConfigEventToCloudFormationConverter(config_event_input_analyzed)
+    c = ConfigEventToCloudFormationConverter(config_event_input_to_be_evaluated)
     
-    modified_input_analyzed = c.get_converted_s3_path()
+    modified_input_to_be_evaluated = c.get_converted_s3_path()
     
-    return modified_input_analyzed
+    return modified_input_to_be_evaluated
     
 def sign_request(*,
     full_invoke_url:str,
@@ -354,6 +354,23 @@ def generate_s3_uuid_uri(*,bucket):
     
     return s3_uri
 
+def format_response_expected_by_consumer(response_expected_by_consumer):
+    
+    from collections.abc import MutableMapping
+    from contextlib import suppress
+    
+    def delete_keys_from_dict(dictionary, keys):
+        for key in keys:
+            with suppress(KeyError):
+                del dictionary[key]
+        for value in dictionary.values():
+            if isinstance(value, MutableMapping):
+                delete_keys_from_dict(value, keys)
+    
+    delete_keys_from_dict(response_expected_by_consumer,['Bucket','Key'])
+    
+    return response_expected_by_consumer
+
 def lambda_handler(event,context):
     
     print(f'event:\n{event}\ncontext:\n{context}')
@@ -395,24 +412,24 @@ def lambda_handler(event,context):
         }
     }
     
-    original_input_analyzed = request_json_body['Input']
+    original_input_to_be_evaluated = request_json_body['Input']
     
-    print(f'original_input_analyzed:\n{original_input_analyzed}')
+    print(f'original_input_to_be_evaluated:\n{original_input_to_be_evaluated}')
     
-    converted_input_analyzed = convert_config_event_to_cfn(
-        config_event_input_analyzed = original_input_analyzed
+    converted_input_to_be_evaluated = convert_config_event_to_cfn(
+        config_event_input_to_be_evaluated = original_input_to_be_evaluated
     )
     
-    print(f'converted_input_analyzed:\n{converted_input_analyzed}')
+    print(f'converted_input_to_be_evaluated:\n{converted_input_to_be_evaluated}')
     
     # set input
     
     eval_engine_input =  {
-        "InputAnalyzed":converted_input_analyzed,
+        "InputToBeEvaluated": input_to_be_evaluated,
         "ConsumerMetadata": r.consumer_metadata, 
         "Context": r.approved_context,
         "InputType": r.validated_input_type,
-        "ResponseExpectedByConsumer": response_expected_by_consumer
+        "Response": format_response_expected_by_consumer(response_expected_by_consumer)
     }
     
     print(f'eval_engine_input:\n{eval_engine_input}')
