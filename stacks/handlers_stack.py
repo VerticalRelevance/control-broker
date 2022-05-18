@@ -101,7 +101,9 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 restrict_public_buckets=True,
             ),
         )
-
+        """
+        NB: EvaluationContext will be passed back to Consumers in payload.
+        """
         aws_s3_deployment.BucketDeployment(
             self,
             "EvaluationContextDeployment",
