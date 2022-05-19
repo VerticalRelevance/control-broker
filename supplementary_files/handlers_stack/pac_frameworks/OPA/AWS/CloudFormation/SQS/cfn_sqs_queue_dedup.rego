@@ -1,4 +1,4 @@
-package sqs_queue_dedup
+package cfn_sqs_queue_dedup
 
 type = "AWS::SQS::Queue"
 
