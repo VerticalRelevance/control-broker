@@ -115,9 +115,9 @@ def lambda_handler(event,context):
     
     print(f'request_json_body:\n{request_json_body}')
 
-    input_analyzed = request_json_body['InputAnalyzed']
+    input_to_be_evaluated = request_json_body['InputToBeEvaluated']
     
-    print(f'input_analyzed:\n{input_analyzed}')
+    print(f'input_to_be_evaluated:\n{input_to_be_evaluated}')
     
     # write InputType to tmp
     
@@ -157,12 +157,12 @@ def lambda_handler(event,context):
 
     # write input_analyzed_object to /tmp
     
-    input_analyzed_object_path = '/tmp/input_analyzed_object.json'
+    input_to_be_evaluated_object_path = '/tmp/input_to_be_evaluated_object.json'
     
     s3_download(
-        bucket = input_analyzed['Bucket'],
-        key = input_analyzed['Key'],
-        local_path = input_analyzed_object_path
+        bucket = input_to_be_evaluated['Bucket'],
+        key = input_to_be_evaluated['Key'],
+        local_path = input_to_be_evaluated_object_path
     )
     
     # get PaC Framework Policies
@@ -200,8 +200,8 @@ def lambda_handler(event,context):
     response_expected_by_consumer = request_json_body['ResponseExpectedByConsumer']
     
     put_object(
-        bucket=response_expected_by_consumer['ResultsReport']['Buckets']['Raw'],
-        key=response_expected_by_consumer['ResultsReport']['Key'],
+        bucket=response_expected_by_consumer['ControlBrokerEvaluation']['Raw']['Bucket'],
+        key=response_expected_by_consumer['ControlBrokerEvaluation']['Raw']['Key'],
         object_ = opa_eval_results
     )
     
