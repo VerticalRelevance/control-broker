@@ -28,16 +28,11 @@ class RequestParser():
         
         self.main()
 
-    def requestor_is_authorized(self):
+    def get_requestor_is_authorized(self):
         # TODO
-        self._requestor_is_authorized = True
+        self.requestor_is_authorized = True
         return True
     
-    def input_grants_required_read_access(self):
-        # TODO
-        self._input_grants_required_read_access = True
-        return True
-        
     def get_validated_input_type(self):
         # TODO
         
@@ -54,10 +49,7 @@ class RequestParser():
         request = {
             "Request":{
                 "Requestor": {
-                    "IsAuthorized": self.requestor_is_authorized(),
-                },
-                "Input": {
-                    "GrantsRequiredReadAccess": self.input_grants_required_read_access()
+                    "IsAuthorized": self.get_requestor_is_authorized(),
                 },
                 "InputType":{
                     "Validated":bool(self.get_validated_input_type())
@@ -327,10 +319,7 @@ def lambda_handler(event,context):
         "Request":{
             # "Content": request_json_body,
             "Requestor": {
-                "IsAuthorized": r._requestor_is_authorized
-            },
-            "Input": {
-                "GrantsRequiredReadAccess": r._input_grants_required_read_access
+                "IsAuthorized": r.requestor_is_authorized
             },
             "InputType":{
                 "Validated":bool(r.validated_input_type)
