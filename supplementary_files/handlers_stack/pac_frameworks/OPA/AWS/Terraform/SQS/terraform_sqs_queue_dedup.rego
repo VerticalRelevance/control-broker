@@ -19,7 +19,7 @@ allow = null {
 
 infractions := [ infraction | o := offending_resources[_]
     infraction := {
-        "resource": o,
+        "resource": o.address,
         "allow": false,
         "reason": "ContentBasedDeduplication property is misconfigured"
     }
