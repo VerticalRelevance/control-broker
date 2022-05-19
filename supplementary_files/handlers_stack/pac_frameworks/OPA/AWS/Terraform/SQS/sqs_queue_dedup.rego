@@ -5,6 +5,19 @@ import future.keywords.every
 
 type = "aws_sqs_queue"
 
+rule_applicable {
+    data.ApprovedContext == "Prod"
+    data.InputType == "Terraform"
+}
+
+default allow = false
+
+allow = null {
+    not rule_applicable
+} else {
+    count(infractions) == 0
+}
+
 # input.configuration.root_module.resources is an array
 
 infractions := [ infraction | o := offending_resources[_]
