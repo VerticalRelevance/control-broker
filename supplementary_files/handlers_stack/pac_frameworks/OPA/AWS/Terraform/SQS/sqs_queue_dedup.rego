@@ -1,7 +1,6 @@
 package sqs_queue_dedup
 
 import future.keywords.in
-import future.keywords.every
 
 type = "aws_sqs_queue"
 
