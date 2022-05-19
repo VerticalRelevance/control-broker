@@ -924,7 +924,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         
         self.bucket_terraform_inputs = aws_s3.Bucket(
             self,
-            "CrossCloudInputs",
+            "TerraformInputs",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
             block_public_access=aws_s3.BlockPublicAccess(
@@ -939,7 +939,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         
         self.lambda_invoked_by_apigw_terraform = aws_lambda.Function(
             self,
-            "InvokedByApigwCrossCloud",
+            "InvokedByApigwTerraform",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
@@ -956,7 +956,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                         }
                     }
                 ),
-                "CrossCloudInputsBucket": self.bucket_terraform_inputs.bucket_name
+                "TerraformInputsBucket": self.bucket_terraform_inputs.bucket_name
             },
             layers=[
                 self.layers['requests'],
