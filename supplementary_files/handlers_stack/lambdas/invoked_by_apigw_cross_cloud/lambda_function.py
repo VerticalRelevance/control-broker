@@ -9,43 +9,11 @@ from botocore.exceptions import ClientError
 import requests
 from aws_requests_auth.boto_utils import BotoAWSRequestsAuth
 
+s3 = boto3.client('s3')
+
 session = boto3.session.Session()
 region = session.region_name
 account_id = boto3.client('sts').get_caller_identity().get('Account')
-
-s3 = boto3.client('s3')
-cfn = boto3.client('cloudformation')
-cloudcontrol = boto3.client('cloudcontrol')
-
-def get_object(*,bucket,key):
-    
-    try:
-        r = s3.get_object(
-            Bucket = bucket,
-            Key = key
-        )
-    except ClientError as e:
-        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
-        raise
-    else:
-        print(f'no ClientError get_object:\nbucket:\n{bucket}\nkey:\n{key}')
-        body = r['Body']
-        content = json.loads(body.read().decode('utf-8'))
-        return content
-
-def put_object(*,bucket,key,object_:dict):
-    try:
-        r = s3.put_object(
-            Bucket = bucket,
-            Key = key,
-            Body = json.dumps(object_)
-        )
-    except ClientError as e:
-        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
-        raise
-    else:
-        print(f'no ClientError put_object:\nbucket:\n{bucket}\nkey:\n{key}')
-        return True
 
 class RequestParser():
     
@@ -75,9 +43,9 @@ class RequestParser():
         
         # go to that provided object
         
-        # validate it matches type expected by this handler i.e. CloudFormation
-        self.validated_input_type = "CloudFormation"
-        return "CloudFormation"
+        # validate it matches type expected by this handler
+        self.validated_input_type = "SomeCrossCloudInput"
+        return "SomeCrossCloudInput"
     
     def fail_fast(self):
 
@@ -165,123 +133,7 @@ class RequestParser():
         self.get_consumer_metadata()
         
         self.get_approved_context()
-
-class CloudControl():
-    
-    def __init__(self,type_name,identifier):
-        self.type_name = type_name
-        self.identifier = identifier
-    
-    def get_resource_schema(self,*,resource_type):
-        try:
-            r = cfn.describe_type(
-                Type = 'RESOURCE',
-                TypeName = resource_type,
-            )
-        except cfn.exceptions.TypeNotFoundException:
-            print(f'TypeNotFoundException: {resource_type}')
-            return None
-        except ClientError as e:
-            raise
-        else:
-            schema = json.loads(r['Schema'])
-            print(schema)
-            return schema
-    
-    def cloudcontrol_get(self,*,type_name,identifier):   
-        try:
-            r = cloudcontrol.get_resource(
-                TypeName = type_name,
-                Identifier = identifier
-            )
-        except ClientError as e:
-            print(f'ClientError\n{e}')
-            raise
-        else:
-            properties = json.loads(r['ResourceDescription']['Properties'])
-            print(f'cloudcontrol.get_resource properties\ntype_name:\n{type_name}\nidentifier:\n{identifier}\nProperties:\n{properties}')
-            return properties
-
-    def get_cfn(self):
         
-        cloudcontrol_properties = self.cloudcontrol_get(type_name=self.type_name,identifier=self.identifier)
-        
-        resource_schema = self.get_resource_schema(resource_type=self.type_name)
-        print(f'resource_schema:\n{resource_schema}')
-        
-        schema_properties = resource_schema['properties']
-        
-        read_only_properties = [i.split('/properties/')[1] for i in resource_schema['readOnlyProperties']]
-        for read_only_property in read_only_properties:
-            cloudcontrol_properties.pop(read_only_property,None)
-        
-        cfn = {
-            "Resources" : {
-              "ConfigEventResource" : {
-                "Type" : self.type_name,
-                "Properties" : cloudcontrol_properties,
-              }
-            }
-        }
-        print(f'cfn:\n{cfn}')
-        return cfn
-
-class ConfigEventToCloudFormationConverter():
-    
-    def __init__(
-        self,
-        config_event_input_to_be_evaluated:dict
-    ):
-        
-        self.config_event = config_event_input_to_be_evaluated
-        
-    def parse_config_event(self):
-        
-        print(f'config_event:\n{self.config_event}')
-    
-        invoking_event = json.loads(self.config_event["invokingEvent"])
-        print(f'invoking_event:\n{invoking_event}')
-        
-        configuration_item = invoking_event["configurationItem"]
-        print(f'configuration_item:\n{configuration_item}')
-        
-        item_status = configuration_item["configurationItemStatus"]
-        print(f'item_status:\n{item_status}')
-        
-        self.resource_type = configuration_item['resourceType']
-        print(f'resource_type:\n{self.resource_type}')
-        
-        resource_configuration = configuration_item['configuration']
-        print(f'resource_configuration:\n{resource_configuration}')
-        
-        self.resource_id = configuration_item['resourceId']
-        print(f'resource_id:\n{self.resource_id}')
-    
-    def get_converted_cloudformation(self):
-        
-        c = CloudControl(type_name=self.resource_type,identifier=self.resource_id)
-    
-        self.cfn = c.get_cfn()
-        
-        print(f'cfn:\n{self.cfn}')
-        
-        return self.cfn
-        
-    def get_converted_s3_path(self):
-        
-        self.parse_config_event()
-        self.get_converted_cloudformation()
-        
-        return self.cfn
-    
-def convert_config_event_to_cfn(*,config_event_input_to_be_evaluated):
-        
-    c = ConfigEventToCloudFormationConverter(config_event_input_to_be_evaluated)
-    
-    modified_input_to_be_evaluated = c.get_converted_s3_path()
-    
-    return modified_input_to_be_evaluated
-    
 def sign_request(*,
     full_invoke_url:str,
     region:str,
@@ -320,6 +172,23 @@ def sign_request(*,
     print(f'formatted response:\n{r}')
     
     return True
+
+def put_object(*,bucket,key,object_:dict):
+    
+    print(f'begin put_object\nbucket:\n{bucket}\nkey:\n{key}')
+    
+    try:
+        r = s3.put_object(
+            Bucket = bucket,
+            Key = key,
+            Body = json.dumps(object_)
+        )
+    except ClientError as e:
+        print(f'ClientError:\nbucket:\n{bucket}\nkey:\n{key}\n{e}')
+        raise
+    else:
+        print(f'no ClientError put_object:\nbucket:\n{bucket}\nkey:\n{key}')
+        return True
     
 def generate_uuid():
     return str(uuid.uuid4())
@@ -364,7 +233,7 @@ def format_response_expected_by_consumer(response_expected_by_consumer):
     delete_keys_from_dict(response_expected_by_consumer,['Bucket','Key'])
     
     return response_expected_by_consumer
-
+    
 def lambda_handler(event,context):
     
     print(f'event:\n{event}\ncontext:\n{context}')
@@ -421,27 +290,17 @@ def lambda_handler(event,context):
         }
     }
     
-    original_input_to_be_evaluated = request_json_body['Input']
-    
-    print(f'original_input_to_be_evaluated:\n{original_input_to_be_evaluated}')
-    
-    converted_input_to_be_evaluated_object = convert_config_event_to_cfn(
-        config_event_input_to_be_evaluated = original_input_to_be_evaluated
-    )
-    
-    print(f'converted_input_to_be_evaluated_object:\n{converted_input_to_be_evaluated_object}')
-    
     # set input
     
     input_to_be_evaluated = {
-        'Bucket' : os.environ['ConfigEventsConvertedInputsBucket'],
-        'Key' : evaluation_key,
+        'Bucket':os.environ['CrossCloudInputsBucket'],
+        'Key':evaluation_key
     }
-        
+    
     put_object(
         bucket = input_to_be_evaluated['Bucket'],
         key = input_to_be_evaluated['Key'],
-        object_ = converted_input_to_be_evaluated_object
+        object_ = request_json_body['Input']
     )
     
     eval_engine_input =  {
@@ -466,7 +325,7 @@ def lambda_handler(event,context):
     
     control_broker_request_status = {
         "Request":{
-            "Content": request_json_body,
+            # "Content": request_json_body,
             "Requestor": {
                 "IsAuthorized": r._requestor_is_authorized
             },
