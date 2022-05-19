@@ -1,6 +1,4 @@
-package sqs_queue_dedup
-
-import future.keywords.in
+package terraform_sqs_queue_dedup
 
 type = "aws_sqs_queue"
 
