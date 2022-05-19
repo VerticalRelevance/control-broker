@@ -3,7 +3,7 @@ package terraform_sqs_queue_dedup
 type = "aws_sqs_queue"
 
 rule_applicable {
-    data.ApprovedContext == "Prod"
+    data.ApprovedContext.EnvironmentEvaluation == "Prod"
     data.InputType == "Terraform"
 }
 
