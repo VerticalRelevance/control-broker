@@ -164,29 +164,6 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             event_bridge_enabled=True
         )
         
-        self.bucket_raw_pac_results.add_to_resource_policy(
-            aws_iam.PolicyStatement(
-                principals=[
-                    aws_iam.AnyPrincipal().with_conditions(
-                        {
-                            "ForAnyValue:StringLike": {
-                                "aws:PrincipalOrgPaths": [self.secrets.allowed_org_path]
-                            }
-                        }
-                    )
-                ],
-                actions=[
-                    "s3:GetObject",
-                    "s3:Get*",
-                    "s3:List*",
-                ],
-                resources=[
-                    self.bucket_raw_pac_results.bucket_arn,
-                    self.bucket_raw_pac_results.arn_for_objects("*"),
-                ],
-            )
-        )   
-    
     def output_handler_event_driven(self):
         
         self.bucket_output_handler = aws_s3.Bucket(
