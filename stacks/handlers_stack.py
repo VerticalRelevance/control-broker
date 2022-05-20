@@ -32,7 +32,10 @@ from constructs import Construct
 
 from components.control_broker_api import ControlBrokerApi
 
-class HandlersStack(Stack):
+from utils.mixins import SecretConfigStackMixin
+
+
+class HandlersStack(Stack, SecretConfigStackMixin):
     def __init__(
         self,
         scope: Construct,
@@ -176,6 +179,28 @@ class HandlersStack(Stack):
             ),
             event_bridge_enabled=True
         )
+        self.bucket_output_handler.add_to_resource_policy(
+            aws_iam.PolicyStatement(
+                principals=[
+                    aws_iam.AnyPrincipal().with_conditions(
+                        {
+                            "ForAnyValue:StringLike": {
+                                "aws:PrincipalOrgPaths": [self.secrets.codestar_connection_arn]
+                            }
+                        }
+                    )
+                ],
+                actions=[
+                    "s3:GetObject",
+                    "s3:Get*",
+                    "s3:List*",
+                ],
+                resources=[
+                    self.bucket_output_handler.bucket_arn,
+                    self.bucket_output_handler.arn_for_objects("*"),
+                ],
+            )
+        )   
         
         self.event_bus_infractions = aws_events.EventBus(
             self,

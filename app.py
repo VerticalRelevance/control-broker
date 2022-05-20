@@ -40,6 +40,6 @@ if continuously_deployed:
             "control-broker/continuous-deployment/github-config"
         ),
     )
-    pipeline_stack.pipeline.add_stage(deploy_stage)
+    # pipeline_stack.pipeline.add_stage(deploy_stage)
 
 app.synth()
