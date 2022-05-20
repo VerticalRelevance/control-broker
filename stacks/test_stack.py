@@ -18,8 +18,6 @@ class TestStack(Stack):
     def __init__(
         self,
         *args,
-        control_broker_outer_state_machine: aws_stepfunctions.StateMachine,
-        control_broker_roles: List[aws_iam.Role],
         **kwargs,
     ):
         """Create a TestStack.
@@ -36,25 +34,6 @@ class TestStack(Stack):
             "ControlBrokerCanaryBucket",
             auto_delete_objects=True,
             removal_policy=RemovalPolicy.DESTROY,
-        )
-        for principal in control_broker_roles:
-            canary_bucket.grant_read(
-                aws_iam.ArnPrincipal(principal.role_arn),
-                f"{CANARY_TEST_TEMPLATE_DEST}/*",
-            )
-        control_broker_consumer_policy = aws_iam.ManagedPolicy(
-            self,
-            "ControlBrokerConsumerPolicy",
-            statements=[
-                aws_iam.PolicyStatement(
-                    sid="AllowStartingOuterStepFunction",
-                    actions=[
-                        "states:StartSyncExecution",
-                        "states:StartAsyncExecution",
-                    ],
-                    resources=[control_broker_outer_state_machine.state_machine_arn],
-                )
-            ],
         )
         canary_execution_role = aws_iam.Role(
             self,
@@ -132,7 +111,6 @@ class TestStack(Stack):
                 environment_variables={
                     "CONTROL_BROKER_READABLE_INPUT_BUCKET": canary_bucket.bucket_name,
                     "CONTROL_BROKER_INPUT_PREFIX": CANARY_TEST_TEMPLATE_DEST,
-                    "CONTROL_BROKER_OUTER_STATE_MACHINE_ARN": control_broker_outer_state_machine.state_machine_arn,
                 }
             ),
         )
