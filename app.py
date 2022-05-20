@@ -6,9 +6,19 @@ import aws_cdk as cdk
 from stacks.handlers_stack import HandlersStack
 from stacks.pipeline_stack import GitHubCDKPipelineStack
 
+from utils.environment import is_pipeline_synth
+
 STACK_VERSION = "V0x10x0"
 
 app = cdk.App()
+
+continuously_deployed = (
+    app.node.try_get_context("control-broker/continuous-deployment/enabled")
+    or is_pipeline_synth()
+)
+deploy_stage = None
+if continuously_deployed:
+    deploy_stage = cdk.Stage(app, "Deploy")
 
 env = cdk.Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT"), region=os.getenv("CDK_DEFAULT_REGION")
@@ -21,15 +31,15 @@ handlers_stack = HandlersStack(
     pac_framework=app.node.try_get_context("control-broker/pac-framework"),
 )
 
-if app.node.try_get_context("control-broker/continuous-deployment/enabled"):
-    github_config = app.node.try_get_context("control-broker/continuous-deployment/github-config")
+if continuously_deployed:
     pipeline_stack = GitHubCDKPipelineStack(
         app,
         f"CBPipelineStack{STACK_VERSION}",
         env=env,
-        github_repo_name = github_config["github_repo_name"],
-        github_repo_owner = github_config["github_repo_owner"],
-        github_repo_branch = github_config["github_repo_branch"],
+        **app.node.try_get_context(
+            "control-broker/continuous-deployment/github-config"
+        ),
     )
+    pipeline_stack.pipeline.add_stage(deploy_stage)
 
 app.synth()

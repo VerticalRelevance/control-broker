@@ -11,7 +11,7 @@ class SecretConfigJson:
 
     @property
     def codestar_connection_arn(self) -> SecretValue:
-        """Connect to GitHub for Pipeline Stack.
+        """For Pipeline Stack
 
         :return: Value defined at the JSON key "codestar_connection_arn"
         :rtype: SecretValue
