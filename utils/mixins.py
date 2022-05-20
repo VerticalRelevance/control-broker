@@ -10,13 +10,13 @@ class SecretConfigJson:
         return SecretValue.secrets_manager(self.secret_id, json_field=json_field)
 
     @property
-    def allowed_org_path(self) -> SecretValue:
-        """The org path to use for IAM policies that restrict access to some Org/OU.
+    def codestar_connection_arn(self) -> SecretValue:
+        """Connect to GitHub for Pipeline Stack.
 
-        :return: Value defined at the JSON key "allowed_org_path"
+        :return: Value defined at the JSON key "codestar_connection_arn"
         :rtype: SecretValue
         """
-        return self._get_secret_value("allowed_org_path")
+        return self._get_secret_value("codestar_connection_arn")
 
 
 class SecretConfigStackMixin:
