@@ -943,75 +943,75 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             )
         )
     
-    # def input_handler_sam(self):
+    def input_handler_sam(self):
         
-    #     self.bucket_terraform_inputs = aws_s3.Bucket(
-    #         self,
-    #         "TerraformInputs",
-    #         removal_policy=RemovalPolicy.DESTROY,
-    #         auto_delete_objects=True,
-    #         block_public_access=aws_s3.BlockPublicAccess(
-    #             block_public_acls=True,
-    #             ignore_public_acls=True,
-    #             block_public_policy=True,
-    #             restrict_public_buckets=True,
-    #         ),
-    #     )
+        self.bucket_sam_inputs = aws_s3.Bucket(
+            self,
+            "SAMInputs",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
         
-    #     # invoked by terraform
+        # invoked by terraform
         
-    #     self.lambda_invoked_by_apigw_terraform = aws_lambda.Function(
-    #         self,
-    #         "InvokedByApigwTerraform",
-    #         runtime=aws_lambda.Runtime.PYTHON_3_9,
-    #         handler="lambda_function.lambda_handler",
-    #         timeout=Duration.seconds(60),
-    #         memory_size=1024,
-    #         code=aws_lambda.Code.from_asset(
-    #             "./supplementary_files/handlers_stack/lambdas/invoked_by_apigw_terraform"
-    #         ),
-    #         environment={
-    #             "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
-    #             "OutputHandlers": json.dumps(
-    #                 {
-    #                     "OPA": {
-    #                         "Bucket": self.bucket_output_handler.bucket_name
-    #                     }
-    #                 }
-    #             ),
-    #             "TerraformInputsBucket": self.bucket_terraform_inputs.bucket_name
-    #         },
-    #         layers=[
-    #             self.layers['requests'],
-    #             self.layers['aws_requests_auth']
-    #         ]
-    #     )
+        self.lambda_invoked_by_apigw_sam = aws_lambda.Function(
+            self,
+            "InvokedByApigwTerraform",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/handlers_stack/lambdas/invoked_by_apigw_terraform"
+            ),
+            environment={
+                "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
+                "OutputHandlers": json.dumps(
+                    {
+                        "OPA": {
+                            "Bucket": self.bucket_output_handler.bucket_name
+                        }
+                    }
+                ),
+                "TerraformInputsBucket": self.bucket_sam_inputs.bucket_name
+            },
+            layers=[
+                self.layers['requests'],
+                self.layers['aws_requests_auth']
+            ]
+        )
     
-    #     self.lambda_invoked_by_apigw_terraform.role.add_to_policy(
-    #         aws_iam.PolicyStatement(
-    #             actions=[
-    #                 "s3:PutObject",
-    #             ],
-    #             resources=[
-    #                 self.bucket_terraform_inputs.bucket_arn,
-    #                 self.bucket_terraform_inputs.arn_for_objects("*"),
-    #             ],
-    #         )
-    #     )
+        self.lambda_invoked_by_apigw_sam.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                ],
+                resources=[
+                    self.bucket_sam_inputs.bucket_arn,
+                    self.bucket_sam_inputs.arn_for_objects("*"),
+                ],
+            )
+        )
         
-    #     self.lambda_invoked_by_apigw_terraform.role.add_to_policy(
-    #         aws_iam.PolicyStatement(
-    #             actions=[
-    #                 "s3:GetObject", # required to generate presigned url for get_object ClientMethod
-    #             ],
-    #             resources=[
-    #                 self.bucket_raw_pac_results.bucket_arn,
-    #                 self.bucket_raw_pac_results.arn_for_objects("*"),
-    #                 self.bucket_output_handler.bucket_arn,
-    #                 self.bucket_output_handler.arn_for_objects("*"),
-    #             ],
-    #         )
-    #     )
+        self.lambda_invoked_by_apigw_sam.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject", # required to generate presigned url for get_object ClientMethod
+                ],
+                resources=[
+                    self.bucket_raw_pac_results.bucket_arn,
+                    self.bucket_raw_pac_results.arn_for_objects("*"),
+                    self.bucket_output_handler.bucket_arn,
+                    self.bucket_output_handler.arn_for_objects("*"),
+                ],
+            )
+        )
         
     def eval_engine(self):
 
@@ -1051,8 +1051,8 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                     self.bucket_cloudformation_raw_inputs.arn_for_objects("*"),
                     self.bucket_cross_cloud_inputs.bucket_arn,
                     self.bucket_cross_cloud_inputs.arn_for_objects("*"),
-                    self.bucket_terraform_inputs.bucket_arn,
-                    self.bucket_terraform_inputs.arn_for_objects("*"),
+                    self.bucket_sam_inputs.bucket_arn,
+                    self.bucket_sam_inputs.arn_for_objects("*"),
                 ],
             )
         )
@@ -1092,7 +1092,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             "Terraform", self.lambda_invoked_by_apigw_terraform, "/Terraform"
         )
         
-        # handler_url_cloudformation = self.api.add_api_handler(
-        #     "SAM", self.lambda_invoked_by_apigw_sam, "/SAM"
-        # )
+        handler_url_cloudformation = self.api.add_api_handler(
+            "SAM", self.lambda_invoked_by_apigw_sam, "/SAM"
+        )
         
