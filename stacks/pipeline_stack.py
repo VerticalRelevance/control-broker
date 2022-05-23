@@ -118,5 +118,3 @@ class GitHubCDKPipelineStack(Stack, SecretConfigStackMixin):
             publish_assets_in_parallel=False,
             docker_enabled_for_synth=True,
         )
-        
-        pass
