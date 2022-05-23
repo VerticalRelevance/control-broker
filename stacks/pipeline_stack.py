@@ -3,13 +3,16 @@ import boto3
 from aws_cdk import (
     ArnFormat,
     Stack,
+    CfnOutput,
     aws_codestarconnections as codestarconnections,
     aws_iam as iam,
     pipelines as pipelines,
 )
 from constructs import Construct
 
-class GitHubCDKPipelineStack(Stack):
+from utils.mixins import SecretConfigStackMixin
+
+class GitHubCDKPipelineStack(Stack, SecretConfigStackMixin):
     """Create a CDK Pipelines CodePipeline using a GitHub repo via a CodeStar Connection.
 
     Optionally allows using a pre-existing CodeStar Connection via a SecretsManager Secret containing
@@ -52,49 +55,52 @@ class GitHubCDKPipelineStack(Stack):
         # Create codestar connection to connect pipeline to git.
         # The connector name is sliced here because the max length
         # of the connection_name attribute is 32.
-        connection_name = github_repo_name[:31]
-        if codestar_connection_arn_secret_id:
-            secrets_client = boto3.client("secretsmanager")
-            codestar_connection_arn = secrets_client.get_secret_value(
-                SecretId=codestar_connection_arn_secret_id
-            )["SecretString"]
-        else:
-            codestar_connection = codestarconnections.CfnConnection(
-                self,
-                connection_name,
-                connection_name=connection_name,
-                provider_type="GitHub",
-            )
-            codestar_connection_arn = codestar_connection.get_att(
-                "ConnectionArn"
-            ).to_string()
+        # connection_name = github_repo_name[:31]
+        
+        
+        # if codestar_connection_arn_secret_id:
+        #     secrets_client = boto3.client("secretsmanager")
+        #     codestar_connection_arn = secrets_client.get_secret_value(
+        #         SecretId=codestar_connection_arn_secret_id
+        #     )["SecretString"]
+        # else:
+        #     codestar_connection_arn = self.secrets.codestar_connection_arn
+        #     # codestar_connection = codestarconnections.CfnConnection(
+        #     #     self,
+        #     #     connection_name,
+        #     #     connection_name=connection_name,
+        #     #     provider_type="GitHub",
+        #     # )
+        #     # codestar_connection_arn = codestar_connection.get_att(
+        #     #     "ConnectionArn"
+        #     # ).to_string()
 
-        if codestar_connection_arn_secret_id:
-            ssm_statement = iam.PolicyStatement(
-                actions=["secretsmanager:GetSecretValue"],
-                resources=["*"],
-                conditions={
-                    "StringLike": {
-                        "secretsmanager:SecretId": self.format_arn(
-                            resource="secret",
-                            service="secretsmanager",
-                            resource_name=f"*{codestar_connection_arn_secret_id}*",
-                            arn_format=ArnFormat.COLON_RESOURCE_NAME,
-                        )
-                    }
-                },
-            )
-            if additional_synth_iam_statements is None:
-                additional_synth_iam_statements = [ssm_statement]
-            elif isinstance(additional_synth_iam_statements, list):
-                additional_synth_iam_statements.append(ssm_statement)
+        # if codestar_connection_arn_secret_id:
+        #     ssm_statement = iam.PolicyStatement(
+        #         actions=["secretsmanager:GetSecretValue"],
+        #         resources=["*"],
+        #         conditions={
+        #             "StringLike": {
+        #                 "secretsmanager:SecretId": self.format_arn(
+        #                     resource="secret",
+        #                     service="secretsmanager",
+        #                     resource_name=f"*{codestar_connection_arn_secret_id}*",
+        #                     arn_format=ArnFormat.COLON_RESOURCE_NAME,
+        #                 )
+        #             }
+        #         },
+        #     )
+        #     if additional_synth_iam_statements is None:
+        #         additional_synth_iam_statements = [ssm_statement]
+        #     elif isinstance(additional_synth_iam_statements, list):
+        #         additional_synth_iam_statements.append(ssm_statement)
 
         pipeline_synth_action = pipelines.ShellStep(
             "Synth",
             input=pipelines.CodePipelineSource.connection(
                 f"{github_repo_owner}/{github_repo_name}",
                 github_repo_branch,
-                connection_arn=codestar_connection_arn,
+                connection_arn=self.secrets.codestar_connection_arn.to_string(),
             ),
             commands=[
                 "npm install -g aws-cdk",  # Installs the cdk cli on Codebuild
