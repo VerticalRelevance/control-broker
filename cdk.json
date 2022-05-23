@@ -26,13 +26,13 @@
       "aws"
     ],
     "performance-testing-example-template": "supplementary_files/ExampleStack.template.json",
-    "control-broker/continuous-deployment/enabled": false,
+    "control-broker/continuous-deployment/enabled": true,
     "control-broker/continuous-deployment/github-config": {
       "github_repo_name": "control-broker",
-      "github_repo_owner": "VerticalRelevance"
+      "github_repo_owner": "VerticalRelevance",
+      "github_repo_branch": "main"
     },
     "control-broker/post-deployment-testing/enabled": false,
-    "control-broker/client/enabled": true,
     "control-broker/secret-config/secrets-manager-secret-id": "control-broker/secret-config",
     "control-broker/pac-framework":"OPA"
   }
