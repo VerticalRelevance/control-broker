@@ -156,8 +156,6 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             block_public_access=aws_s3.BlockPublicAccess(
                 block_public_acls=True,
                 ignore_public_acls=True,
-                # block_public_policy=True,
-                # restrict_public_buckets=True,
                 block_public_policy=False,
                 restrict_public_buckets=False,
             ),
@@ -179,28 +177,6 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             ),
             event_bridge_enabled=True
         )
-        self.bucket_output_handler.add_to_resource_policy(
-            aws_iam.PolicyStatement(
-                principals=[
-                    aws_iam.AnyPrincipal().with_conditions(
-                        {
-                            "ForAnyValue:StringLike": {
-                                "aws:PrincipalOrgPaths": [self.secrets.codestar_connection_arn]
-                            }
-                        }
-                    )
-                ],
-                actions=[
-                    "s3:GetObject",
-                    "s3:Get*",
-                    "s3:List*",
-                ],
-                resources=[
-                    self.bucket_output_handler.bucket_arn,
-                    self.bucket_output_handler.arn_for_objects("*"),
-                ],
-            )
-        )   
         
         self.event_bus_infractions = aws_events.EventBus(
             self,
