@@ -24,7 +24,7 @@ Please note that this software is meant as a starting point and is therefore not
 
 * [Using the Control Broker from a CodePipeline application pipeline to block deployment of non-compliant CDK resources](https://github.com/VerticalRelevance/control-broker-codepipeline-example)
 * [Using the Control Broker to detect non-compliant changes to deployed resources with AWS Config](https://github.com/VerticalRelevance/control-broker-consumer-example-config)
-* (TODO - make demo)[Using the Control Broker from a development machine to evaluate IaC against the organization's latest security policies as it is being written]()
+* [Using the Control Broker from a development machine to evaluate IaC against the organization's latest security policies as it is being written](https://github.com/VerticalRelevance/control-broker-consumer-example-local-dev)
 
 ## Deploying Your Own Control Broker
 
