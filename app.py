@@ -3,7 +3,7 @@ import os
 
 import aws_cdk as cdk
 
-from stacks.handlers_stack import HandlersStack
+from stacks.control_broker_stack import ControlBrokerStack
 from stacks.pipeline_stack import GitHubCDKPipelineStack
 
 from git import Repo
@@ -26,7 +26,7 @@ env = cdk.Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT"), region=os.getenv("CDK_DEFAULT_REGION")
 )
 
-handlers_stack = HandlersStack(
+handlers_stack = ControlBrokerStack(
     deploy_stage or app,
     f"CBHandlersStack{STACK_VERSION}",
     env=env,
@@ -34,10 +34,6 @@ handlers_stack = HandlersStack(
 )
 
 if continuously_deployed:
-    # try:
-    #     current_branch = Repo().active_branch.name
-    # except TypeError:
-    #     current_branch = None
     pipeline_stack = GitHubCDKPipelineStack(
         app,
         f"CBCICDDeployment{STACK_VERSION}",
@@ -45,7 +41,6 @@ if continuously_deployed:
         **app.node.try_get_context(
             "control-broker/continuous-deployment/github-config"
         ),
-        # github_repo_branch=current_branch
     )
     pipeline_stack.pipeline.add_stage(deploy_stage)
 
