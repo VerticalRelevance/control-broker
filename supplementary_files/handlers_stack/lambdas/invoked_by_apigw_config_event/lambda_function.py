@@ -75,9 +75,9 @@ class RequestParser():
         
         # go to that provided object
         
-        # validate it matches type expected by this handler i.e. CloudFormation
+        # validate it matches type expected by this handler
         self.validated_input_type = "CloudFormation"
-        return "CloudFormation"
+        return self.validated_input_type
     
     def fail_fast(self):
 
@@ -409,12 +409,12 @@ def lambda_handler(event,context):
                 "Key": evaluation_key
             },
             "OutputHandlers":{
-                "CloudFormationOPA": {
+                "OPA": {
                     "PresignedUrl": generate_presigned_url(
-                        bucket = json.loads(os.environ['OutputHandlers'])['CloudFormationOPA']['Bucket'],
+                        bucket = json.loads(os.environ['OutputHandlers'])['OPA']['Bucket'],
                         key = evaluation_key
                     ),
-                    "Bucket": json.loads(os.environ['OutputHandlers'])['CloudFormationOPA']['Bucket'],
+                    "Bucket": json.loads(os.environ['OutputHandlers'])['OPA']['Bucket'],
                     "Key": evaluation_key
                 }
             }
