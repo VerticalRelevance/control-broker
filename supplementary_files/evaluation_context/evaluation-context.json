@@ -1,0 +1,11 @@
+{
+    "EvaluationContext":{
+        "Allowed": {
+            "SQS": {
+                "Queue": {
+                    "ContentBasedDeduplication":true
+                }
+            }
+        }
+    }
+}
