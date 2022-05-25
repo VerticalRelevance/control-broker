@@ -74,7 +74,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         self.input_handler_config_event()
         self.input_handler_cross_cloud_custom_auth()
         self.input_handler_terraform()
-        # self.input_handler_sam()
+        self.input_handler_sam()
         
         self.eval_engine()
         
@@ -958,17 +958,17 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             ),
         )
         
-        # invoked by terraform
+        # invoked by sam
         
         self.lambda_invoked_by_apigw_sam = aws_lambda.Function(
             self,
-            "InvokedByApigwTerraform",
+            "InvokedByApigwSAM",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/handlers_stack/lambdas/invoked_by_apigw_terraform"
+                "./supplementary_files/handlers_stack/lambdas/invoked_by_apigw_sam"
             ),
             environment={
                 "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
@@ -979,7 +979,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                         }
                     }
                 ),
-                "TerraformInputsBucket": self.bucket_sam_inputs.bucket_name
+                "SAMInputsBucket": self.bucket_sam_inputs.bucket_name
             },
             layers=[
                 self.layers['requests'],

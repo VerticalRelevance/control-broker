@@ -285,7 +285,7 @@ def lambda_handler(event,context):
     # set input
     
     input_to_be_evaluated = {
-        'Bucket':os.environ['CloudFormationRawInputsBucket'],
+        'Bucket':os.environ['SAMInputsBucket'],
         'Key':evaluation_key
     }
     
