@@ -10,7 +10,7 @@ from git import Repo
 
 from utils.environment import is_pipeline_synth
 
-STACK_VERSION = "V0x10x0"
+STACK_VERSION = "V0x10x1"
 
 app = cdk.App()
 
