@@ -26,9 +26,9 @@ env = cdk.Environment(
     account=os.getenv("CDK_DEFAULT_ACCOUNT"), region=os.getenv("CDK_DEFAULT_REGION")
 )
 
-handlers_stack = ControlBrokerStack(
+control_broker_stack = ControlBrokerStack(
     deploy_stage or app,
-    f"CBHandlersStack{STACK_VERSION}",
+    f"ControlBroker{STACK_VERSION}",
     env=env,
     pac_framework=app.node.try_get_context("control-broker/pac-framework"),
 )
