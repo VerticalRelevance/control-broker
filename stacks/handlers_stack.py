@@ -73,6 +73,8 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         self.input_handler_cloudformation()
         self.input_handler_config_event()
         self.input_handler_cross_cloud_custom_auth()
+        self.input_handler_terraform()
+        self.input_handler_sam()
         
         self.eval_engine()
         
@@ -155,37 +157,12 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             block_public_access=aws_s3.BlockPublicAccess(
                 block_public_acls=True,
                 ignore_public_acls=True,
-                # block_public_policy=True,
-                # restrict_public_buckets=True,
                 block_public_policy=False,
                 restrict_public_buckets=False,
             ),
             event_bridge_enabled=True
         )
         
-        self.bucket_raw_pac_results.add_to_resource_policy(
-            aws_iam.PolicyStatement(
-                principals=[
-                    aws_iam.AnyPrincipal().with_conditions(
-                        {
-                            "ForAnyValue:StringLike": {
-                                "aws:PrincipalOrgPaths": [self.secrets.allowed_org_path]
-                            }
-                        }
-                    )
-                ],
-                actions=[
-                    "s3:GetObject",
-                    "s3:Get*",
-                    "s3:List*",
-                ],
-                resources=[
-                    self.bucket_raw_pac_results.bucket_arn,
-                    self.bucket_raw_pac_results.arn_for_objects("*"),
-                ],
-            )
-        )   
-    
     def output_handler_event_driven(self):
         
         self.bucket_output_handler = aws_s3.Bucket(
@@ -201,29 +178,6 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             ),
             event_bridge_enabled=True
         )
-        self.bucket_output_handler.add_to_resource_policy(
-            aws_iam.PolicyStatement(
-                principals=[
-                    aws_iam.AnyPrincipal().with_conditions(
-                        {
-                            "ForAnyValue:StringLike": {
-                                "aws:PrincipalOrgPaths": [self.secrets.allowed_org_path]
-                            }
-                        }
-                    )
-                ],
-                actions=[
-                    "s3:GetObject",
-                    "s3:Get*",
-                    "s3:List*",
-                ],
-                resources=[
-                    self.bucket_output_handler.bucket_arn,
-                    self.bucket_output_handler.arn_for_objects("*"),
-                ],
-            )
-        )   
-        
         
         self.event_bus_infractions = aws_events.EventBus(
             self,
@@ -255,15 +209,15 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         
         # output handler - event-driven
         
-        self.lambda_output_handler_event_driven = aws_lambda.Function(
+        self.lambda_output_handler_opa = aws_lambda.Function(
             self,
-            "OutputHandlerEventDriven",
+            "OutputHandlerOPA",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
-                "./supplementary_files/handlers_stack/lambdas/output_handler/event_driven"
+                "./supplementary_files/handlers_stack/lambdas/output_handlers/OPA"
             ),
             environment={
                 "InfractionsEventBusName":self.event_bus_infractions.event_bus_name,
@@ -271,7 +225,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             },
         )
         
-        self.lambda_output_handler_event_driven.role.add_to_policy(
+        self.lambda_output_handler_opa.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:GetObject",
@@ -284,7 +238,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 ],
             )
         )
-        self.lambda_output_handler_event_driven.role.add_to_policy(
+        self.lambda_output_handler_opa.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:PutObject",
@@ -298,7 +252,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             )
         )
         
-        self.lambda_output_handler_event_driven.role.add_to_policy(
+        self.lambda_output_handler_opa.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "events:PutEvents",
@@ -311,109 +265,10 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         )
         
         self.bucket_raw_pac_results.add_event_notification(aws_s3.EventType.OBJECT_CREATED,
-            aws_s3_notifications.LambdaDestination(self.lambda_output_handler_event_driven),
+            aws_s3_notifications.LambdaDestination(self.lambda_output_handler_opa),
             # prefix="home/myusername/*"
         )
 
-    def output_handler_s3_object_lambda(self):
-        
-        self.lambda_output_handler_s3_object_lambda = aws_lambda.Function(
-            self,
-            "OutputHandlerS3ObjectLambda",
-            runtime=aws_lambda.Runtime.PYTHON_3_9,
-            handler="lambda_function.lambda_handler",
-            timeout=Duration.seconds(60),
-            memory_size=1024,
-            code=aws_lambda.Code.from_asset(
-                "./supplementary_files/handlers_stack/lambdas/output_handler/s3_object_lambda"
-            ),
-            layers=[
-                self.layers['requests']
-            ],
-            environment={
-                "InfractionsEventBusName":self.event_bus_infractions.event_bus_name
-            },
-        )
-        
-        
-        self.lambda_output_handler_s3_object_lambda.role.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    "s3:GetObject",
-                    "s3:GetBucket",
-                    "s3:List*",
-                ],
-                resources=[
-                    self.bucket_raw_pac_results.bucket_arn,
-                    self.bucket_raw_pac_results.arn_for_objects("*"),
-                ],
-            )
-        )
-        
-        self.lambda_output_handler_s3_object_lambda.role.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    "s3:WriteGetObjectResponse",
-                ],
-                resources=["*"],
-            )
-        )
-        
-        self.lambda_output_handler_s3_object_lambda.role.add_to_policy(
-            aws_iam.PolicyStatement(
-                actions=[
-                    "events:PutEvents",
-                ],
-                resources=[
-                    self.event_bus_infractions.event_bus_arn,
-                    f"{self.event_bus_infractions.event_bus_arn}*",
-                ],
-            )
-        )
-        
-        self.access_point = aws_s3objectlambda_alpha.AccessPoint(
-            self,
-            "OuputHandlerCloudFormationOPA",
-            bucket=self.bucket_raw_pac_results,
-            handler=self.lambda_output_handler_s3_object_lambda,
-            access_point_name="ouput-handler-cloudformation-opa",
-            # payload={
-            #     "prop": "value"
-            # }
-        )
-
-        # policy_document_access_point = aws_iam.PolicyStatement(
-        #     principals=[
-        #         aws_iam.AnyPrincipal().with_conditions(
-        #             {
-        #                 "ForAnyValue:StringLike": {
-        #                     "aws:PrincipalOrgPaths": [
-        #                         # self.secrets.allowed_org_path,
-        #                         "o-9txpghbplo/*"
-        #                         ]
-        #                 }
-        #             }
-        #         )
-        #     ],
-        #     actions=[
-        #         "s3:GetObject",
-        #     ],
-        #     resources=["*"
-        #         # self.bucket_raw_pac_results.bucket_arn,
-        #         # self.bucket_raw_pac_results.arn_for_objects("*"),
-        #     ],
-        # )
-
-        # cfn_access_point_policy = aws_s3objectlambda.CfnAccessPointPolicy(
-        #     self,
-        #     "OuputHandlerSameOrgPolicy",
-        #     object_lambda_access_point=self.access_point.access_point_name,
-        #     policy_document=policy_document_access_point.to_json()
-        #     # policy_document={}
-        # )
-
-        CfnOutput(self, "OuputHandlerCloudFormationOPAAccessPointArn", value=self.access_point.access_point_arn)
-        
     def authorizer_lambda(self):
 
         # auth - lambda
@@ -471,7 +326,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
                 "OutputHandlers": json.dumps(
                     {
-                        "CloudFormationOPA": {
+                        "OPA": {
                             "Bucket": self.bucket_output_handler.bucket_name
                         }
                     }
@@ -552,7 +407,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
                 "OutputHandlers": json.dumps(
                     {
-                        "CloudFormationOPA": {
+                        "OPA": {
                             "Bucket": self.bucket_output_handler.bucket_name
                         }
                     }
@@ -979,7 +834,7 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                 "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
                 "OutputHandlers": json.dumps(
                     {
-                        "CloudFormationOPA": {
+                        "OPA": {
                             "Bucket": self.bucket_output_handler.bucket_name
                         }
                     }
@@ -1005,6 +860,146 @@ class HandlersStack(Stack, SecretConfigStackMixin):
         )
         
         self.lambda_invoked_by_apigw_cross_cloud.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject", # required to generate presigned url for get_object ClientMethod
+                ],
+                resources=[
+                    self.bucket_raw_pac_results.bucket_arn,
+                    self.bucket_raw_pac_results.arn_for_objects("*"),
+                    self.bucket_output_handler.bucket_arn,
+                    self.bucket_output_handler.arn_for_objects("*"),
+                ],
+            )
+        )
+    
+    def input_handler_terraform(self):
+        
+        self.bucket_terraform_inputs = aws_s3.Bucket(
+            self,
+            "TerraformInputs",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+        
+        # invoked by terraform
+        
+        self.lambda_invoked_by_apigw_terraform = aws_lambda.Function(
+            self,
+            "InvokedByApigwTerraform",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/handlers_stack/lambdas/invoked_by_apigw_terraform"
+            ),
+            environment={
+                "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
+                "OutputHandlers": json.dumps(
+                    {
+                        "OPA": {
+                            "Bucket": self.bucket_output_handler.bucket_name
+                        }
+                    }
+                ),
+                "TerraformInputsBucket": self.bucket_terraform_inputs.bucket_name
+            },
+            layers=[
+                self.layers['requests'],
+                self.layers['aws_requests_auth']
+            ]
+        )
+    
+        self.lambda_invoked_by_apigw_terraform.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                ],
+                resources=[
+                    self.bucket_terraform_inputs.bucket_arn,
+                    self.bucket_terraform_inputs.arn_for_objects("*"),
+                ],
+            )
+        )
+        
+        self.lambda_invoked_by_apigw_terraform.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:GetObject", # required to generate presigned url for get_object ClientMethod
+                ],
+                resources=[
+                    self.bucket_raw_pac_results.bucket_arn,
+                    self.bucket_raw_pac_results.arn_for_objects("*"),
+                    self.bucket_output_handler.bucket_arn,
+                    self.bucket_output_handler.arn_for_objects("*"),
+                ],
+            )
+        )
+    
+    def input_handler_sam(self):
+        
+        self.bucket_sam_inputs = aws_s3.Bucket(
+            self,
+            "SAMInputs",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+        
+        # invoked by sam
+        
+        self.lambda_invoked_by_apigw_sam = aws_lambda.Function(
+            self,
+            "InvokedByApigwSAM",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/handlers_stack/lambdas/invoked_by_apigw_sam"
+            ),
+            environment={
+                "RawPaCResultsBucket": self.bucket_raw_pac_results.bucket_name,
+                "OutputHandlers": json.dumps(
+                    {
+                        "OPA": {
+                            "Bucket": self.bucket_output_handler.bucket_name
+                        }
+                    }
+                ),
+                "SAMInputsBucket": self.bucket_sam_inputs.bucket_name
+            },
+            layers=[
+                self.layers['requests'],
+                self.layers['aws_requests_auth']
+            ]
+        )
+    
+        self.lambda_invoked_by_apigw_sam.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:PutObject",
+                ],
+                resources=[
+                    self.bucket_sam_inputs.bucket_arn,
+                    self.bucket_sam_inputs.arn_for_objects("*"),
+                ],
+            )
+        )
+        
+        self.lambda_invoked_by_apigw_sam.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
                     "s3:GetObject", # required to generate presigned url for get_object ClientMethod
@@ -1056,6 +1051,8 @@ class HandlersStack(Stack, SecretConfigStackMixin):
                     self.bucket_cloudformation_raw_inputs.arn_for_objects("*"),
                     self.bucket_cross_cloud_inputs.bucket_arn,
                     self.bucket_cross_cloud_inputs.arn_for_objects("*"),
+                    self.bucket_sam_inputs.bucket_arn,
+                    self.bucket_sam_inputs.arn_for_objects("*"),
                 ],
             )
         )
@@ -1091,4 +1088,11 @@ class HandlersStack(Stack, SecretConfigStackMixin):
             authorizer = self.authorizer_lambda_cross_cloud
         )
         
+        handler_url_cloudformation = self.api.add_api_handler(
+            "Terraform", self.lambda_invoked_by_apigw_terraform, "/Terraform"
+        )
+        
+        handler_url_cloudformation = self.api.add_api_handler(
+            "SAM", self.lambda_invoked_by_apigw_sam, "/SAM"
+        )
         
