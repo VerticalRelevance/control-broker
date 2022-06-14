@@ -1100,7 +1100,7 @@ class ControlBrokerStack(Stack, SecretConfigStackMixin):
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
             timeout=Duration.seconds(60),
-            memory_size=10240, # TODO power-tune
+            memory_size=3008, # TODO power-tune
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/lambdas/eval_engine_lambdalith"
             ),
