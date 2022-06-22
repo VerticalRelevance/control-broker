@@ -5,6 +5,10 @@
       "type": "build"
     },
     {
+      "name": "@types/jest==^27.0.0",
+      "type": "build"
+    },
+    {
       "name": "@types/node",
       "version": "^14",
       "type": "build"
@@ -97,6 +101,7 @@
     },
     {
       "name": "typescript",
+      "version": "4.7.3",
       "type": "build"
     },
     {
