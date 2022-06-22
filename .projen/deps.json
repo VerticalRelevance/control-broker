@@ -2,10 +2,7 @@
   "dependencies": [
     {
       "name": "@types/jest",
-      "type": "build"
-    },
-    {
-      "name": "@types/jest==^27.0.0",
+      "version": "^27.0.0",
       "type": "build"
     },
     {
@@ -83,6 +80,10 @@
     {
       "name": "npm-check-updates",
       "version": "^12",
+      "type": "build"
+    },
+    {
+      "name": "prettier-eslint",
       "type": "build"
     },
     {
