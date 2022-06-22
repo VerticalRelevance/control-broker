@@ -1,10 +1,10 @@
 const { awscdk } = require('projen');
 const project = new awscdk.AwsCdkConstructLibrary({
-  author: 'Eddie Peters',
-  authorAddress: 'eddie@dinogalactic.com',
-  cdkVersion: '2.1.0',
+  author: 'Clark Schneider',
+  authorAddress: 'cschneider@verticalrelevance.com',
+  cdkVersion: '2.28.1',
   defaultReleaseBranch: 'main',
-  name: 'control-broker-ts',
+  name: 'control-broker',
   repositoryUrl: 'git@github.com:verticalrelevance/control-broker',
 
   // deps: [],                /* Runtime dependencies of this module. */
