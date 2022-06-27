@@ -17,6 +17,7 @@ const project = new awscdk.AwsCdkConstructLibrary({
     distName: 'control-broker',
     module: 'control_broker',
   },
+  homepage: 'https://github.com/VerticalRelevance/control-broker/',
 });
 
 project.addDevDeps('@types/jest@^27.0.0', 'prettier-eslint');
