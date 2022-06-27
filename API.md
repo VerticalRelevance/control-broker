@@ -465,9 +465,6 @@ Returns `undefined` if `createDefaultStage` is unset.
 ---
 
 
-
-## Classes <a name="Classes" id="Classes"></a>
-
 ### ControlBroker <a name="ControlBroker" id="control-broker.ControlBroker"></a>
 
 #### Initializers <a name="Initializers" id="control-broker.ControlBroker.Initializer"></a>
@@ -475,14 +472,97 @@ Returns `undefined` if `createDefaultStage` is unset.
 ```typescript
 import { ControlBroker } from 'control-broker'
 
-new ControlBroker()
+new ControlBroker(scope: Construct, id: string)
 ```
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
+| <code><a href="#control-broker.ControlBroker.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | The scope in which to define this construct. |
+| <code><a href="#control-broker.ControlBroker.Initializer.parameter.id">id</a></code> | <code>string</code> | The scoped construct ID. |
 
 ---
 
+##### `scope`<sup>Required</sup> <a name="scope" id="control-broker.ControlBroker.Initializer.parameter.scope"></a>
+
+- *Type:* constructs.Construct
+
+The scope in which to define this construct.
+
+---
+
+##### `id`<sup>Required</sup> <a name="id" id="control-broker.ControlBroker.Initializer.parameter.id"></a>
+
+- *Type:* string
+
+The scoped construct ID.
+
+Must be unique amongst siblings. If
+the ID includes a path separator (`/`), then it will be replaced by double
+dash `--`.
+
+---
+
+#### Methods <a name="Methods" id="Methods"></a>
+
+| **Name** | **Description** |
+| --- | --- |
+| <code><a href="#control-broker.ControlBroker.toString">toString</a></code> | Returns a string representation of this construct. |
+
+---
+
+##### `toString` <a name="toString" id="control-broker.ControlBroker.toString"></a>
+
+```typescript
+public toString(): string
+```
+
+Returns a string representation of this construct.
+
+#### Static Functions <a name="Static Functions" id="Static Functions"></a>
+
+| **Name** | **Description** |
+| --- | --- |
+| <code><a href="#control-broker.ControlBroker.isConstruct">isConstruct</a></code> | Checks if `x` is a construct. |
+
+---
+
+##### ~~`isConstruct`~~ <a name="isConstruct" id="control-broker.ControlBroker.isConstruct"></a>
+
+```typescript
+import { ControlBroker } from 'control-broker'
+
+ControlBroker.isConstruct(x: any)
+```
+
+Checks if `x` is a construct.
+
+###### `x`<sup>Required</sup> <a name="x" id="control-broker.ControlBroker.isConstruct.parameter.x"></a>
+
+- *Type:* any
+
+Any object.
+
+---
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.ControlBroker.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
+
+---
+
+##### `node`<sup>Required</sup> <a name="node" id="control-broker.ControlBroker.property.node"></a>
+
+```typescript
+public readonly node: Node;
+```
+
+- *Type:* constructs.Node
+
+The tree node.
+
+---
 
 
 
