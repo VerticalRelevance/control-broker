@@ -6,7 +6,7 @@ const project = new awscdk.AwsCdkConstructLibrary({
   defaultReleaseBranch: 'main',
   releaseBranches: { release: { majorVersion: 0 } },
   name: 'control-broker',
-  repositoryUrl: 'git@github.com:verticalrelevance/control-broker',
+  repositoryUrl: 'https://github.com/VerticalRelevance/control-broker.git',
   typescriptVersion: '4.7.3',
   deps: ['@aws-cdk/aws-apigatewayv2-alpha@2.28.1-alpha.0'],
   description:
