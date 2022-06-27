@@ -6,4 +6,4 @@
  * example/test apps that use these constructs.
  */
 
-export * from './constructs/index';
+export * from './constructs';
