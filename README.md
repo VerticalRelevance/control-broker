@@ -2,6 +2,10 @@
 
 *Give everyone in your organization subsecond security and compliance decisions based on the organization's latest policies.*
 
+## Contributing
+
+Please see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 ## Versions
 
 This `main` branch represents the (unstable) working branch of the repository.
