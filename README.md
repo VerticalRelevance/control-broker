@@ -6,16 +6,6 @@
 
 Please see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-## Versions
-
-This `main` branch represents the (unstable) working branch of the repository.
-It contains the latest updates, but is probably not what you want if you
-definitely want to deploy a working Control Broker.
-
-For previous stable versions, see the [Releases](https://github.com/VerticalRelevance/ControlBrokerEvalEngine-Blueprint/releases) page.
-
-Please note that this software is meant as a starting point and is therefore not production-ready.
-
 ## Features
 
 * Runs a Policy as Code service as a serverless AWS application - you bring the policies, and Control Broker helps you store, organize, and use them - plus it helps you monitor, and analyze their usage.
