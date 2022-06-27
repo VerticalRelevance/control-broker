@@ -3,7 +3,7 @@
   "description": "Control Broker allows customers to deploy an HTTP API on AWS that executes Policy as Code (PaC) policies using Open Policy Agent (OPA) or CloudFormation Guard to evaluate inputs and return decisions.",
   "repository": {
     "type": "git",
-    "url": "git@github.com:verticalrelevance/control-broker"
+    "url": "https://github.com/VerticalRelevance/control-broker.git"
   },
   "scripts": {
     "build": "npx projen build",
