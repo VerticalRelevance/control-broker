@@ -3,7 +3,7 @@ const project = new awscdk.AwsCdkConstructLibrary({
   author: 'Clark Schneider',
   authorAddress: 'cschneider@verticalrelevance.com',
   cdkVersion: '2.28.1',
-  defaultReleaseBranch: 'main',
+  defaultReleaseBranch: 'release', // TODO: Change this when main becomes the release branch
   name: 'control-broker',
   repositoryUrl: 'git@github.com:verticalrelevance/control-broker',
   typescriptVersion: '4.7.3',
