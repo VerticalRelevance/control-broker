@@ -3,7 +3,8 @@ const project = new awscdk.AwsCdkConstructLibrary({
   author: 'Clark Schneider',
   authorAddress: 'cschneider@verticalrelevance.com',
   cdkVersion: '2.28.1',
-  defaultReleaseBranch: 'release', // TODO: Change this when main becomes the release branch
+  defaultReleaseBranch: 'main',
+  releaseBranches: { release: { majorVersion: 0 } },
   name: 'control-broker',
   repositoryUrl: 'git@github.com:verticalrelevance/control-broker',
   typescriptVersion: '4.7.3',
@@ -14,4 +15,7 @@ const project = new awscdk.AwsCdkConstructLibrary({
   peerDeps: ['@aws-cdk/aws-apigatewayv2-alpha@2.28.1-alpha.0'],
 });
 project.addDevDeps('@types/jest@^27.0.0', 'prettier-eslint');
+// Add environment specification that causes the release workflow to run in the context of the "npm" GitHub environment,
+// which contains the required NPM_TOKEN
+project.tryFindObjectFile('.github/workflows/release.yml').addOverride('jobs.release_npm.environment', 'npm');
 project.synth();
