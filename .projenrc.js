@@ -17,5 +17,6 @@ const project = new awscdk.AwsCdkConstructLibrary({
 project.addDevDeps('@types/jest@^27.0.0', 'prettier-eslint');
 // Add environment specification that causes the release workflow to run in the context of the "npm" GitHub environment,
 // which contains the required NPM_TOKEN
+project.tryFindObjectFile('.github/workflows/release-release.yml').addOverride('jobs.release_npm.environment', 'npm');
 project.tryFindObjectFile('.github/workflows/release.yml').addOverride('jobs.release_npm.environment', 'npm');
 project.synth();
