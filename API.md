@@ -9,14 +9,14 @@
 ```typescript
 import { Api } from 'control-broker'
 
-new Api(scope: Construct, id: string, props?: HttpApiProps)
+new Api(scope: Construct, id: string, props: ApiProps)
 ```
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#control-broker.Api.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | *No description.* |
 | <code><a href="#control-broker.Api.Initializer.parameter.id">id</a></code> | <code>string</code> | *No description.* |
-| <code><a href="#control-broker.Api.Initializer.parameter.props">props</a></code> | <code>@aws-cdk/aws-apigatewayv2-alpha.HttpApiProps</code> | *No description.* |
+| <code><a href="#control-broker.Api.Initializer.parameter.props">props</a></code> | <code><a href="#control-broker.ApiProps">ApiProps</a></code> | *No description.* |
 
 ---
 
@@ -32,9 +32,9 @@ new Api(scope: Construct, id: string, props?: HttpApiProps)
 
 ---
 
-##### `props`<sup>Optional</sup> <a name="props" id="control-broker.Api.Initializer.parameter.props"></a>
+##### `props`<sup>Required</sup> <a name="props" id="control-broker.Api.Initializer.parameter.props"></a>
 
-- *Type:* @aws-cdk/aws-apigatewayv2-alpha.HttpApiProps
+- *Type:* <a href="#control-broker.ApiProps">ApiProps</a>
 
 ---
 
@@ -43,17 +43,6 @@ new Api(scope: Construct, id: string, props?: HttpApiProps)
 | **Name** | **Description** |
 | --- | --- |
 | <code><a href="#control-broker.Api.toString">toString</a></code> | Returns a string representation of this construct. |
-| <code><a href="#control-broker.Api.applyRemovalPolicy">applyRemovalPolicy</a></code> | Apply the given removal policy to this resource. |
-| <code><a href="#control-broker.Api.addRoutes">addRoutes</a></code> | Add multiple routes that uses the same configuration. |
-| <code><a href="#control-broker.Api.addStage">addStage</a></code> | Add a new stage. |
-| <code><a href="#control-broker.Api.addVpcLink">addVpcLink</a></code> | Add a new VpcLink. |
-| <code><a href="#control-broker.Api.metric">metric</a></code> | Return the given named metric for this Api Gateway. |
-| <code><a href="#control-broker.Api.metricClientError">metricClientError</a></code> | Metric for the number of client-side errors captured in a given period. |
-| <code><a href="#control-broker.Api.metricCount">metricCount</a></code> | Metric for the total number API requests in a given period. |
-| <code><a href="#control-broker.Api.metricDataProcessed">metricDataProcessed</a></code> | Metric for the amount of data processed in bytes. |
-| <code><a href="#control-broker.Api.metricIntegrationLatency">metricIntegrationLatency</a></code> | Metric for the time between when API Gateway relays a request to the backend and when it receives a response from the backend. |
-| <code><a href="#control-broker.Api.metricLatency">metricLatency</a></code> | The time between when API Gateway receives a request from a client and when it returns a response to the client. |
-| <code><a href="#control-broker.Api.metricServerError">metricServerError</a></code> | Metric for the number of server-side errors captured in a given period. |
 
 ---
 
@@ -65,192 +54,11 @@ public toString(): string
 
 Returns a string representation of this construct.
 
-##### `applyRemovalPolicy` <a name="applyRemovalPolicy" id="control-broker.Api.applyRemovalPolicy"></a>
-
-```typescript
-public applyRemovalPolicy(policy: RemovalPolicy): void
-```
-
-Apply the given removal policy to this resource.
-
-The Removal Policy controls what happens to this resource when it stops
-being managed by CloudFormation, either because you've removed it from the
-CDK application or because you've made a change that requires the resource
-to be replaced.
-
-The resource can be deleted (`RemovalPolicy.DESTROY`), or left in your AWS
-account for data recovery and cleanup later (`RemovalPolicy.RETAIN`).
-
-###### `policy`<sup>Required</sup> <a name="policy" id="control-broker.Api.applyRemovalPolicy.parameter.policy"></a>
-
-- *Type:* aws-cdk-lib.RemovalPolicy
-
----
-
-##### `addRoutes` <a name="addRoutes" id="control-broker.Api.addRoutes"></a>
-
-```typescript
-public addRoutes(options: AddRoutesOptions): HttpRoute[]
-```
-
-Add multiple routes that uses the same configuration.
-
-The routes all go to the same path, but for different
-methods.
-
-###### `options`<sup>Required</sup> <a name="options" id="control-broker.Api.addRoutes.parameter.options"></a>
-
-- *Type:* @aws-cdk/aws-apigatewayv2-alpha.AddRoutesOptions
-
----
-
-##### `addStage` <a name="addStage" id="control-broker.Api.addStage"></a>
-
-```typescript
-public addStage(id: string, options: HttpStageOptions): HttpStage
-```
-
-Add a new stage.
-
-###### `id`<sup>Required</sup> <a name="id" id="control-broker.Api.addStage.parameter.id"></a>
-
-- *Type:* string
-
----
-
-###### `options`<sup>Required</sup> <a name="options" id="control-broker.Api.addStage.parameter.options"></a>
-
-- *Type:* @aws-cdk/aws-apigatewayv2-alpha.HttpStageOptions
-
----
-
-##### `addVpcLink` <a name="addVpcLink" id="control-broker.Api.addVpcLink"></a>
-
-```typescript
-public addVpcLink(options: VpcLinkProps): VpcLink
-```
-
-Add a new VpcLink.
-
-###### `options`<sup>Required</sup> <a name="options" id="control-broker.Api.addVpcLink.parameter.options"></a>
-
-- *Type:* @aws-cdk/aws-apigatewayv2-alpha.VpcLinkProps
-
----
-
-##### `metric` <a name="metric" id="control-broker.Api.metric"></a>
-
-```typescript
-public metric(metricName: string, props?: MetricOptions): Metric
-```
-
-Return the given named metric for this Api Gateway.
-
-###### `metricName`<sup>Required</sup> <a name="metricName" id="control-broker.Api.metric.parameter.metricName"></a>
-
-- *Type:* string
-
----
-
-###### `props`<sup>Optional</sup> <a name="props" id="control-broker.Api.metric.parameter.props"></a>
-
-- *Type:* aws-cdk-lib.aws_cloudwatch.MetricOptions
-
----
-
-##### `metricClientError` <a name="metricClientError" id="control-broker.Api.metricClientError"></a>
-
-```typescript
-public metricClientError(props?: MetricOptions): Metric
-```
-
-Metric for the number of client-side errors captured in a given period.
-
-###### `props`<sup>Optional</sup> <a name="props" id="control-broker.Api.metricClientError.parameter.props"></a>
-
-- *Type:* aws-cdk-lib.aws_cloudwatch.MetricOptions
-
----
-
-##### `metricCount` <a name="metricCount" id="control-broker.Api.metricCount"></a>
-
-```typescript
-public metricCount(props?: MetricOptions): Metric
-```
-
-Metric for the total number API requests in a given period.
-
-###### `props`<sup>Optional</sup> <a name="props" id="control-broker.Api.metricCount.parameter.props"></a>
-
-- *Type:* aws-cdk-lib.aws_cloudwatch.MetricOptions
-
----
-
-##### `metricDataProcessed` <a name="metricDataProcessed" id="control-broker.Api.metricDataProcessed"></a>
-
-```typescript
-public metricDataProcessed(props?: MetricOptions): Metric
-```
-
-Metric for the amount of data processed in bytes.
-
-###### `props`<sup>Optional</sup> <a name="props" id="control-broker.Api.metricDataProcessed.parameter.props"></a>
-
-- *Type:* aws-cdk-lib.aws_cloudwatch.MetricOptions
-
----
-
-##### `metricIntegrationLatency` <a name="metricIntegrationLatency" id="control-broker.Api.metricIntegrationLatency"></a>
-
-```typescript
-public metricIntegrationLatency(props?: MetricOptions): Metric
-```
-
-Metric for the time between when API Gateway relays a request to the backend and when it receives a response from the backend.
-
-###### `props`<sup>Optional</sup> <a name="props" id="control-broker.Api.metricIntegrationLatency.parameter.props"></a>
-
-- *Type:* aws-cdk-lib.aws_cloudwatch.MetricOptions
-
----
-
-##### `metricLatency` <a name="metricLatency" id="control-broker.Api.metricLatency"></a>
-
-```typescript
-public metricLatency(props?: MetricOptions): Metric
-```
-
-The time between when API Gateway receives a request from a client and when it returns a response to the client.
-
-The latency includes the integration latency and other API Gateway overhead.
-
-###### `props`<sup>Optional</sup> <a name="props" id="control-broker.Api.metricLatency.parameter.props"></a>
-
-- *Type:* aws-cdk-lib.aws_cloudwatch.MetricOptions
-
----
-
-##### `metricServerError` <a name="metricServerError" id="control-broker.Api.metricServerError"></a>
-
-```typescript
-public metricServerError(props?: MetricOptions): Metric
-```
-
-Metric for the number of server-side errors captured in a given period.
-
-###### `props`<sup>Optional</sup> <a name="props" id="control-broker.Api.metricServerError.parameter.props"></a>
-
-- *Type:* aws-cdk-lib.aws_cloudwatch.MetricOptions
-
----
-
 #### Static Functions <a name="Static Functions" id="Static Functions"></a>
 
 | **Name** | **Description** |
 | --- | --- |
 | <code><a href="#control-broker.Api.isConstruct">isConstruct</a></code> | Checks if `x` is a construct. |
-| <code><a href="#control-broker.Api.isResource">isResource</a></code> | Check whether the given construct is a Resource. |
-| <code><a href="#control-broker.Api.fromHttpApiAttributes">fromHttpApiAttributes</a></code> | Import an existing HTTP API into this CDK app. |
 
 ---
 
@@ -272,64 +80,15 @@ Any object.
 
 ---
 
-##### `isResource` <a name="isResource" id="control-broker.Api.isResource"></a>
-
-```typescript
-import { Api } from 'control-broker'
-
-Api.isResource(construct: IConstruct)
-```
-
-Check whether the given construct is a Resource.
-
-###### `construct`<sup>Required</sup> <a name="construct" id="control-broker.Api.isResource.parameter.construct"></a>
-
-- *Type:* constructs.IConstruct
-
----
-
-##### `fromHttpApiAttributes` <a name="fromHttpApiAttributes" id="control-broker.Api.fromHttpApiAttributes"></a>
-
-```typescript
-import { Api } from 'control-broker'
-
-Api.fromHttpApiAttributes(scope: Construct, id: string, attrs: HttpApiAttributes)
-```
-
-Import an existing HTTP API into this CDK app.
-
-###### `scope`<sup>Required</sup> <a name="scope" id="control-broker.Api.fromHttpApiAttributes.parameter.scope"></a>
-
-- *Type:* constructs.Construct
-
----
-
-###### `id`<sup>Required</sup> <a name="id" id="control-broker.Api.fromHttpApiAttributes.parameter.id"></a>
-
-- *Type:* string
-
----
-
-###### `attrs`<sup>Required</sup> <a name="attrs" id="control-broker.Api.fromHttpApiAttributes.parameter.attrs"></a>
-
-- *Type:* @aws-cdk/aws-apigatewayv2-alpha.HttpApiAttributes
-
----
-
 #### Properties <a name="Properties" id="Properties"></a>
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#control-broker.Api.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
-| <code><a href="#control-broker.Api.property.env">env</a></code> | <code>aws-cdk-lib.ResourceEnvironment</code> | The environment this resource belongs to. |
-| <code><a href="#control-broker.Api.property.stack">stack</a></code> | <code>aws-cdk-lib.Stack</code> | The stack in which this resource is defined. |
-| <code><a href="#control-broker.Api.property.apiEndpoint">apiEndpoint</a></code> | <code>string</code> | Get the default endpoint for this API. |
-| <code><a href="#control-broker.Api.property.apiId">apiId</a></code> | <code>string</code> | The identifier of this API Gateway API. |
-| <code><a href="#control-broker.Api.property.httpApiId">httpApiId</a></code> | <code>string</code> | The identifier of this API Gateway HTTP API. |
-| <code><a href="#control-broker.Api.property.defaultStage">defaultStage</a></code> | <code>@aws-cdk/aws-apigatewayv2-alpha.IHttpStage</code> | The default stage of this API. |
-| <code><a href="#control-broker.Api.property.disableExecuteApiEndpoint">disableExecuteApiEndpoint</a></code> | <code>boolean</code> | Specifies whether clients can invoke this HTTP API by using the default execute-api endpoint. |
-| <code><a href="#control-broker.Api.property.httpApiName">httpApiName</a></code> | <code>string</code> | A human friendly name for this HTTP API. |
-| <code><a href="#control-broker.Api.property.url">url</a></code> | <code>string</code> | Get the URL to the default stage of this API. |
+| <code><a href="#control-broker.Api.property.accessLogRetention">accessLogRetention</a></code> | <code>aws-cdk-lib.aws_logs.RetentionDays</code> | *No description.* |
+| <code><a href="#control-broker.Api.property.awsApiGatewayHTTPApi">awsApiGatewayHTTPApi</a></code> | <code>@aws-cdk/aws-apigatewayv2-alpha.HttpApi</code> | *No description.* |
+| <code><a href="#control-broker.Api.property.awsApiGatewayRestApi">awsApiGatewayRestApi</a></code> | <code>aws-cdk-lib.aws_apigateway.RestApi</code> | *No description.* |
+| <code><a href="#control-broker.Api.property.externalBaseUrl">externalBaseUrl</a></code> | <code>string</code> | *No description.* |
 
 ---
 
@@ -345,144 +104,65 @@ The tree node.
 
 ---
 
-##### `env`<sup>Required</sup> <a name="env" id="control-broker.Api.property.env"></a>
+##### `accessLogRetention`<sup>Required</sup> <a name="accessLogRetention" id="control-broker.Api.property.accessLogRetention"></a>
 
 ```typescript
-public readonly env: ResourceEnvironment;
+public readonly accessLogRetention: RetentionDays;
 ```
 
-- *Type:* aws-cdk-lib.ResourceEnvironment
-
-The environment this resource belongs to.
-
-For resources that are created and managed by the CDK
-(generally, those created by creating new class instances like Role, Bucket, etc.),
-this is always the same as the environment of the stack they belong to;
-however, for imported resources
-(those obtained from static methods like fromRoleArn, fromBucketName, etc.),
-that might be different than the stack they were imported into.
+- *Type:* aws-cdk-lib.aws_logs.RetentionDays
 
 ---
 
-##### `stack`<sup>Required</sup> <a name="stack" id="control-broker.Api.property.stack"></a>
+##### `awsApiGatewayHTTPApi`<sup>Required</sup> <a name="awsApiGatewayHTTPApi" id="control-broker.Api.property.awsApiGatewayHTTPApi"></a>
 
 ```typescript
-public readonly stack: Stack;
+public readonly awsApiGatewayHTTPApi: HttpApi;
 ```
 
-- *Type:* aws-cdk-lib.Stack
-
-The stack in which this resource is defined.
+- *Type:* @aws-cdk/aws-apigatewayv2-alpha.HttpApi
 
 ---
 
-##### `apiEndpoint`<sup>Required</sup> <a name="apiEndpoint" id="control-broker.Api.property.apiEndpoint"></a>
+##### `awsApiGatewayRestApi`<sup>Required</sup> <a name="awsApiGatewayRestApi" id="control-broker.Api.property.awsApiGatewayRestApi"></a>
 
 ```typescript
-public readonly apiEndpoint: string;
+public readonly awsApiGatewayRestApi: RestApi;
 ```
 
-- *Type:* string
-
-Get the default endpoint for this API.
+- *Type:* aws-cdk-lib.aws_apigateway.RestApi
 
 ---
 
-##### `apiId`<sup>Required</sup> <a name="apiId" id="control-broker.Api.property.apiId"></a>
+##### `externalBaseUrl`<sup>Required</sup> <a name="externalBaseUrl" id="control-broker.Api.property.externalBaseUrl"></a>
 
 ```typescript
-public readonly apiId: string;
+public readonly externalBaseUrl: string;
 ```
 
 - *Type:* string
 
-The identifier of this API Gateway API.
-
----
-
-##### `httpApiId`<sup>Required</sup> <a name="httpApiId" id="control-broker.Api.property.httpApiId"></a>
-
-```typescript
-public readonly httpApiId: string;
-```
-
-- *Type:* string
-
-The identifier of this API Gateway HTTP API.
-
----
-
-##### `defaultStage`<sup>Optional</sup> <a name="defaultStage" id="control-broker.Api.property.defaultStage"></a>
-
-```typescript
-public readonly defaultStage: IHttpStage;
-```
-
-- *Type:* @aws-cdk/aws-apigatewayv2-alpha.IHttpStage
-
-The default stage of this API.
-
----
-
-##### `disableExecuteApiEndpoint`<sup>Optional</sup> <a name="disableExecuteApiEndpoint" id="control-broker.Api.property.disableExecuteApiEndpoint"></a>
-
-```typescript
-public readonly disableExecuteApiEndpoint: boolean;
-```
-
-- *Type:* boolean
-
-Specifies whether clients can invoke this HTTP API by using the default execute-api endpoint.
-
----
-
-##### `httpApiName`<sup>Optional</sup> <a name="httpApiName" id="control-broker.Api.property.httpApiName"></a>
-
-```typescript
-public readonly httpApiName: string;
-```
-
-- *Type:* string
-
-A human friendly name for this HTTP API.
-
-Note that this is different from `httpApiId`.
-
----
-
-##### `url`<sup>Optional</sup> <a name="url" id="control-broker.Api.property.url"></a>
-
-```typescript
-public readonly url: string;
-```
-
-- *Type:* string
-
-Get the URL to the default stage of this API.
-
-Returns `undefined` if `createDefaultStage` is unset.
-
 ---
 
 
-### ControlBroker <a name="ControlBroker" id="control-broker.ControlBroker"></a>
+### BaseInputHandler <a name="BaseInputHandler" id="control-broker.inputHandlers.BaseInputHandler"></a>
 
-#### Initializers <a name="Initializers" id="control-broker.ControlBroker.Initializer"></a>
+#### Initializers <a name="Initializers" id="control-broker.inputHandlers.BaseInputHandler.Initializer"></a>
 
 ```typescript
-import { ControlBroker } from 'control-broker'
+import { inputHandlers } from 'control-broker'
 
-new ControlBroker(scope: Construct, id: string)
+new inputHandlers.BaseInputHandler(scope: Construct, id: string)
 ```
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#control-broker.ControlBroker.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | The scope in which to define this construct. |
-| <code><a href="#control-broker.ControlBroker.Initializer.parameter.id">id</a></code> | <code>string</code> | The scoped construct ID. |
+| <code><a href="#control-broker.inputHandlers.BaseInputHandler.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | The scope in which to define this construct. |
+| <code><a href="#control-broker.inputHandlers.BaseInputHandler.Initializer.parameter.id">id</a></code> | <code>string</code> | The scoped construct ID. |
 
 ---
 
-##### `scope`<sup>Required</sup> <a name="scope" id="control-broker.ControlBroker.Initializer.parameter.scope"></a>
+##### `scope`<sup>Required</sup> <a name="scope" id="control-broker.inputHandlers.BaseInputHandler.Initializer.parameter.scope"></a>
 
 - *Type:* constructs.Construct
 
@@ -490,7 +170,7 @@ The scope in which to define this construct.
 
 ---
 
-##### `id`<sup>Required</sup> <a name="id" id="control-broker.ControlBroker.Initializer.parameter.id"></a>
+##### `id`<sup>Required</sup> <a name="id" id="control-broker.inputHandlers.BaseInputHandler.Initializer.parameter.id"></a>
 
 - *Type:* string
 
@@ -506,7 +186,233 @@ dash `--`.
 
 | **Name** | **Description** |
 | --- | --- |
+| <code><a href="#control-broker.inputHandlers.BaseInputHandler.toString">toString</a></code> | Returns a string representation of this construct. |
+
+---
+
+##### `toString` <a name="toString" id="control-broker.inputHandlers.BaseInputHandler.toString"></a>
+
+```typescript
+public toString(): string
+```
+
+Returns a string representation of this construct.
+
+#### Static Functions <a name="Static Functions" id="Static Functions"></a>
+
+| **Name** | **Description** |
+| --- | --- |
+| <code><a href="#control-broker.inputHandlers.BaseInputHandler.isConstruct">isConstruct</a></code> | Checks if `x` is a construct. |
+
+---
+
+##### ~~`isConstruct`~~ <a name="isConstruct" id="control-broker.inputHandlers.BaseInputHandler.isConstruct"></a>
+
+```typescript
+import { inputHandlers } from 'control-broker'
+
+inputHandlers.BaseInputHandler.isConstruct(x: any)
+```
+
+Checks if `x` is a construct.
+
+###### `x`<sup>Required</sup> <a name="x" id="control-broker.inputHandlers.BaseInputHandler.isConstruct.parameter.x"></a>
+
+- *Type:* any
+
+Any object.
+
+---
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.inputHandlers.BaseInputHandler.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
+| <code><a href="#control-broker.inputHandlers.BaseInputHandler.property.urlSafeName">urlSafeName</a></code> | <code>string</code> | Return a name for this input handler that is safe for use in the path of a URL. |
+
+---
+
+##### `node`<sup>Required</sup> <a name="node" id="control-broker.inputHandlers.BaseInputHandler.property.node"></a>
+
+```typescript
+public readonly node: Node;
+```
+
+- *Type:* constructs.Node
+
+The tree node.
+
+---
+
+##### `urlSafeName`<sup>Required</sup> <a name="urlSafeName" id="control-broker.inputHandlers.BaseInputHandler.property.urlSafeName"></a>
+
+```typescript
+public readonly urlSafeName: string;
+```
+
+- *Type:* string
+
+Return a name for this input handler that is safe for use in the path of a URL.
+
+---
+
+
+### CloudFormationInputHandler <a name="CloudFormationInputHandler" id="control-broker.inputHandlers.CloudFormationInputHandler"></a>
+
+#### Initializers <a name="Initializers" id="control-broker.inputHandlers.CloudFormationInputHandler.Initializer"></a>
+
+```typescript
+import { inputHandlers } from 'control-broker'
+
+new inputHandlers.CloudFormationInputHandler(scope: Construct, id: string)
+```
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | The scope in which to define this construct. |
+| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.Initializer.parameter.id">id</a></code> | <code>string</code> | The scoped construct ID. |
+
+---
+
+##### `scope`<sup>Required</sup> <a name="scope" id="control-broker.inputHandlers.CloudFormationInputHandler.Initializer.parameter.scope"></a>
+
+- *Type:* constructs.Construct
+
+The scope in which to define this construct.
+
+---
+
+##### `id`<sup>Required</sup> <a name="id" id="control-broker.inputHandlers.CloudFormationInputHandler.Initializer.parameter.id"></a>
+
+- *Type:* string
+
+The scoped construct ID.
+
+Must be unique amongst siblings. If
+the ID includes a path separator (`/`), then it will be replaced by double
+dash `--`.
+
+---
+
+#### Methods <a name="Methods" id="Methods"></a>
+
+| **Name** | **Description** |
+| --- | --- |
+| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.toString">toString</a></code> | Returns a string representation of this construct. |
+
+---
+
+##### `toString` <a name="toString" id="control-broker.inputHandlers.CloudFormationInputHandler.toString"></a>
+
+```typescript
+public toString(): string
+```
+
+Returns a string representation of this construct.
+
+#### Static Functions <a name="Static Functions" id="Static Functions"></a>
+
+| **Name** | **Description** |
+| --- | --- |
+| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.isConstruct">isConstruct</a></code> | Checks if `x` is a construct. |
+
+---
+
+##### ~~`isConstruct`~~ <a name="isConstruct" id="control-broker.inputHandlers.CloudFormationInputHandler.isConstruct"></a>
+
+```typescript
+import { inputHandlers } from 'control-broker'
+
+inputHandlers.CloudFormationInputHandler.isConstruct(x: any)
+```
+
+Checks if `x` is a construct.
+
+###### `x`<sup>Required</sup> <a name="x" id="control-broker.inputHandlers.CloudFormationInputHandler.isConstruct.parameter.x"></a>
+
+- *Type:* any
+
+Any object.
+
+---
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
+| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.property.urlSafeName">urlSafeName</a></code> | <code>string</code> | Return a name for this input handler that is safe for use in the path of a URL. |
+
+---
+
+##### `node`<sup>Required</sup> <a name="node" id="control-broker.inputHandlers.CloudFormationInputHandler.property.node"></a>
+
+```typescript
+public readonly node: Node;
+```
+
+- *Type:* constructs.Node
+
+The tree node.
+
+---
+
+##### `urlSafeName`<sup>Required</sup> <a name="urlSafeName" id="control-broker.inputHandlers.CloudFormationInputHandler.property.urlSafeName"></a>
+
+```typescript
+public readonly urlSafeName: string;
+```
+
+- *Type:* string
+
+Return a name for this input handler that is safe for use in the path of a URL.
+
+---
+
+
+### ControlBroker <a name="ControlBroker" id="control-broker.ControlBroker"></a>
+
+#### Initializers <a name="Initializers" id="control-broker.ControlBroker.Initializer"></a>
+
+```typescript
+import { ControlBroker } from 'control-broker'
+
+new ControlBroker(scope: Construct, id: string, props: ControlBrokerProps)
+```
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.ControlBroker.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | *No description.* |
+| <code><a href="#control-broker.ControlBroker.Initializer.parameter.id">id</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#control-broker.ControlBroker.Initializer.parameter.props">props</a></code> | <code><a href="#control-broker.ControlBrokerProps">ControlBrokerProps</a></code> | *No description.* |
+
+---
+
+##### `scope`<sup>Required</sup> <a name="scope" id="control-broker.ControlBroker.Initializer.parameter.scope"></a>
+
+- *Type:* constructs.Construct
+
+---
+
+##### `id`<sup>Required</sup> <a name="id" id="control-broker.ControlBroker.Initializer.parameter.id"></a>
+
+- *Type:* string
+
+---
+
+##### `props`<sup>Required</sup> <a name="props" id="control-broker.ControlBroker.Initializer.parameter.props"></a>
+
+- *Type:* <a href="#control-broker.ControlBrokerProps">ControlBrokerProps</a>
+
+---
+
+#### Methods <a name="Methods" id="Methods"></a>
+
+| **Name** | **Description** |
+| --- | --- |
 | <code><a href="#control-broker.ControlBroker.toString">toString</a></code> | Returns a string representation of this construct. |
+| <code><a href="#control-broker.ControlBroker.getUrlForInputHandler">getUrlForInputHandler</a></code> | *No description.* |
 
 ---
 
@@ -517,6 +423,18 @@ public toString(): string
 ```
 
 Returns a string representation of this construct.
+
+##### `getUrlForInputHandler` <a name="getUrlForInputHandler" id="control-broker.ControlBroker.getUrlForInputHandler"></a>
+
+```typescript
+public getUrlForInputHandler(inputHandler: BaseInputHandler): string
+```
+
+###### `inputHandler`<sup>Required</sup> <a name="inputHandler" id="control-broker.ControlBroker.getUrlForInputHandler.parameter.inputHandler"></a>
+
+- *Type:* control-broker.inputHandlers.BaseInputHandler
+
+---
 
 #### Static Functions <a name="Static Functions" id="Static Functions"></a>
 
@@ -549,6 +467,7 @@ Any object.
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#control-broker.ControlBroker.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
+| <code><a href="#control-broker.ControlBroker.property.api">api</a></code> | <code><a href="#control-broker.Api">Api</a></code> | *No description.* |
 
 ---
 
@@ -564,7 +483,185 @@ The tree node.
 
 ---
 
+##### `api`<sup>Required</sup> <a name="api" id="control-broker.ControlBroker.property.api"></a>
 
+```typescript
+public readonly api: Api;
+```
+
+- *Type:* <a href="#control-broker.Api">Api</a>
+
+---
+
+
+### EvalEngine <a name="EvalEngine" id="control-broker.EvalEngine"></a>
+
+#### Initializers <a name="Initializers" id="control-broker.EvalEngine.Initializer"></a>
+
+```typescript
+import { EvalEngine } from 'control-broker'
+
+new EvalEngine(scope: Construct, id: string)
+```
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.EvalEngine.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | The scope in which to define this construct. |
+| <code><a href="#control-broker.EvalEngine.Initializer.parameter.id">id</a></code> | <code>string</code> | The scoped construct ID. |
+
+---
+
+##### `scope`<sup>Required</sup> <a name="scope" id="control-broker.EvalEngine.Initializer.parameter.scope"></a>
+
+- *Type:* constructs.Construct
+
+The scope in which to define this construct.
+
+---
+
+##### `id`<sup>Required</sup> <a name="id" id="control-broker.EvalEngine.Initializer.parameter.id"></a>
+
+- *Type:* string
+
+The scoped construct ID.
+
+Must be unique amongst siblings. If
+the ID includes a path separator (`/`), then it will be replaced by double
+dash `--`.
+
+---
+
+#### Methods <a name="Methods" id="Methods"></a>
+
+| **Name** | **Description** |
+| --- | --- |
+| <code><a href="#control-broker.EvalEngine.toString">toString</a></code> | Returns a string representation of this construct. |
+
+---
+
+##### `toString` <a name="toString" id="control-broker.EvalEngine.toString"></a>
+
+```typescript
+public toString(): string
+```
+
+Returns a string representation of this construct.
+
+#### Static Functions <a name="Static Functions" id="Static Functions"></a>
+
+| **Name** | **Description** |
+| --- | --- |
+| <code><a href="#control-broker.EvalEngine.isConstruct">isConstruct</a></code> | Checks if `x` is a construct. |
+
+---
+
+##### ~~`isConstruct`~~ <a name="isConstruct" id="control-broker.EvalEngine.isConstruct"></a>
+
+```typescript
+import { EvalEngine } from 'control-broker'
+
+EvalEngine.isConstruct(x: any)
+```
+
+Checks if `x` is a construct.
+
+###### `x`<sup>Required</sup> <a name="x" id="control-broker.EvalEngine.isConstruct.parameter.x"></a>
+
+- *Type:* any
+
+Any object.
+
+---
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.EvalEngine.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
+
+---
+
+##### `node`<sup>Required</sup> <a name="node" id="control-broker.EvalEngine.property.node"></a>
+
+```typescript
+public readonly node: Node;
+```
+
+- *Type:* constructs.Node
+
+The tree node.
+
+---
+
+
+## Structs <a name="Structs" id="Structs"></a>
+
+### ApiProps <a name="ApiProps" id="control-broker.ApiProps"></a>
+
+#### Initializer <a name="Initializer" id="control-broker.ApiProps.Initializer"></a>
+
+```typescript
+import { ApiProps } from 'control-broker'
+
+const apiProps: ApiProps = { ... }
+```
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.ApiProps.property.evalEngine">evalEngine</a></code> | <code><a href="#control-broker.EvalEngine">EvalEngine</a></code> | *No description.* |
+| <code><a href="#control-broker.ApiProps.property.accessLogRetention">accessLogRetention</a></code> | <code>aws-cdk-lib.aws_logs.RetentionDays</code> | *No description.* |
+
+---
+
+##### `evalEngine`<sup>Required</sup> <a name="evalEngine" id="control-broker.ApiProps.property.evalEngine"></a>
+
+```typescript
+public readonly evalEngine: EvalEngine;
+```
+
+- *Type:* <a href="#control-broker.EvalEngine">EvalEngine</a>
+
+---
+
+##### `accessLogRetention`<sup>Optional</sup> <a name="accessLogRetention" id="control-broker.ApiProps.property.accessLogRetention"></a>
+
+```typescript
+public readonly accessLogRetention: RetentionDays;
+```
+
+- *Type:* aws-cdk-lib.aws_logs.RetentionDays
+
+---
+
+### ControlBrokerProps <a name="ControlBrokerProps" id="control-broker.ControlBrokerProps"></a>
+
+#### Initializer <a name="Initializer" id="control-broker.ControlBrokerProps.Initializer"></a>
+
+```typescript
+import { ControlBrokerProps } from 'control-broker'
+
+const controlBrokerProps: ControlBrokerProps = { ... }
+```
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.ControlBrokerProps.property.api">api</a></code> | <code><a href="#control-broker.Api">Api</a></code> | *No description.* |
+
+---
+
+##### `api`<sup>Optional</sup> <a name="api" id="control-broker.ControlBrokerProps.property.api"></a>
+
+```typescript
+public readonly api: Api;
+```
+
+- *Type:* <a href="#control-broker.Api">Api</a>
+
+---
 
 
 

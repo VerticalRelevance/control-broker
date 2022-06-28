@@ -10,7 +10,7 @@ Please see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 * Runs a Policy as Code service as a serverless AWS application - you bring the policies, and Control Broker helps you store, organize, and use them - plus it helps you monitor, and analyze their usage.
 * Defined in the AWS Python CDK for push-button, repeatable deployment.
-* Can be invoked from anywhere in your environment that can invoke a Step Function State Machine (i.e. anywhere that can assume a properly permissioned role), including on-premise and various cloud locations.
+* Can be invoked from anywhere in your environment that can invoke an API Gateway API.
 * Supports policies written for Open Policy Agent (CloudFormation Guard planned).
 * Also helps with notifications, auditing, and analysis of discovered compliance issues.
 
