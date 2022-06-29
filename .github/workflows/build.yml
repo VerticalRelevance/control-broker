@@ -47,6 +47,8 @@ jobs:
           path: dist
     container:
       image: jsii/superchain:1-buster-slim-node14
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
   self-mutation:
     needs: build
     runs-on: ubuntu-latest

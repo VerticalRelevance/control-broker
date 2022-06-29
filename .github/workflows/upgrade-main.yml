@@ -35,6 +35,8 @@ jobs:
           path: .repo.patch
     container:
       image: jsii/superchain:1-buster-slim-node14
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
   pr:
     name: Create Pull Request
     needs: upgrade
