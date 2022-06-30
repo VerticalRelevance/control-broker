@@ -31,28 +31,18 @@ const project = new awscdk.AwsCdkConstructLibrary({
 });
 
 project.addDevDeps('@types/jest@^27.0.0', 'prettier-eslint');
-const releaseWorkflowFiles = [
-  project.tryFindObjectFile('.github/workflows/release-release.yml'),
-  project.tryFindObjectFile('.github/workflows/release.yml'),
-];
-const buildWorkflowFiles = [
-  project.tryFindObjectFile('.github/workflows/build.yml'),
-];
-const upgradeWorkflowFiles = [
-  project.tryFindObjectFile('.github/workflows/upgrade-release.yml'),
-  project.tryFindObjectFile('.github/workflows/upgrade-main.yml'),
-];
-const dockerSocketVolumes = ['/var/run/docker.sock:/var/run/docker.sock'];
-
-releaseWorkflowFiles.forEach((f) => {
-  // Add environment specification that causes the release workflow to run in the context of the "npm" GitHub environment,
-  // which contains the required NPM_TOKEN, and do the same for PyPI
-  f.addOverride('jobs.release_npm.environment', 'npm');
-  f.addOverride('jobs.release_pypi.environment', 'pypi');
-  // Give access to the docker daemon from inside the container this job runs in
-  // so that it can build CDK assets
-  f.addOverride('jobs.release.container.volumes', dockerSocketVolumes);
-});
-buildWorkflowFiles.forEach((f) => f.addOverride('jobs.build.container.volumes', dockerSocketVolumes));
-upgradeWorkflowFiles.forEach((f) => f.addOverride('jobs.upgrade.container.volumes', dockerSocketVolumes));
+// Add environment specification that causes the release workflow to run in the context of the "npm" GitHub environment,
+// which contains the required NPM_TOKEN
+project
+  .tryFindObjectFile('.github/workflows/release-release.yml')
+  .addOverride('jobs.release_npm.environment', 'npm');
+project
+  .tryFindObjectFile('.github/workflows/release.yml')
+  .addOverride('jobs.release_npm.environment', 'npm');
+project
+  .tryFindObjectFile('.github/workflows/release-release.yml')
+  .addOverride('jobs.release_pypi.environment', 'pypi');
+project
+  .tryFindObjectFile('.github/workflows/release.yml')
+  .addOverride('jobs.release_pypi.environment', 'pypi');
 project.synth();
