@@ -1,3 +1,4 @@
+import { CfnOutput } from 'aws-cdk-lib';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import { BaseEvalEngine } from '.';
@@ -29,6 +30,7 @@ export class ControlBroker extends Construct {
     };
     this.evalEngine = props.evalEngine;
     props.inputHandlers.forEach((ih) => this.addInputHandler(ih));
+    new CfnOutput(this, 'InputBucketName', { value: props.inputBucket.bucketName });
   }
 
   public addInputHandler(inputHandler: BaseInputHandler) {
