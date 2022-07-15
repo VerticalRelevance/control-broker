@@ -12,22 +12,22 @@
 
 "@aws-cdk/aws-apigatewayv2-alpha@2.28.1-alpha.0":
   version "2.28.1-alpha.0"
-  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-apigatewayv2-alpha/-/aws-apigatewayv2-alpha-2.28.1-alpha.0.tgz#8a6b8d4ff9195ffda26b696e5b3c079feeb68a3b"
+  resolved "https://registry.npmjs.org/@aws-cdk/aws-apigatewayv2-alpha/-/aws-apigatewayv2-alpha-2.28.1-alpha.0.tgz"
   integrity sha512-jLnw/NqvqE8MN/XAddWWYvSEbZBzHpfE3EiwcwXXHTcbptDgu1LRzJ6fZinClrzM7hXnv3Fr7286f9/isKuDdw==
 
 "@aws-cdk/aws-apigatewayv2-authorizers-alpha@2.28.1-alpha.0":
   version "2.28.1-alpha.0"
-  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-apigatewayv2-authorizers-alpha/-/aws-apigatewayv2-authorizers-alpha-2.28.1-alpha.0.tgz#954ba7fc072e40517abc93fc2b1acef9515d0345"
+  resolved "https://registry.npmjs.org/@aws-cdk/aws-apigatewayv2-authorizers-alpha/-/aws-apigatewayv2-authorizers-alpha-2.28.1-alpha.0.tgz"
   integrity sha512-QWJuu95krVHXn0nZDtMTJTv8lRYBTiyrtLvMIU+QYJtZjBhadMxybhNVsrlD7MKsPaYRadJpRVSXm1JsYYqYug==
 
 "@aws-cdk/aws-apigatewayv2-integrations-alpha@2.28.1-alpha.0":
   version "2.28.1-alpha.0"
-  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-apigatewayv2-integrations-alpha/-/aws-apigatewayv2-integrations-alpha-2.28.1-alpha.0.tgz#02b0a6ec939890cf99880a9e26738e48c0417003"
+  resolved "https://registry.npmjs.org/@aws-cdk/aws-apigatewayv2-integrations-alpha/-/aws-apigatewayv2-integrations-alpha-2.28.1-alpha.0.tgz"
   integrity sha512-iwB7KkvtMORyYpmOsuyL/aU/wRAOuyJAbKlEHvxs/f7/UlL/XLIvOoeOC2m3KJUZUQQbxh/HsbKCx4/uL9f3lA==
 
 "@aws-cdk/aws-lambda-python-alpha@2.28.1-alpha.0":
   version "2.28.1-alpha.0"
-  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-lambda-python-alpha/-/aws-lambda-python-alpha-2.28.1-alpha.0.tgz#f60cc7a98b6dc085f18de877343e15a201a706a4"
+  resolved "https://registry.npmjs.org/@aws-cdk/aws-lambda-python-alpha/-/aws-lambda-python-alpha-2.28.1-alpha.0.tgz"
   integrity sha512-rMw48IoQqbXFOyg6zdkAZC30QPhtNOXjfEnt1c8Sa4BVfXT/qWMyC8zxOAoQUy/PSuSLbVVEIYYbXiVWLBoadw==
 
 "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.12.13", "@babel/code-frame@^7.16.7":
@@ -3696,7 +3696,7 @@ js-tokens@^4.0.0:
 
 js-yaml@3.14.0:
   version "3.14.0"
-  resolved "https://registry.yarnpkg.com/js-yaml/-/js-yaml-3.14.0.tgz#a7a34170f26a21bb162424d8adacb4113a69e482"
+  resolved "https://registry.npmjs.org/js-yaml/-/js-yaml-3.14.0.tgz"
   integrity sha512-/4IbIeHcD9VMHFqDR/gQ7EdZdLimOvW2DdcxFjdyyZ9NsbS+ccrXqVWDtab/lRl5AlUqmpBx8EhPaWR+OtY17A==
   dependencies:
     argparse "^1.0.7"

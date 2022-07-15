@@ -1,4 +1,5 @@
 import { Function } from 'aws-cdk-lib/aws-lambda';
+import { BaseApiBinding } from '../api-bindings';
 
 export enum IntegrationTargetType {
   LAMBDA,
@@ -7,6 +8,7 @@ export enum IntegrationTargetType {
 
 export interface IIntegrationTarget {
   readonly integrationTargetType: IntegrationTargetType;
+  readonly binding: BaseApiBinding<any>;
 }
 
 export interface ILambdaIntegrationTarget extends IIntegrationTarget {

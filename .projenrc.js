@@ -45,4 +45,9 @@ project
 project
   .tryFindObjectFile('.github/workflows/release.yml')
   .addOverride('jobs.release_pypi.environment', 'pypi');
+project.addGitIgnore('cdk.out/');
+project.addTask('deploy_core_stack', {
+  exec: "npx cdk deploy -a 'npx ts-node --prefer-ts-exts src/apps/core.ts'",
+  description: 'Deploys a stack with default Control Broker components. Most useful for smoke testing.',
+});
 project.synth();

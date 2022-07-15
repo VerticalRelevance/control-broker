@@ -1,5 +1,6 @@
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Stack } from 'aws-cdk-lib';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Api, ControlBroker, OpaEvalEngine } from '../src';
 import { HttpApiBinding } from '../src/constructs/api-bindings';
 import { CloudFormationInputHandler } from '../src/constructs/input-handlers';
@@ -13,20 +14,23 @@ mockedPythonFunction.mockImplementation(() => {
     ...original.PythonFunction,
     functionArn: 'arn:aws:lambda:us-east-1:123456789012:function:mockfunction',
     addPermission: () => {},
+    addEnvironment: () => {},
   };
 });
 
 test('ControlBroker can be created and attached to a stack', () => {
   const stack = new Stack();
   const api = new Api(stack, 'ControlbrokerApi', {});
-  const cfnInputHandler = new CloudFormationInputHandler(stack, 'CfnInputHandler');
-  const cfnInputHandlerApiBinding = new HttpApiBinding('CloudFormation', api, cfnInputHandler);
-  const evalEngine = new OpaEvalEngine(stack, 'EvalEngine');
-  const evalEngineBinding = new HttpApiBinding('EvalEngine', api, evalEngine);
+  const cfnInputHandlerApiBinding = new HttpApiBinding('CloudFormation');
+  const cfnInputHandler = new CloudFormationInputHandler(stack, 'CfnInputHandler', { binding: cfnInputHandlerApiBinding });
+  const evalEngineBinding = new HttpApiBinding('EvalEngine');
+  const evalEngine = new OpaEvalEngine(stack, 'EvalEngine', { binding: evalEngineBinding });
   expect(mockedPythonFunction).toHaveBeenCalled();
-  api.setEvalEngine(evalEngine, evalEngineBinding);
-  api.addInputHandler(cfnInputHandler, cfnInputHandlerApiBinding);
+  const inputBucket = new Bucket(stack, 'CBInputBucket', {});
   new ControlBroker(stack, 'TestControlBroker', {
     api,
+    inputBucket,
+    evalEngine,
+    inputHandlers: [cfnInputHandler],
   });
 });

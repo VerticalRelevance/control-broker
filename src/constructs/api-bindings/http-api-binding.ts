@@ -14,33 +14,40 @@ export interface HttpApiBindingAddToApiOptions {}
 
 export class HttpApiBinding extends BaseApiBinding<HttpRouteIntegration> {
   public readonly apiType: AwsApiType = AwsApiType.HTTP;
+  protected api?: Api;
   protected routes: HttpRoute[] = [];
   protected authorizedPrincipalArns: string[] = [];
-  public readonly route: HttpRoute;
-  public readonly path: string;
-  public readonly method: string;
+  public route?: HttpRoute;
+  public path?: string;
+  public method?: string;
 
-  public constructor(urlSafeName: string, api: Api, integrationTarget: IIntegrationTarget) {
-    super(urlSafeName, api, integrationTarget);
+  public constructor(urlSafeName: string) {
+    super(urlSafeName);
+  }
+
+  public bindTargetToApi(api: Api, target: IIntegrationTarget) {
+    this.api = api;
     this.path = join('/', this.urlSafeName);
     this.route = api.awsApiGatewayHTTPApi.addRoutes({
       authorizer: new HttpIamAuthorizer(),
       methods: [HttpMethod.POST],
-      integration: this.makeIntegrationForIntegrationTarget(),
+      integration: this.makeIntegrationForIntegrationTarget(target),
       path: this.path,
     })[0];
     this.method = HttpMethod.POST as string;
+    if (api.awsApiGatewayHTTPApi.url === undefined) {
+      throw new Error('No default stage defined for the HTTP API');
+    }
+    return join(api.awsApiGatewayHTTPApi.url, this.path);
   }
 
   /**
-   *
-   *
    * Note: JSII complains if we make the return type HTTPRouteIntegration,
    * ostensibly because of its restrictions on Generics.
    */
-  protected makeIntegrationForIntegrationTarget(): any {
-    if (isLambdaIntegrationTarget(this.integrationTarget)) {
-      return new HttpLambdaIntegration(`${this.urlSafeName}LambdaIntegration`, this.integrationTarget.handler);
+  protected makeIntegrationForIntegrationTarget(target: IIntegrationTarget): any {
+    if (isLambdaIntegrationTarget(target)) {
+      return new HttpLambdaIntegration(`${this.urlSafeName}LambdaIntegration`, target.handler);
     } else {
       throw new Error('Only Lambda integrations are supported right now');
     }
@@ -51,5 +58,12 @@ export class HttpApiBinding extends BaseApiBinding<HttpRouteIntegration> {
     this.routes.forEach((r) => {
       r.grantInvoke(new ArnPrincipal(principalArn));
     });
+  }
+
+  public get url(): string | undefined {
+    if (this.api?.awsApiGatewayHTTPApi.url === undefined) {
+      throw new Error('Cannot get URL if the base API has no default stage');
+    }
+    return join(this.api?.awsApiGatewayHTTPApi.url, this.urlSafeName);
   }
 }

@@ -3,15 +3,15 @@ import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Duration } from 'aws-cdk-lib';
 import { Function, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
-import { BaseEvalEngine } from '.';
+import { BaseEvalEngine, BaseEvalEngineProps } from '.';
 import { ILambdaIntegrationTarget, IntegrationTargetType } from '../interfaces';
 
 export class OpaEvalEngine extends BaseEvalEngine implements ILambdaIntegrationTarget {
   public readonly integrationTargetType: IntegrationTargetType = IntegrationTargetType.LAMBDA;
   public readonly handler: Function;
 
-  constructor(scope: Construct, id: string) {
-    super(scope, id);
+  constructor(scope: Construct, id: string, props: BaseEvalEngineProps) {
+    super(scope, id, props);
     this.handler = new PythonFunction(this, `${id}OpaEvalEngineLambdaFunction`, {
       entry: join(__dirname, 'lambda-function-code/opa-eval-engine/'),
       runtime: Runtime.PYTHON_3_9,

@@ -1,4 +1,5 @@
 import { HttpApi } from '@aws-cdk/aws-apigatewayv2-alpha';
+import { CfnOutput } from 'aws-cdk-lib';
 import { RestApi } from 'aws-cdk-lib/aws-apigateway';
 import { CfnStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { ServicePrincipal } from 'aws-cdk-lib/aws-iam';
@@ -24,15 +25,25 @@ export interface InputHandlerBindingConfigurations {
 export interface EvalEngineBindingConfiguration {
   readonly evalEngine: BaseEvalEngine | undefined;
   readonly binding: BaseApiBinding<any> | undefined;
-};
+}
 
 export class Api extends Construct {
-  public readonly awsApiGatewayRestApi: RestApi;
-  public readonly awsApiGatewayHTTPApi: HttpApi;
   public readonly accessLogRetention: RetentionDays = RetentionDays.ONE_DAY;
   public readonly apiAccessLogGroup: LogGroup;
-  protected inputHandlerBindings: InputHandlerBindingConfigurations = {};
-  protected evalEngineBinding: EvalEngineBindingConfiguration = { evalEngine: undefined, binding: undefined };
+
+  protected inputHandlers: BaseInputHandler[] = [];
+  /**
+   * @internal
+   */
+  protected _evalEngine?: BaseEvalEngine = undefined;
+  /**
+   * @internal
+   */
+  protected _awsApiGatewayHttpApi?: HttpApi;
+  /**
+   * @internal
+   */
+  protected _awsApiGatewayRestApi?: RestApi;
 
   constructor(scope: Construct, public readonly id: string, props: ApiProps) {
     super(scope, id);
@@ -42,14 +53,32 @@ export class Api extends Construct {
       this.apiAccessLogGroup = new LogGroup(this, `${id}AccessLogGroup`, { retention: this.accessLogRetention });
       this.apiAccessLogGroup.grantWrite(new ServicePrincipal('apigateway.amazonaws.com'));
     }
-    this.awsApiGatewayHTTPApi = new HttpApi(this, `${id}HttpApi`, { createDefaultStage: true });
     this.configureAwsApiGatewayHTTPApiLogging();
-    this.awsApiGatewayRestApi = new RestApi(this, `${id}RestApi`);
+  }
+
+  /**
+   * Lazily create the HTTP API when it is first accessed.
+   */
+  public get awsApiGatewayHTTPApi() {
+    if (this._awsApiGatewayHttpApi === undefined) {
+      this._awsApiGatewayHttpApi = new HttpApi(this, `${this.id}HttpApi`, { createDefaultStage: true });
+    }
+    return this._awsApiGatewayHttpApi;
+  }
+
+  /**
+   * Lazily create the Rest API when it is first accessed.
+   */
+  public get awsApiGatewayRestApi() {
+    if (this._awsApiGatewayRestApi === undefined) {
+      this._awsApiGatewayRestApi = new RestApi(this, `${this.id}RestApi`);
+    }
+    return this._awsApiGatewayRestApi;
   }
 
   protected configureAwsApiGatewayHTTPApiLogging() {
-    const cfnDefaultStage = this.awsApiGatewayHTTPApi.node.defaultChild as CfnStage;
-    cfnDefaultStage.addOverride('AccessLogSettings', {
+    const cfnDefaultStage = this.awsApiGatewayHTTPApi.defaultStage!.node.defaultChild as CfnStage;
+    cfnDefaultStage.addPropertyOverride('AccessLogSettings', {
       DestinationArn: this.apiAccessLogGroup.logGroupArn,
       Format: JSON.stringify({
         requestId: '$context.requestId',
@@ -65,26 +94,29 @@ export class Api extends Construct {
     });
   }
 
-  public setEvalEngine(evalEngine: BaseEvalEngine, binding: BaseApiBinding<any>) {
-    this.evalEngineBinding = { evalEngine, binding };
+  public set evalEngine(evalEngine: BaseEvalEngine | undefined) {
+    this._evalEngine = evalEngine;
   }
 
-  protected get evalEngineUrl() {
-    if (this.evalEngineBinding.binding === undefined) {
-      throw new Error('You must add an eval engine binding before trying to get its URL');
-    }
-    return this.evalEngineBinding.binding.url;
+  public get evalEngine() {
+    return this._evalEngine;
   }
 
-  public addInputHandler(inputHandler: BaseInputHandler, binding: BaseApiBinding<any>) {
-    if (this.evalEngineBinding.binding === undefined) {
-      throw new Error('You must add an eval engine binding before trying to add input handlers');
+  public addInputHandler(inputHandler: BaseInputHandler) {
+    if (this.evalEngine === undefined) {
+      throw new Error('You must add an eval engine before trying to add input handlers');
     }
-    this.evalEngineBinding.binding.authorizePrincipalArn(inputHandler.evalEngineCallerPrincipalArn);
-    this.inputHandlerBindings[inputHandler.urlSafeName] = { inputHandler, binding };
+    inputHandler.bindToApi(this);
+    this.evalEngine.authorizePrincipalArn(inputHandler.evalEngineCallerPrincipalArn);
+    this.inputHandlers.push(inputHandler);
+    if (inputHandler.url === undefined) {
+      throw new Error("Input handler's URL was undefined even after binding to the API");
+    }
+    new CfnOutput(this, `${inputHandler.urlSafeName}HandlerURL`, { value: inputHandler.url });
   }
 
   public getUrlForInputHandler(inputHandler: BaseInputHandler) {
-    return this.inputHandlerBindings[inputHandler.urlSafeName].binding.url;
+    const currentInputHandler = this.inputHandlers.find((ih) => ih === inputHandler);
+    return currentInputHandler?.url;
   }
 }

@@ -100,6 +100,15 @@
         }
       ]
     },
+    "deploy_core_stack": {
+      "name": "deploy_core_stack",
+      "description": "Deploys a stack with default Control Broker components. Most useful for smoke testing.",
+      "steps": [
+        {
+          "exec": "npx cdk deploy -a 'npx ts-node --prefer-ts-exts src/apps/core.ts'"
+        }
+      ]
+    },
     "docgen": {
       "name": "docgen",
       "description": "Generate API.md from .jsii manifest",

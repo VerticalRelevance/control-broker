@@ -45,7 +45,6 @@ new Api(scope: Construct, id: string, props: ApiProps)
 | <code><a href="#control-broker.Api.toString">toString</a></code> | Returns a string representation of this construct. |
 | <code><a href="#control-broker.Api.addInputHandler">addInputHandler</a></code> | *No description.* |
 | <code><a href="#control-broker.Api.getUrlForInputHandler">getUrlForInputHandler</a></code> | *No description.* |
-| <code><a href="#control-broker.Api.setEvalEngine">setEvalEngine</a></code> | *No description.* |
 
 ---
 
@@ -60,18 +59,12 @@ Returns a string representation of this construct.
 ##### `addInputHandler` <a name="addInputHandler" id="control-broker.Api.addInputHandler"></a>
 
 ```typescript
-public addInputHandler(inputHandler: BaseInputHandler, binding: BaseApiBinding): void
+public addInputHandler(inputHandler: BaseInputHandler): void
 ```
 
 ###### `inputHandler`<sup>Required</sup> <a name="inputHandler" id="control-broker.Api.addInputHandler.parameter.inputHandler"></a>
 
-- *Type:* control-broker.inputHandlers.BaseInputHandler
-
----
-
-###### `binding`<sup>Required</sup> <a name="binding" id="control-broker.Api.addInputHandler.parameter.binding"></a>
-
-- *Type:* <a href="#control-broker.BaseApiBinding">BaseApiBinding</a>
+- *Type:* <a href="#control-broker.BaseInputHandler">BaseInputHandler</a>
 
 ---
 
@@ -83,25 +76,7 @@ public getUrlForInputHandler(inputHandler: BaseInputHandler): string
 
 ###### `inputHandler`<sup>Required</sup> <a name="inputHandler" id="control-broker.Api.getUrlForInputHandler.parameter.inputHandler"></a>
 
-- *Type:* control-broker.inputHandlers.BaseInputHandler
-
----
-
-##### `setEvalEngine` <a name="setEvalEngine" id="control-broker.Api.setEvalEngine"></a>
-
-```typescript
-public setEvalEngine(evalEngine: BaseEvalEngine, binding: BaseApiBinding): void
-```
-
-###### `evalEngine`<sup>Required</sup> <a name="evalEngine" id="control-broker.Api.setEvalEngine.parameter.evalEngine"></a>
-
-- *Type:* <a href="#control-broker.BaseEvalEngine">BaseEvalEngine</a>
-
----
-
-###### `binding`<sup>Required</sup> <a name="binding" id="control-broker.Api.setEvalEngine.parameter.binding"></a>
-
-- *Type:* <a href="#control-broker.BaseApiBinding">BaseApiBinding</a>
+- *Type:* <a href="#control-broker.BaseInputHandler">BaseInputHandler</a>
 
 ---
 
@@ -138,9 +113,10 @@ Any object.
 | <code><a href="#control-broker.Api.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
 | <code><a href="#control-broker.Api.property.accessLogRetention">accessLogRetention</a></code> | <code>aws-cdk-lib.aws_logs.RetentionDays</code> | *No description.* |
 | <code><a href="#control-broker.Api.property.apiAccessLogGroup">apiAccessLogGroup</a></code> | <code>aws-cdk-lib.aws_logs.LogGroup</code> | *No description.* |
-| <code><a href="#control-broker.Api.property.awsApiGatewayHTTPApi">awsApiGatewayHTTPApi</a></code> | <code>@aws-cdk/aws-apigatewayv2-alpha.HttpApi</code> | *No description.* |
-| <code><a href="#control-broker.Api.property.awsApiGatewayRestApi">awsApiGatewayRestApi</a></code> | <code>aws-cdk-lib.aws_apigateway.RestApi</code> | *No description.* |
+| <code><a href="#control-broker.Api.property.awsApiGatewayHTTPApi">awsApiGatewayHTTPApi</a></code> | <code>@aws-cdk/aws-apigatewayv2-alpha.HttpApi</code> | Lazily create the HTTP API when it is first accessed. |
+| <code><a href="#control-broker.Api.property.awsApiGatewayRestApi">awsApiGatewayRestApi</a></code> | <code>aws-cdk-lib.aws_apigateway.RestApi</code> | Lazily create the Rest API when it is first accessed. |
 | <code><a href="#control-broker.Api.property.id">id</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#control-broker.Api.property.evalEngine">evalEngine</a></code> | <code><a href="#control-broker.BaseEvalEngine">BaseEvalEngine</a></code> | *No description.* |
 
 ---
 
@@ -184,6 +160,8 @@ public readonly awsApiGatewayHTTPApi: HttpApi;
 
 - *Type:* @aws-cdk/aws-apigatewayv2-alpha.HttpApi
 
+Lazily create the HTTP API when it is first accessed.
+
 ---
 
 ##### `awsApiGatewayRestApi`<sup>Required</sup> <a name="awsApiGatewayRestApi" id="control-broker.Api.property.awsApiGatewayRestApi"></a>
@@ -193,6 +171,8 @@ public readonly awsApiGatewayRestApi: RestApi;
 ```
 
 - *Type:* aws-cdk-lib.aws_apigateway.RestApi
+
+Lazily create the Rest API when it is first accessed.
 
 ---
 
@@ -206,6 +186,16 @@ public readonly id: string;
 
 ---
 
+##### `evalEngine`<sup>Optional</sup> <a name="evalEngine" id="control-broker.Api.property.evalEngine"></a>
+
+```typescript
+public readonly evalEngine: BaseEvalEngine;
+```
+
+- *Type:* <a href="#control-broker.BaseEvalEngine">BaseEvalEngine</a>
+
+---
+
 
 ### BaseEvalEngine <a name="BaseEvalEngine" id="control-broker.BaseEvalEngine"></a>
 
@@ -216,13 +206,14 @@ public readonly id: string;
 ```typescript
 import { BaseEvalEngine } from 'control-broker'
 
-new BaseEvalEngine(scope: Construct, id: string)
+new BaseEvalEngine(scope: Construct, id: string, props: BaseEvalEngineProps)
 ```
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#control-broker.BaseEvalEngine.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | The scope in which to define this construct. |
-| <code><a href="#control-broker.BaseEvalEngine.Initializer.parameter.id">id</a></code> | <code>string</code> | The scoped construct ID. |
+| <code><a href="#control-broker.BaseEvalEngine.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | *No description.* |
+| <code><a href="#control-broker.BaseEvalEngine.Initializer.parameter.id">id</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#control-broker.BaseEvalEngine.Initializer.parameter.props">props</a></code> | <code><a href="#control-broker.BaseEvalEngineProps">BaseEvalEngineProps</a></code> | *No description.* |
 
 ---
 
@@ -230,19 +221,17 @@ new BaseEvalEngine(scope: Construct, id: string)
 
 - *Type:* constructs.Construct
 
-The scope in which to define this construct.
-
 ---
 
 ##### `id`<sup>Required</sup> <a name="id" id="control-broker.BaseEvalEngine.Initializer.parameter.id"></a>
 
 - *Type:* string
 
-The scoped construct ID.
+---
 
-Must be unique amongst siblings. If
-the ID includes a path separator (`/`), then it will be replaced by double
-dash `--`.
+##### `props`<sup>Required</sup> <a name="props" id="control-broker.BaseEvalEngine.Initializer.parameter.props"></a>
+
+- *Type:* <a href="#control-broker.BaseEvalEngineProps">BaseEvalEngineProps</a>
 
 ---
 
@@ -251,6 +240,7 @@ dash `--`.
 | **Name** | **Description** |
 | --- | --- |
 | <code><a href="#control-broker.BaseEvalEngine.toString">toString</a></code> | Returns a string representation of this construct. |
+| <code><a href="#control-broker.BaseEvalEngine.authorizePrincipalArn">authorizePrincipalArn</a></code> | *No description.* |
 
 ---
 
@@ -261,6 +251,18 @@ public toString(): string
 ```
 
 Returns a string representation of this construct.
+
+##### `authorizePrincipalArn` <a name="authorizePrincipalArn" id="control-broker.BaseEvalEngine.authorizePrincipalArn"></a>
+
+```typescript
+public authorizePrincipalArn(principalArn: string): void
+```
+
+###### `principalArn`<sup>Required</sup> <a name="principalArn" id="control-broker.BaseEvalEngine.authorizePrincipalArn.parameter.principalArn"></a>
+
+- *Type:* string
+
+---
 
 #### Static Functions <a name="Static Functions" id="Static Functions"></a>
 
@@ -293,6 +295,7 @@ Any object.
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#control-broker.BaseEvalEngine.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
+| <code><a href="#control-broker.BaseEvalEngine.property.binding">binding</a></code> | <code><a href="#control-broker.BaseApiBinding">BaseApiBinding</a></code> | *No description.* |
 | <code><a href="#control-broker.BaseEvalEngine.property.integrationTargetType">integrationTargetType</a></code> | <code><a href="#control-broker.IntegrationTargetType">IntegrationTargetType</a></code> | *No description.* |
 
 ---
@@ -309,6 +312,16 @@ The tree node.
 
 ---
 
+##### `binding`<sup>Required</sup> <a name="binding" id="control-broker.BaseEvalEngine.property.binding"></a>
+
+```typescript
+public readonly binding: BaseApiBinding;
+```
+
+- *Type:* <a href="#control-broker.BaseApiBinding">BaseApiBinding</a>
+
+---
+
 ##### `integrationTargetType`<sup>Required</sup> <a name="integrationTargetType" id="control-broker.BaseEvalEngine.property.integrationTargetType"></a>
 
 ```typescript
@@ -320,42 +333,41 @@ public readonly integrationTargetType: IntegrationTargetType;
 ---
 
 
-### BaseInputHandler <a name="BaseInputHandler" id="control-broker.inputHandlers.BaseInputHandler"></a>
+### BaseInputHandler <a name="BaseInputHandler" id="control-broker.BaseInputHandler"></a>
 
 - *Implements:* <a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a>
 
-#### Initializers <a name="Initializers" id="control-broker.inputHandlers.BaseInputHandler.Initializer"></a>
+#### Initializers <a name="Initializers" id="control-broker.BaseInputHandler.Initializer"></a>
 
 ```typescript
-import { inputHandlers } from 'control-broker'
+import { BaseInputHandler } from 'control-broker'
 
-new inputHandlers.BaseInputHandler(scope: Construct, id: string)
+new BaseInputHandler(scope: Construct, id: string, props: BaseInputHandlerProps)
 ```
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#control-broker.inputHandlers.BaseInputHandler.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | The scope in which to define this construct. |
-| <code><a href="#control-broker.inputHandlers.BaseInputHandler.Initializer.parameter.id">id</a></code> | <code>string</code> | The scoped construct ID. |
+| <code><a href="#control-broker.BaseInputHandler.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | *No description.* |
+| <code><a href="#control-broker.BaseInputHandler.Initializer.parameter.id">id</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#control-broker.BaseInputHandler.Initializer.parameter.props">props</a></code> | <code><a href="#control-broker.BaseInputHandlerProps">BaseInputHandlerProps</a></code> | *No description.* |
 
 ---
 
-##### `scope`<sup>Required</sup> <a name="scope" id="control-broker.inputHandlers.BaseInputHandler.Initializer.parameter.scope"></a>
+##### `scope`<sup>Required</sup> <a name="scope" id="control-broker.BaseInputHandler.Initializer.parameter.scope"></a>
 
 - *Type:* constructs.Construct
 
-The scope in which to define this construct.
-
 ---
 
-##### `id`<sup>Required</sup> <a name="id" id="control-broker.inputHandlers.BaseInputHandler.Initializer.parameter.id"></a>
+##### `id`<sup>Required</sup> <a name="id" id="control-broker.BaseInputHandler.Initializer.parameter.id"></a>
 
 - *Type:* string
 
-The scoped construct ID.
+---
 
-Must be unique amongst siblings. If
-the ID includes a path separator (`/`), then it will be replaced by double
-dash `--`.
+##### `props`<sup>Required</sup> <a name="props" id="control-broker.BaseInputHandler.Initializer.parameter.props"></a>
+
+- *Type:* <a href="#control-broker.BaseInputHandlerProps">BaseInputHandlerProps</a>
 
 ---
 
@@ -363,11 +375,12 @@ dash `--`.
 
 | **Name** | **Description** |
 | --- | --- |
-| <code><a href="#control-broker.inputHandlers.BaseInputHandler.toString">toString</a></code> | Returns a string representation of this construct. |
+| <code><a href="#control-broker.BaseInputHandler.toString">toString</a></code> | Returns a string representation of this construct. |
+| <code><a href="#control-broker.BaseInputHandler.bindToApi">bindToApi</a></code> | *No description.* |
 
 ---
 
-##### `toString` <a name="toString" id="control-broker.inputHandlers.BaseInputHandler.toString"></a>
+##### `toString` <a name="toString" id="control-broker.BaseInputHandler.toString"></a>
 
 ```typescript
 public toString(): string
@@ -375,25 +388,37 @@ public toString(): string
 
 Returns a string representation of this construct.
 
+##### `bindToApi` <a name="bindToApi" id="control-broker.BaseInputHandler.bindToApi"></a>
+
+```typescript
+public bindToApi(api: Api): void
+```
+
+###### `api`<sup>Required</sup> <a name="api" id="control-broker.BaseInputHandler.bindToApi.parameter.api"></a>
+
+- *Type:* <a href="#control-broker.Api">Api</a>
+
+---
+
 #### Static Functions <a name="Static Functions" id="Static Functions"></a>
 
 | **Name** | **Description** |
 | --- | --- |
-| <code><a href="#control-broker.inputHandlers.BaseInputHandler.isConstruct">isConstruct</a></code> | Checks if `x` is a construct. |
+| <code><a href="#control-broker.BaseInputHandler.isConstruct">isConstruct</a></code> | Checks if `x` is a construct. |
 
 ---
 
-##### ~~`isConstruct`~~ <a name="isConstruct" id="control-broker.inputHandlers.BaseInputHandler.isConstruct"></a>
+##### ~~`isConstruct`~~ <a name="isConstruct" id="control-broker.BaseInputHandler.isConstruct"></a>
 
 ```typescript
-import { inputHandlers } from 'control-broker'
+import { BaseInputHandler } from 'control-broker'
 
-inputHandlers.BaseInputHandler.isConstruct(x: any)
+BaseInputHandler.isConstruct(x: any)
 ```
 
 Checks if `x` is a construct.
 
-###### `x`<sup>Required</sup> <a name="x" id="control-broker.inputHandlers.BaseInputHandler.isConstruct.parameter.x"></a>
+###### `x`<sup>Required</sup> <a name="x" id="control-broker.BaseInputHandler.isConstruct.parameter.x"></a>
 
 - *Type:* any
 
@@ -405,14 +430,17 @@ Any object.
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#control-broker.inputHandlers.BaseInputHandler.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
-| <code><a href="#control-broker.inputHandlers.BaseInputHandler.property.evalEngineCallerPrincipalArn">evalEngineCallerPrincipalArn</a></code> | <code>string</code> | ARN of the principal that will call the EvalEngine endpoint. |
-| <code><a href="#control-broker.inputHandlers.BaseInputHandler.property.integrationTargetType">integrationTargetType</a></code> | <code><a href="#control-broker.IntegrationTargetType">IntegrationTargetType</a></code> | *No description.* |
-| <code><a href="#control-broker.inputHandlers.BaseInputHandler.property.urlSafeName">urlSafeName</a></code> | <code>string</code> | Return a name for this input handler that is safe for use in the path of a URL. |
+| <code><a href="#control-broker.BaseInputHandler.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
+| <code><a href="#control-broker.BaseInputHandler.property.binding">binding</a></code> | <code><a href="#control-broker.BaseApiBinding">BaseApiBinding</a></code> | *No description.* |
+| <code><a href="#control-broker.BaseInputHandler.property.evalEngineCallerPrincipalArn">evalEngineCallerPrincipalArn</a></code> | <code>string</code> | ARN of the principal that will call the EvalEngine endpoint. |
+| <code><a href="#control-broker.BaseInputHandler.property.integrationTargetType">integrationTargetType</a></code> | <code><a href="#control-broker.IntegrationTargetType">IntegrationTargetType</a></code> | *No description.* |
+| <code><a href="#control-broker.BaseInputHandler.property.urlSafeName">urlSafeName</a></code> | <code>string</code> | Return a name for this input handler that is safe for use in the path of a URL. |
+| <code><a href="#control-broker.BaseInputHandler.property.url">url</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#control-broker.BaseInputHandler.property.controlBrokerParams">controlBrokerParams</a></code> | <code><a href="#control-broker.ControlBrokerParams">ControlBrokerParams</a></code> | *No description.* |
 
 ---
 
-##### `node`<sup>Required</sup> <a name="node" id="control-broker.inputHandlers.BaseInputHandler.property.node"></a>
+##### `node`<sup>Required</sup> <a name="node" id="control-broker.BaseInputHandler.property.node"></a>
 
 ```typescript
 public readonly node: Node;
@@ -424,7 +452,17 @@ The tree node.
 
 ---
 
-##### `evalEngineCallerPrincipalArn`<sup>Required</sup> <a name="evalEngineCallerPrincipalArn" id="control-broker.inputHandlers.BaseInputHandler.property.evalEngineCallerPrincipalArn"></a>
+##### `binding`<sup>Required</sup> <a name="binding" id="control-broker.BaseInputHandler.property.binding"></a>
+
+```typescript
+public readonly binding: BaseApiBinding;
+```
+
+- *Type:* <a href="#control-broker.BaseApiBinding">BaseApiBinding</a>
+
+---
+
+##### `evalEngineCallerPrincipalArn`<sup>Required</sup> <a name="evalEngineCallerPrincipalArn" id="control-broker.BaseInputHandler.property.evalEngineCallerPrincipalArn"></a>
 
 ```typescript
 public readonly evalEngineCallerPrincipalArn: string;
@@ -436,7 +474,7 @@ ARN of the principal that will call the EvalEngine endpoint.
 
 ---
 
-##### `integrationTargetType`<sup>Required</sup> <a name="integrationTargetType" id="control-broker.inputHandlers.BaseInputHandler.property.integrationTargetType"></a>
+##### `integrationTargetType`<sup>Required</sup> <a name="integrationTargetType" id="control-broker.BaseInputHandler.property.integrationTargetType"></a>
 
 ```typescript
 public readonly integrationTargetType: IntegrationTargetType;
@@ -446,7 +484,7 @@ public readonly integrationTargetType: IntegrationTargetType;
 
 ---
 
-##### `urlSafeName`<sup>Required</sup> <a name="urlSafeName" id="control-broker.inputHandlers.BaseInputHandler.property.urlSafeName"></a>
+##### `urlSafeName`<sup>Required</sup> <a name="urlSafeName" id="control-broker.BaseInputHandler.property.urlSafeName"></a>
 
 ```typescript
 public readonly urlSafeName: string;
@@ -458,35 +496,62 @@ Return a name for this input handler that is safe for use in the path of a URL.
 
 ---
 
+##### `url`<sup>Optional</sup> <a name="url" id="control-broker.BaseInputHandler.property.url"></a>
 
-### CloudFormationInputHandler <a name="CloudFormationInputHandler" id="control-broker.inputHandlers.CloudFormationInputHandler"></a>
+```typescript
+public readonly url: string;
+```
+
+- *Type:* string
+
+---
+
+##### `controlBrokerParams`<sup>Required</sup> <a name="controlBrokerParams" id="control-broker.BaseInputHandler.property.controlBrokerParams"></a>
+
+```typescript
+public readonly controlBrokerParams: ControlBrokerParams;
+```
+
+- *Type:* <a href="#control-broker.ControlBrokerParams">ControlBrokerParams</a>
+
+---
+
+
+### CloudFormationInputHandler <a name="CloudFormationInputHandler" id="control-broker.CloudFormationInputHandler"></a>
 
 - *Implements:* <a href="#control-broker.ILambdaIntegrationTarget">ILambdaIntegrationTarget</a>
 
-#### Initializers <a name="Initializers" id="control-broker.inputHandlers.CloudFormationInputHandler.Initializer"></a>
+#### Initializers <a name="Initializers" id="control-broker.CloudFormationInputHandler.Initializer"></a>
 
 ```typescript
-import { inputHandlers } from 'control-broker'
+import { CloudFormationInputHandler } from 'control-broker'
 
-new inputHandlers.CloudFormationInputHandler(scope: Construct, id: string)
+new CloudFormationInputHandler(scope: Construct, id: string, props: BaseInputHandlerProps)
 ```
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | *No description.* |
-| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.Initializer.parameter.id">id</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#control-broker.CloudFormationInputHandler.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | *No description.* |
+| <code><a href="#control-broker.CloudFormationInputHandler.Initializer.parameter.id">id</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#control-broker.CloudFormationInputHandler.Initializer.parameter.props">props</a></code> | <code><a href="#control-broker.BaseInputHandlerProps">BaseInputHandlerProps</a></code> | *No description.* |
 
 ---
 
-##### `scope`<sup>Required</sup> <a name="scope" id="control-broker.inputHandlers.CloudFormationInputHandler.Initializer.parameter.scope"></a>
+##### `scope`<sup>Required</sup> <a name="scope" id="control-broker.CloudFormationInputHandler.Initializer.parameter.scope"></a>
 
 - *Type:* constructs.Construct
 
 ---
 
-##### `id`<sup>Required</sup> <a name="id" id="control-broker.inputHandlers.CloudFormationInputHandler.Initializer.parameter.id"></a>
+##### `id`<sup>Required</sup> <a name="id" id="control-broker.CloudFormationInputHandler.Initializer.parameter.id"></a>
 
 - *Type:* string
+
+---
+
+##### `props`<sup>Required</sup> <a name="props" id="control-broker.CloudFormationInputHandler.Initializer.parameter.props"></a>
+
+- *Type:* <a href="#control-broker.BaseInputHandlerProps">BaseInputHandlerProps</a>
 
 ---
 
@@ -494,11 +559,12 @@ new inputHandlers.CloudFormationInputHandler(scope: Construct, id: string)
 
 | **Name** | **Description** |
 | --- | --- |
-| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.toString">toString</a></code> | Returns a string representation of this construct. |
+| <code><a href="#control-broker.CloudFormationInputHandler.toString">toString</a></code> | Returns a string representation of this construct. |
+| <code><a href="#control-broker.CloudFormationInputHandler.bindToApi">bindToApi</a></code> | *No description.* |
 
 ---
 
-##### `toString` <a name="toString" id="control-broker.inputHandlers.CloudFormationInputHandler.toString"></a>
+##### `toString` <a name="toString" id="control-broker.CloudFormationInputHandler.toString"></a>
 
 ```typescript
 public toString(): string
@@ -506,25 +572,37 @@ public toString(): string
 
 Returns a string representation of this construct.
 
+##### `bindToApi` <a name="bindToApi" id="control-broker.CloudFormationInputHandler.bindToApi"></a>
+
+```typescript
+public bindToApi(api: Api): void
+```
+
+###### `api`<sup>Required</sup> <a name="api" id="control-broker.CloudFormationInputHandler.bindToApi.parameter.api"></a>
+
+- *Type:* <a href="#control-broker.Api">Api</a>
+
+---
+
 #### Static Functions <a name="Static Functions" id="Static Functions"></a>
 
 | **Name** | **Description** |
 | --- | --- |
-| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.isConstruct">isConstruct</a></code> | Checks if `x` is a construct. |
+| <code><a href="#control-broker.CloudFormationInputHandler.isConstruct">isConstruct</a></code> | Checks if `x` is a construct. |
 
 ---
 
-##### ~~`isConstruct`~~ <a name="isConstruct" id="control-broker.inputHandlers.CloudFormationInputHandler.isConstruct"></a>
+##### ~~`isConstruct`~~ <a name="isConstruct" id="control-broker.CloudFormationInputHandler.isConstruct"></a>
 
 ```typescript
-import { inputHandlers } from 'control-broker'
+import { CloudFormationInputHandler } from 'control-broker'
 
-inputHandlers.CloudFormationInputHandler.isConstruct(x: any)
+CloudFormationInputHandler.isConstruct(x: any)
 ```
 
 Checks if `x` is a construct.
 
-###### `x`<sup>Required</sup> <a name="x" id="control-broker.inputHandlers.CloudFormationInputHandler.isConstruct.parameter.x"></a>
+###### `x`<sup>Required</sup> <a name="x" id="control-broker.CloudFormationInputHandler.isConstruct.parameter.x"></a>
 
 - *Type:* any
 
@@ -536,15 +614,18 @@ Any object.
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
-| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.property.evalEngineCallerPrincipalArn">evalEngineCallerPrincipalArn</a></code> | <code>string</code> | ARN of the principal that will call the EvalEngine endpoint. |
-| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.property.integrationTargetType">integrationTargetType</a></code> | <code><a href="#control-broker.IntegrationTargetType">IntegrationTargetType</a></code> | *No description.* |
-| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.property.urlSafeName">urlSafeName</a></code> | <code>string</code> | Return a name for this input handler that is safe for use in the path of a URL. |
-| <code><a href="#control-broker.inputHandlers.CloudFormationInputHandler.property.handler">handler</a></code> | <code>aws-cdk-lib.aws_lambda.Function</code> | *No description.* |
+| <code><a href="#control-broker.CloudFormationInputHandler.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
+| <code><a href="#control-broker.CloudFormationInputHandler.property.binding">binding</a></code> | <code><a href="#control-broker.BaseApiBinding">BaseApiBinding</a></code> | *No description.* |
+| <code><a href="#control-broker.CloudFormationInputHandler.property.evalEngineCallerPrincipalArn">evalEngineCallerPrincipalArn</a></code> | <code>string</code> | ARN of the principal that will call the EvalEngine endpoint. |
+| <code><a href="#control-broker.CloudFormationInputHandler.property.integrationTargetType">integrationTargetType</a></code> | <code><a href="#control-broker.IntegrationTargetType">IntegrationTargetType</a></code> | *No description.* |
+| <code><a href="#control-broker.CloudFormationInputHandler.property.urlSafeName">urlSafeName</a></code> | <code>string</code> | Return a name for this input handler that is safe for use in the path of a URL. |
+| <code><a href="#control-broker.CloudFormationInputHandler.property.url">url</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#control-broker.CloudFormationInputHandler.property.controlBrokerParams">controlBrokerParams</a></code> | <code><a href="#control-broker.ControlBrokerParams">ControlBrokerParams</a></code> | *No description.* |
+| <code><a href="#control-broker.CloudFormationInputHandler.property.handler">handler</a></code> | <code>aws-cdk-lib.aws_lambda.Function</code> | *No description.* |
 
 ---
 
-##### `node`<sup>Required</sup> <a name="node" id="control-broker.inputHandlers.CloudFormationInputHandler.property.node"></a>
+##### `node`<sup>Required</sup> <a name="node" id="control-broker.CloudFormationInputHandler.property.node"></a>
 
 ```typescript
 public readonly node: Node;
@@ -556,7 +637,17 @@ The tree node.
 
 ---
 
-##### `evalEngineCallerPrincipalArn`<sup>Required</sup> <a name="evalEngineCallerPrincipalArn" id="control-broker.inputHandlers.CloudFormationInputHandler.property.evalEngineCallerPrincipalArn"></a>
+##### `binding`<sup>Required</sup> <a name="binding" id="control-broker.CloudFormationInputHandler.property.binding"></a>
+
+```typescript
+public readonly binding: BaseApiBinding;
+```
+
+- *Type:* <a href="#control-broker.BaseApiBinding">BaseApiBinding</a>
+
+---
+
+##### `evalEngineCallerPrincipalArn`<sup>Required</sup> <a name="evalEngineCallerPrincipalArn" id="control-broker.CloudFormationInputHandler.property.evalEngineCallerPrincipalArn"></a>
 
 ```typescript
 public readonly evalEngineCallerPrincipalArn: string;
@@ -568,7 +659,7 @@ ARN of the principal that will call the EvalEngine endpoint.
 
 ---
 
-##### `integrationTargetType`<sup>Required</sup> <a name="integrationTargetType" id="control-broker.inputHandlers.CloudFormationInputHandler.property.integrationTargetType"></a>
+##### `integrationTargetType`<sup>Required</sup> <a name="integrationTargetType" id="control-broker.CloudFormationInputHandler.property.integrationTargetType"></a>
 
 ```typescript
 public readonly integrationTargetType: IntegrationTargetType;
@@ -578,7 +669,7 @@ public readonly integrationTargetType: IntegrationTargetType;
 
 ---
 
-##### `urlSafeName`<sup>Required</sup> <a name="urlSafeName" id="control-broker.inputHandlers.CloudFormationInputHandler.property.urlSafeName"></a>
+##### `urlSafeName`<sup>Required</sup> <a name="urlSafeName" id="control-broker.CloudFormationInputHandler.property.urlSafeName"></a>
 
 ```typescript
 public readonly urlSafeName: string;
@@ -590,7 +681,27 @@ Return a name for this input handler that is safe for use in the path of a URL.
 
 ---
 
-##### `handler`<sup>Required</sup> <a name="handler" id="control-broker.inputHandlers.CloudFormationInputHandler.property.handler"></a>
+##### `url`<sup>Optional</sup> <a name="url" id="control-broker.CloudFormationInputHandler.property.url"></a>
+
+```typescript
+public readonly url: string;
+```
+
+- *Type:* string
+
+---
+
+##### `controlBrokerParams`<sup>Required</sup> <a name="controlBrokerParams" id="control-broker.CloudFormationInputHandler.property.controlBrokerParams"></a>
+
+```typescript
+public readonly controlBrokerParams: ControlBrokerParams;
+```
+
+- *Type:* <a href="#control-broker.ControlBrokerParams">ControlBrokerParams</a>
+
+---
+
+##### `handler`<sup>Required</sup> <a name="handler" id="control-broker.CloudFormationInputHandler.property.handler"></a>
 
 ```typescript
 public readonly handler: Function;
@@ -642,6 +753,7 @@ new ControlBroker(scope: Construct, id: string, props: ControlBrokerProps)
 | **Name** | **Description** |
 | --- | --- |
 | <code><a href="#control-broker.ControlBroker.toString">toString</a></code> | Returns a string representation of this construct. |
+| <code><a href="#control-broker.ControlBroker.addInputHandler">addInputHandler</a></code> | *No description.* |
 | <code><a href="#control-broker.ControlBroker.getUrlForInputHandler">getUrlForInputHandler</a></code> | *No description.* |
 
 ---
@@ -654,6 +766,18 @@ public toString(): string
 
 Returns a string representation of this construct.
 
+##### `addInputHandler` <a name="addInputHandler" id="control-broker.ControlBroker.addInputHandler"></a>
+
+```typescript
+public addInputHandler(inputHandler: BaseInputHandler): string
+```
+
+###### `inputHandler`<sup>Required</sup> <a name="inputHandler" id="control-broker.ControlBroker.addInputHandler.parameter.inputHandler"></a>
+
+- *Type:* <a href="#control-broker.BaseInputHandler">BaseInputHandler</a>
+
+---
+
 ##### `getUrlForInputHandler` <a name="getUrlForInputHandler" id="control-broker.ControlBroker.getUrlForInputHandler"></a>
 
 ```typescript
@@ -662,7 +786,7 @@ public getUrlForInputHandler(inputHandler: BaseInputHandler): string
 
 ###### `inputHandler`<sup>Required</sup> <a name="inputHandler" id="control-broker.ControlBroker.getUrlForInputHandler.parameter.inputHandler"></a>
 
-- *Type:* control-broker.inputHandlers.BaseInputHandler
+- *Type:* <a href="#control-broker.BaseInputHandler">BaseInputHandler</a>
 
 ---
 
@@ -698,6 +822,7 @@ Any object.
 | --- | --- | --- |
 | <code><a href="#control-broker.ControlBroker.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
 | <code><a href="#control-broker.ControlBroker.property.api">api</a></code> | <code><a href="#control-broker.Api">Api</a></code> | *No description.* |
+| <code><a href="#control-broker.ControlBroker.property.evalEngine">evalEngine</a></code> | <code><a href="#control-broker.BaseEvalEngine">BaseEvalEngine</a></code> | *No description.* |
 
 ---
 
@@ -723,6 +848,16 @@ public readonly api: Api;
 
 ---
 
+##### `evalEngine`<sup>Optional</sup> <a name="evalEngine" id="control-broker.ControlBroker.property.evalEngine"></a>
+
+```typescript
+public readonly evalEngine: BaseEvalEngine;
+```
+
+- *Type:* <a href="#control-broker.BaseEvalEngine">BaseEvalEngine</a>
+
+---
+
 
 ### OpaEvalEngine <a name="OpaEvalEngine" id="control-broker.OpaEvalEngine"></a>
 
@@ -733,13 +868,14 @@ public readonly api: Api;
 ```typescript
 import { OpaEvalEngine } from 'control-broker'
 
-new OpaEvalEngine(scope: Construct, id: string)
+new OpaEvalEngine(scope: Construct, id: string, props: BaseEvalEngineProps)
 ```
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#control-broker.OpaEvalEngine.Initializer.parameter.scope">scope</a></code> | <code>constructs.Construct</code> | *No description.* |
 | <code><a href="#control-broker.OpaEvalEngine.Initializer.parameter.id">id</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#control-broker.OpaEvalEngine.Initializer.parameter.props">props</a></code> | <code><a href="#control-broker.BaseEvalEngineProps">BaseEvalEngineProps</a></code> | *No description.* |
 
 ---
 
@@ -755,11 +891,18 @@ new OpaEvalEngine(scope: Construct, id: string)
 
 ---
 
+##### `props`<sup>Required</sup> <a name="props" id="control-broker.OpaEvalEngine.Initializer.parameter.props"></a>
+
+- *Type:* <a href="#control-broker.BaseEvalEngineProps">BaseEvalEngineProps</a>
+
+---
+
 #### Methods <a name="Methods" id="Methods"></a>
 
 | **Name** | **Description** |
 | --- | --- |
 | <code><a href="#control-broker.OpaEvalEngine.toString">toString</a></code> | Returns a string representation of this construct. |
+| <code><a href="#control-broker.OpaEvalEngine.authorizePrincipalArn">authorizePrincipalArn</a></code> | *No description.* |
 
 ---
 
@@ -770,6 +913,18 @@ public toString(): string
 ```
 
 Returns a string representation of this construct.
+
+##### `authorizePrincipalArn` <a name="authorizePrincipalArn" id="control-broker.OpaEvalEngine.authorizePrincipalArn"></a>
+
+```typescript
+public authorizePrincipalArn(principalArn: string): void
+```
+
+###### `principalArn`<sup>Required</sup> <a name="principalArn" id="control-broker.OpaEvalEngine.authorizePrincipalArn.parameter.principalArn"></a>
+
+- *Type:* string
+
+---
 
 #### Static Functions <a name="Static Functions" id="Static Functions"></a>
 
@@ -802,6 +957,7 @@ Any object.
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#control-broker.OpaEvalEngine.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
+| <code><a href="#control-broker.OpaEvalEngine.property.binding">binding</a></code> | <code><a href="#control-broker.BaseApiBinding">BaseApiBinding</a></code> | *No description.* |
 | <code><a href="#control-broker.OpaEvalEngine.property.integrationTargetType">integrationTargetType</a></code> | <code><a href="#control-broker.IntegrationTargetType">IntegrationTargetType</a></code> | *No description.* |
 | <code><a href="#control-broker.OpaEvalEngine.property.handler">handler</a></code> | <code>aws-cdk-lib.aws_lambda.Function</code> | *No description.* |
 
@@ -816,6 +972,16 @@ public readonly node: Node;
 - *Type:* constructs.Node
 
 The tree node.
+
+---
+
+##### `binding`<sup>Required</sup> <a name="binding" id="control-broker.OpaEvalEngine.property.binding"></a>
+
+```typescript
+public readonly binding: BaseApiBinding;
+```
+
+- *Type:* <a href="#control-broker.BaseApiBinding">BaseApiBinding</a>
 
 ---
 
@@ -841,6 +1007,17 @@ public readonly handler: Function;
 
 
 ## Structs <a name="Structs" id="Structs"></a>
+
+### ApiBindingHeaders <a name="ApiBindingHeaders" id="control-broker.ApiBindingHeaders"></a>
+
+#### Initializer <a name="Initializer" id="control-broker.ApiBindingHeaders.Initializer"></a>
+
+```typescript
+import { ApiBindingHeaders } from 'control-broker'
+
+const apiBindingHeaders: ApiBindingHeaders = { ... }
+```
+
 
 ### ApiProps <a name="ApiProps" id="control-broker.ApiProps"></a>
 
@@ -898,6 +1075,92 @@ public readonly integration: any;
 
 ---
 
+### BaseEvalEngineProps <a name="BaseEvalEngineProps" id="control-broker.BaseEvalEngineProps"></a>
+
+#### Initializer <a name="Initializer" id="control-broker.BaseEvalEngineProps.Initializer"></a>
+
+```typescript
+import { BaseEvalEngineProps } from 'control-broker'
+
+const baseEvalEngineProps: BaseEvalEngineProps = { ... }
+```
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.BaseEvalEngineProps.property.binding">binding</a></code> | <code><a href="#control-broker.BaseApiBinding">BaseApiBinding</a></code> | *No description.* |
+
+---
+
+##### `binding`<sup>Required</sup> <a name="binding" id="control-broker.BaseEvalEngineProps.property.binding"></a>
+
+```typescript
+public readonly binding: BaseApiBinding;
+```
+
+- *Type:* <a href="#control-broker.BaseApiBinding">BaseApiBinding</a>
+
+---
+
+### BaseInputHandlerProps <a name="BaseInputHandlerProps" id="control-broker.BaseInputHandlerProps"></a>
+
+#### Initializer <a name="Initializer" id="control-broker.BaseInputHandlerProps.Initializer"></a>
+
+```typescript
+import { BaseInputHandlerProps } from 'control-broker'
+
+const baseInputHandlerProps: BaseInputHandlerProps = { ... }
+```
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.BaseInputHandlerProps.property.binding">binding</a></code> | <code><a href="#control-broker.BaseApiBinding">BaseApiBinding</a></code> | *No description.* |
+
+---
+
+##### `binding`<sup>Required</sup> <a name="binding" id="control-broker.BaseInputHandlerProps.property.binding"></a>
+
+```typescript
+public readonly binding: BaseApiBinding;
+```
+
+- *Type:* <a href="#control-broker.BaseApiBinding">BaseApiBinding</a>
+
+---
+
+### ControlBrokerParams <a name="ControlBrokerParams" id="control-broker.ControlBrokerParams"></a>
+
+Parameters that components of Control Broker may need.
+
+#### Initializer <a name="Initializer" id="control-broker.ControlBrokerParams.Initializer"></a>
+
+```typescript
+import { ControlBrokerParams } from 'control-broker'
+
+const controlBrokerParams: ControlBrokerParams = { ... }
+```
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#control-broker.ControlBrokerParams.property.inputBucket">inputBucket</a></code> | <code>aws-cdk-lib.aws_s3.Bucket</code> | *No description.* |
+
+---
+
+##### `inputBucket`<sup>Required</sup> <a name="inputBucket" id="control-broker.ControlBrokerParams.property.inputBucket"></a>
+
+```typescript
+public readonly inputBucket: Bucket;
+```
+
+- *Type:* aws-cdk-lib.aws_s3.Bucket
+
+---
+
 ### ControlBrokerProps <a name="ControlBrokerProps" id="control-broker.ControlBrokerProps"></a>
 
 #### Initializer <a name="Initializer" id="control-broker.ControlBrokerProps.Initializer"></a>
@@ -913,6 +1176,9 @@ const controlBrokerProps: ControlBrokerProps = { ... }
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#control-broker.ControlBrokerProps.property.api">api</a></code> | <code><a href="#control-broker.Api">Api</a></code> | *No description.* |
+| <code><a href="#control-broker.ControlBrokerProps.property.evalEngine">evalEngine</a></code> | <code><a href="#control-broker.BaseEvalEngine">BaseEvalEngine</a></code> | *No description.* |
+| <code><a href="#control-broker.ControlBrokerProps.property.inputBucket">inputBucket</a></code> | <code>aws-cdk-lib.aws_s3.Bucket</code> | *No description.* |
+| <code><a href="#control-broker.ControlBrokerProps.property.inputHandlers">inputHandlers</a></code> | <code><a href="#control-broker.BaseInputHandler">BaseInputHandler</a>[]</code> | *No description.* |
 
 ---
 
@@ -923,6 +1189,36 @@ public readonly api: Api;
 ```
 
 - *Type:* <a href="#control-broker.Api">Api</a>
+
+---
+
+##### `evalEngine`<sup>Required</sup> <a name="evalEngine" id="control-broker.ControlBrokerProps.property.evalEngine"></a>
+
+```typescript
+public readonly evalEngine: BaseEvalEngine;
+```
+
+- *Type:* <a href="#control-broker.BaseEvalEngine">BaseEvalEngine</a>
+
+---
+
+##### `inputBucket`<sup>Required</sup> <a name="inputBucket" id="control-broker.ControlBrokerProps.property.inputBucket"></a>
+
+```typescript
+public readonly inputBucket: Bucket;
+```
+
+- *Type:* aws-cdk-lib.aws_s3.Bucket
+
+---
+
+##### `inputHandlers`<sup>Required</sup> <a name="inputHandlers" id="control-broker.ControlBrokerProps.property.inputHandlers"></a>
+
+```typescript
+public readonly inputHandlers: BaseInputHandler[];
+```
+
+- *Type:* <a href="#control-broker.BaseInputHandler">BaseInputHandler</a>[]
 
 ---
 
@@ -991,7 +1287,7 @@ const inputHandlerBindingConfiguration: InputHandlerBindingConfiguration = { ...
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#control-broker.InputHandlerBindingConfiguration.property.binding">binding</a></code> | <code><a href="#control-broker.BaseApiBinding">BaseApiBinding</a></code> | *No description.* |
-| <code><a href="#control-broker.InputHandlerBindingConfiguration.property.inputHandler">inputHandler</a></code> | <code>control-broker.inputHandlers.BaseInputHandler</code> | *No description.* |
+| <code><a href="#control-broker.InputHandlerBindingConfiguration.property.inputHandler">inputHandler</a></code> | <code><a href="#control-broker.BaseInputHandler">BaseInputHandler</a></code> | *No description.* |
 
 ---
 
@@ -1011,7 +1307,7 @@ public readonly binding: BaseApiBinding;
 public readonly inputHandler: BaseInputHandler;
 ```
 
-- *Type:* control-broker.inputHandlers.BaseInputHandler
+- *Type:* <a href="#control-broker.BaseInputHandler">BaseInputHandler</a>
 
 ---
 
@@ -1026,25 +1322,25 @@ const inputHandlerBindingConfigurations: InputHandlerBindingConfigurations = { .
 ```
 
 
-### InputHandlerIntegrationContext <a name="InputHandlerIntegrationContext" id="control-broker.inputHandlers.InputHandlerIntegrationContext"></a>
+### InputHandlerIntegrationContext <a name="InputHandlerIntegrationContext" id="control-broker.InputHandlerIntegrationContext"></a>
 
-#### Initializer <a name="Initializer" id="control-broker.inputHandlers.InputHandlerIntegrationContext.Initializer"></a>
+#### Initializer <a name="Initializer" id="control-broker.InputHandlerIntegrationContext.Initializer"></a>
 
 ```typescript
-import { inputHandlers } from 'control-broker'
+import { InputHandlerIntegrationContext } from 'control-broker'
 
-const inputHandlerIntegrationContext: inputHandlers.InputHandlerIntegrationContext = { ... }
+const inputHandlerIntegrationContext: InputHandlerIntegrationContext = { ... }
 ```
 
 #### Properties <a name="Properties" id="Properties"></a>
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#control-broker.inputHandlers.InputHandlerIntegrationContext.property.externalUrl">externalUrl</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#control-broker.InputHandlerIntegrationContext.property.externalUrl">externalUrl</a></code> | <code>string</code> | *No description.* |
 
 ---
 
-##### `externalUrl`<sup>Required</sup> <a name="externalUrl" id="control-broker.inputHandlers.InputHandlerIntegrationContext.property.externalUrl"></a>
+##### `externalUrl`<sup>Required</sup> <a name="externalUrl" id="control-broker.InputHandlerIntegrationContext.property.externalUrl"></a>
 
 ```typescript
 public readonly externalUrl: string;
@@ -1068,14 +1364,12 @@ and different principals to allow.
 ```typescript
 import { BaseApiBinding } from 'control-broker'
 
-new BaseApiBinding(urlSafeName: string, api: Api, integrationTarget: IIntegrationTarget)
+new BaseApiBinding(urlSafeName: string)
 ```
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#control-broker.BaseApiBinding.Initializer.parameter.urlSafeName">urlSafeName</a></code> | <code>string</code> | A name suitable for use in an integration's URL. |
-| <code><a href="#control-broker.BaseApiBinding.Initializer.parameter.api">api</a></code> | <code><a href="#control-broker.Api">Api</a></code> | The API to bind to. |
-| <code><a href="#control-broker.BaseApiBinding.Initializer.parameter.integrationTarget">integrationTarget</a></code> | <code><a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a></code> | The integration target to bind to the API via an integration. |
 
 ---
 
@@ -1089,27 +1383,27 @@ Can contain slashes.
 
 ---
 
-##### `api`<sup>Required</sup> <a name="api" id="control-broker.BaseApiBinding.Initializer.parameter.api"></a>
-
-- *Type:* <a href="#control-broker.Api">Api</a>
-
-The API to bind to.
-
----
-
-##### `integrationTarget`<sup>Required</sup> <a name="integrationTarget" id="control-broker.BaseApiBinding.Initializer.parameter.integrationTarget"></a>
-
-- *Type:* <a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a>
-
-The integration target to bind to the API via an integration.
-
----
-
 #### Methods <a name="Methods" id="Methods"></a>
 
 | **Name** | **Description** |
 | --- | --- |
+| <code><a href="#control-broker.BaseApiBinding.addHeaders">addHeaders</a></code> | *No description.* |
 | <code><a href="#control-broker.BaseApiBinding.authorizePrincipalArn">authorizePrincipalArn</a></code> | Give permission to a principal to call this API using this binding. |
+| <code><a href="#control-broker.BaseApiBinding.bindTargetToApi">bindTargetToApi</a></code> | Bind this target to the API. |
+
+---
+
+##### `addHeaders` <a name="addHeaders" id="control-broker.BaseApiBinding.addHeaders"></a>
+
+```typescript
+public addHeaders(headers: ApiBindingHeaders): void
+```
+
+###### `headers`<sup>Required</sup> <a name="headers" id="control-broker.BaseApiBinding.addHeaders.parameter.headers"></a>
+
+- *Type:* <a href="#control-broker.ApiBindingHeaders">ApiBindingHeaders</a>
+
+Headers to send to the integration.
 
 ---
 
@@ -1131,30 +1425,36 @@ Principal to give calling permissions to.
 
 ---
 
+##### `bindTargetToApi` <a name="bindTargetToApi" id="control-broker.BaseApiBinding.bindTargetToApi"></a>
+
+```typescript
+public bindTargetToApi(api: Api, target: IIntegrationTarget): string
+```
+
+Bind this target to the API.
+
+###### `api`<sup>Required</sup> <a name="api" id="control-broker.BaseApiBinding.bindTargetToApi.parameter.api"></a>
+
+- *Type:* <a href="#control-broker.Api">Api</a>
+
+---
+
+###### `target`<sup>Required</sup> <a name="target" id="control-broker.BaseApiBinding.bindTargetToApi.parameter.target"></a>
+
+- *Type:* <a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a>
+
+---
+
 
 #### Properties <a name="Properties" id="Properties"></a>
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#control-broker.BaseApiBinding.property.api">api</a></code> | <code><a href="#control-broker.Api">Api</a></code> | The API to bind to. |
 | <code><a href="#control-broker.BaseApiBinding.property.apiType">apiType</a></code> | <code><a href="#control-broker.AwsApiType">AwsApiType</a></code> | *No description.* |
-| <code><a href="#control-broker.BaseApiBinding.property.integrationTarget">integrationTarget</a></code> | <code><a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a></code> | The integration target to bind to the API via an integration. |
+| <code><a href="#control-broker.BaseApiBinding.property.urlSafeName">urlSafeName</a></code> | <code>string</code> | A name suitable for use in an integration's URL. |
+| <code><a href="#control-broker.BaseApiBinding.property.url">url</a></code> | <code>string</code> | *No description.* |
 | <code><a href="#control-broker.BaseApiBinding.property.method">method</a></code> | <code>string</code> | *No description.* |
 | <code><a href="#control-broker.BaseApiBinding.property.path">path</a></code> | <code>string</code> | *No description.* |
-| <code><a href="#control-broker.BaseApiBinding.property.url">url</a></code> | <code>string</code> | *No description.* |
-| <code><a href="#control-broker.BaseApiBinding.property.urlSafeName">urlSafeName</a></code> | <code>string</code> | A name suitable for use in an integration's URL. |
-
----
-
-##### `api`<sup>Required</sup> <a name="api" id="control-broker.BaseApiBinding.property.api"></a>
-
-```typescript
-public readonly api: Api;
-```
-
-- *Type:* <a href="#control-broker.Api">Api</a>
-
-The API to bind to.
 
 ---
 
@@ -1165,48 +1465,6 @@ public readonly apiType: AwsApiType;
 ```
 
 - *Type:* <a href="#control-broker.AwsApiType">AwsApiType</a>
-
----
-
-##### `integrationTarget`<sup>Required</sup> <a name="integrationTarget" id="control-broker.BaseApiBinding.property.integrationTarget"></a>
-
-```typescript
-public readonly integrationTarget: IIntegrationTarget;
-```
-
-- *Type:* <a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a>
-
-The integration target to bind to the API via an integration.
-
----
-
-##### `method`<sup>Required</sup> <a name="method" id="control-broker.BaseApiBinding.property.method"></a>
-
-```typescript
-public readonly method: string;
-```
-
-- *Type:* string
-
----
-
-##### `path`<sup>Required</sup> <a name="path" id="control-broker.BaseApiBinding.property.path"></a>
-
-```typescript
-public readonly path: string;
-```
-
-- *Type:* string
-
----
-
-##### `url`<sup>Required</sup> <a name="url" id="control-broker.BaseApiBinding.property.url"></a>
-
-```typescript
-public readonly url: string;
-```
-
-- *Type:* string
 
 ---
 
@@ -1224,6 +1482,36 @@ Can contain slashes.
 
 ---
 
+##### `url`<sup>Optional</sup> <a name="url" id="control-broker.BaseApiBinding.property.url"></a>
+
+```typescript
+public readonly url: string;
+```
+
+- *Type:* string
+
+---
+
+##### `method`<sup>Optional</sup> <a name="method" id="control-broker.BaseApiBinding.property.method"></a>
+
+```typescript
+public readonly method: string;
+```
+
+- *Type:* string
+
+---
+
+##### `path`<sup>Optional</sup> <a name="path" id="control-broker.BaseApiBinding.property.path"></a>
+
+```typescript
+public readonly path: string;
+```
+
+- *Type:* string
+
+---
+
 
 ### HttpApiBinding <a name="HttpApiBinding" id="control-broker.HttpApiBinding"></a>
 
@@ -1232,14 +1520,12 @@ Can contain slashes.
 ```typescript
 import { HttpApiBinding } from 'control-broker'
 
-new HttpApiBinding(urlSafeName: string, api: Api, integrationTarget: IIntegrationTarget)
+new HttpApiBinding(urlSafeName: string)
 ```
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#control-broker.HttpApiBinding.Initializer.parameter.urlSafeName">urlSafeName</a></code> | <code>string</code> | *No description.* |
-| <code><a href="#control-broker.HttpApiBinding.Initializer.parameter.api">api</a></code> | <code><a href="#control-broker.Api">Api</a></code> | *No description.* |
-| <code><a href="#control-broker.HttpApiBinding.Initializer.parameter.integrationTarget">integrationTarget</a></code> | <code><a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a></code> | *No description.* |
 
 ---
 
@@ -1249,23 +1535,27 @@ new HttpApiBinding(urlSafeName: string, api: Api, integrationTarget: IIntegratio
 
 ---
 
-##### `api`<sup>Required</sup> <a name="api" id="control-broker.HttpApiBinding.Initializer.parameter.api"></a>
-
-- *Type:* <a href="#control-broker.Api">Api</a>
-
----
-
-##### `integrationTarget`<sup>Required</sup> <a name="integrationTarget" id="control-broker.HttpApiBinding.Initializer.parameter.integrationTarget"></a>
-
-- *Type:* <a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a>
-
----
-
 #### Methods <a name="Methods" id="Methods"></a>
 
 | **Name** | **Description** |
 | --- | --- |
+| <code><a href="#control-broker.HttpApiBinding.addHeaders">addHeaders</a></code> | *No description.* |
 | <code><a href="#control-broker.HttpApiBinding.authorizePrincipalArn">authorizePrincipalArn</a></code> | Give permission to a principal to call this API using this binding. |
+| <code><a href="#control-broker.HttpApiBinding.bindTargetToApi">bindTargetToApi</a></code> | Bind this target to the API. |
+
+---
+
+##### `addHeaders` <a name="addHeaders" id="control-broker.HttpApiBinding.addHeaders"></a>
+
+```typescript
+public addHeaders(headers: ApiBindingHeaders): void
+```
+
+###### `headers`<sup>Required</sup> <a name="headers" id="control-broker.HttpApiBinding.addHeaders.parameter.headers"></a>
+
+- *Type:* <a href="#control-broker.ApiBindingHeaders">ApiBindingHeaders</a>
+
+Headers to send to the integration.
 
 ---
 
@@ -1285,31 +1575,37 @@ This should be called after the binding has been added to all APIs.
 
 ---
 
+##### `bindTargetToApi` <a name="bindTargetToApi" id="control-broker.HttpApiBinding.bindTargetToApi"></a>
+
+```typescript
+public bindTargetToApi(api: Api, target: IIntegrationTarget): string
+```
+
+Bind this target to the API.
+
+###### `api`<sup>Required</sup> <a name="api" id="control-broker.HttpApiBinding.bindTargetToApi.parameter.api"></a>
+
+- *Type:* <a href="#control-broker.Api">Api</a>
+
+---
+
+###### `target`<sup>Required</sup> <a name="target" id="control-broker.HttpApiBinding.bindTargetToApi.parameter.target"></a>
+
+- *Type:* <a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a>
+
+---
+
 
 #### Properties <a name="Properties" id="Properties"></a>
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#control-broker.HttpApiBinding.property.api">api</a></code> | <code><a href="#control-broker.Api">Api</a></code> | The API to bind to. |
 | <code><a href="#control-broker.HttpApiBinding.property.apiType">apiType</a></code> | <code><a href="#control-broker.AwsApiType">AwsApiType</a></code> | *No description.* |
-| <code><a href="#control-broker.HttpApiBinding.property.integrationTarget">integrationTarget</a></code> | <code><a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a></code> | The integration target to bind to the API via an integration. |
+| <code><a href="#control-broker.HttpApiBinding.property.urlSafeName">urlSafeName</a></code> | <code>string</code> | A name suitable for use in an integration's URL. |
+| <code><a href="#control-broker.HttpApiBinding.property.url">url</a></code> | <code>string</code> | *No description.* |
 | <code><a href="#control-broker.HttpApiBinding.property.method">method</a></code> | <code>string</code> | *No description.* |
 | <code><a href="#control-broker.HttpApiBinding.property.path">path</a></code> | <code>string</code> | *No description.* |
-| <code><a href="#control-broker.HttpApiBinding.property.url">url</a></code> | <code>string</code> | *No description.* |
-| <code><a href="#control-broker.HttpApiBinding.property.urlSafeName">urlSafeName</a></code> | <code>string</code> | A name suitable for use in an integration's URL. |
 | <code><a href="#control-broker.HttpApiBinding.property.route">route</a></code> | <code>@aws-cdk/aws-apigatewayv2-alpha.HttpRoute</code> | *No description.* |
-
----
-
-##### `api`<sup>Required</sup> <a name="api" id="control-broker.HttpApiBinding.property.api"></a>
-
-```typescript
-public readonly api: Api;
-```
-
-- *Type:* <a href="#control-broker.Api">Api</a>
-
-The API to bind to.
 
 ---
 
@@ -1320,48 +1616,6 @@ public readonly apiType: AwsApiType;
 ```
 
 - *Type:* <a href="#control-broker.AwsApiType">AwsApiType</a>
-
----
-
-##### `integrationTarget`<sup>Required</sup> <a name="integrationTarget" id="control-broker.HttpApiBinding.property.integrationTarget"></a>
-
-```typescript
-public readonly integrationTarget: IIntegrationTarget;
-```
-
-- *Type:* <a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a>
-
-The integration target to bind to the API via an integration.
-
----
-
-##### `method`<sup>Required</sup> <a name="method" id="control-broker.HttpApiBinding.property.method"></a>
-
-```typescript
-public readonly method: string;
-```
-
-- *Type:* string
-
----
-
-##### `path`<sup>Required</sup> <a name="path" id="control-broker.HttpApiBinding.property.path"></a>
-
-```typescript
-public readonly path: string;
-```
-
-- *Type:* string
-
----
-
-##### `url`<sup>Required</sup> <a name="url" id="control-broker.HttpApiBinding.property.url"></a>
-
-```typescript
-public readonly url: string;
-```
-
-- *Type:* string
 
 ---
 
@@ -1379,7 +1633,37 @@ Can contain slashes.
 
 ---
 
-##### `route`<sup>Required</sup> <a name="route" id="control-broker.HttpApiBinding.property.route"></a>
+##### `url`<sup>Optional</sup> <a name="url" id="control-broker.HttpApiBinding.property.url"></a>
+
+```typescript
+public readonly url: string;
+```
+
+- *Type:* string
+
+---
+
+##### `method`<sup>Optional</sup> <a name="method" id="control-broker.HttpApiBinding.property.method"></a>
+
+```typescript
+public readonly method: string;
+```
+
+- *Type:* string
+
+---
+
+##### `path`<sup>Optional</sup> <a name="path" id="control-broker.HttpApiBinding.property.path"></a>
+
+```typescript
+public readonly path: string;
+```
+
+- *Type:* string
+
+---
+
+##### `route`<sup>Optional</sup> <a name="route" id="control-broker.HttpApiBinding.property.route"></a>
 
 ```typescript
 public readonly route: HttpRoute;
@@ -1394,14 +1678,25 @@ public readonly route: HttpRoute;
 
 ### IIntegrationTarget <a name="IIntegrationTarget" id="control-broker.IIntegrationTarget"></a>
 
-- *Implemented By:* control-broker.inputHandlers.BaseInputHandler, control-broker.inputHandlers.CloudFormationInputHandler, <a href="#control-broker.BaseEvalEngine">BaseEvalEngine</a>, <a href="#control-broker.OpaEvalEngine">OpaEvalEngine</a>, <a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a>, <a href="#control-broker.ILambdaIntegrationTarget">ILambdaIntegrationTarget</a>
+- *Implemented By:* <a href="#control-broker.BaseEvalEngine">BaseEvalEngine</a>, <a href="#control-broker.BaseInputHandler">BaseInputHandler</a>, <a href="#control-broker.CloudFormationInputHandler">CloudFormationInputHandler</a>, <a href="#control-broker.OpaEvalEngine">OpaEvalEngine</a>, <a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a>, <a href="#control-broker.ILambdaIntegrationTarget">ILambdaIntegrationTarget</a>
 
 
 #### Properties <a name="Properties" id="Properties"></a>
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
+| <code><a href="#control-broker.IIntegrationTarget.property.binding">binding</a></code> | <code><a href="#control-broker.BaseApiBinding">BaseApiBinding</a></code> | *No description.* |
 | <code><a href="#control-broker.IIntegrationTarget.property.integrationTargetType">integrationTargetType</a></code> | <code><a href="#control-broker.IntegrationTargetType">IntegrationTargetType</a></code> | *No description.* |
+
+---
+
+##### `binding`<sup>Required</sup> <a name="binding" id="control-broker.IIntegrationTarget.property.binding"></a>
+
+```typescript
+public readonly binding: BaseApiBinding;
+```
+
+- *Type:* <a href="#control-broker.BaseApiBinding">BaseApiBinding</a>
 
 ---
 
@@ -1419,15 +1714,26 @@ public readonly integrationTargetType: IntegrationTargetType;
 
 - *Extends:* <a href="#control-broker.IIntegrationTarget">IIntegrationTarget</a>
 
-- *Implemented By:* control-broker.inputHandlers.CloudFormationInputHandler, <a href="#control-broker.OpaEvalEngine">OpaEvalEngine</a>, <a href="#control-broker.ILambdaIntegrationTarget">ILambdaIntegrationTarget</a>
+- *Implemented By:* <a href="#control-broker.CloudFormationInputHandler">CloudFormationInputHandler</a>, <a href="#control-broker.OpaEvalEngine">OpaEvalEngine</a>, <a href="#control-broker.ILambdaIntegrationTarget">ILambdaIntegrationTarget</a>
 
 
 #### Properties <a name="Properties" id="Properties"></a>
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
+| <code><a href="#control-broker.ILambdaIntegrationTarget.property.binding">binding</a></code> | <code><a href="#control-broker.BaseApiBinding">BaseApiBinding</a></code> | *No description.* |
 | <code><a href="#control-broker.ILambdaIntegrationTarget.property.integrationTargetType">integrationTargetType</a></code> | <code><a href="#control-broker.IntegrationTargetType">IntegrationTargetType</a></code> | *No description.* |
 | <code><a href="#control-broker.ILambdaIntegrationTarget.property.handler">handler</a></code> | <code>aws-cdk-lib.aws_lambda.Function</code> | *No description.* |
+
+---
+
+##### `binding`<sup>Required</sup> <a name="binding" id="control-broker.ILambdaIntegrationTarget.property.binding"></a>
+
+```typescript
+public readonly binding: BaseApiBinding;
+```
+
+- *Type:* <a href="#control-broker.BaseApiBinding">BaseApiBinding</a>
 
 ---
 

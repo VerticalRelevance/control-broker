@@ -12,6 +12,7 @@
     "compat": "npx projen compat",
     "compile": "npx projen compile",
     "default": "npx projen default",
+    "deploy_core_stack": "npx projen deploy_core_stack",
     "docgen": "npx projen docgen",
     "eject": "npx projen eject",
     "eslint": "npx projen eslint",
