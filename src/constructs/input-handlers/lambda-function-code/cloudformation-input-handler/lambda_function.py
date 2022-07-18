@@ -22,9 +22,12 @@ class RequestParser:
 
         self.request_json_body = json.loads(event["body"])
         self.headers = event["headers"]
-        self.consumer_request_context = self.request_json_body["Context"]
+        self.consumer_request_context = self.request_json_body.get("Context", None)
 
         self.main()
+
+        print(self.consumer_metadata)
+        print(self.approved_context)
 
     def get_requestor_is_authorized(self):
         # TODO
@@ -50,7 +53,7 @@ class RequestParser:
                     "IsAuthorized": self.get_requestor_is_authorized(),
                 },
                 "InputType": {"Validated": bool(self.get_validated_input_type())},
-                "Context": {"IsApproved": bool(self.approved_context)},
+                "Context": {"IsApproved": self.approved_context is not None},
             }
         }
 
@@ -254,18 +257,18 @@ def lambda_handler(event, context):
                 "Bucket": os.environ["RawPaCResultsBucket"],
                 "Key": evaluation_key,
             },
-            "OutputHandlers": {
-                "OPA": {
-                    "PresignedUrl": generate_presigned_url(
-                        bucket=json.loads(os.environ["OutputHandlers"])["OPA"][
-                            "Bucket"
-                        ],
-                        key=evaluation_key,
-                    ),
-                    "Bucket": json.loads(os.environ["OutputHandlers"])["OPA"]["Bucket"],
-                    "Key": evaluation_key,
-                }
-            },
+            # "OutputHandlers": {
+            #     "OPA": {
+            #         "PresignedUrl": generate_presigned_url(
+            #             bucket=json.loads(os.environ["OutputHandlers"])["OPA"][
+            #                 "Bucket"
+            #             ],
+            #             key=evaluation_key,
+            #         ),
+            #         "Bucket": json.loads(os.environ["OutputHandlers"])["OPA"]["Bucket"],
+            #         "Key": evaluation_key,
+            #     }
+            # },
         }
     }
 

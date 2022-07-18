@@ -16,6 +16,7 @@ const evalEngine = new OpaEvalEngine(stack, 'EvalEngine', { binding: evalEngineB
 new ControlBroker(stack, 'TestControlBroker', {
   api,
   inputBucket: new Bucket(stack, 'InputBucket'),
+  resultsBucket: new Bucket(stack, 'OutputBucket'),
   evalEngine,
   inputHandlers: [cfnInputHandler],
 });

@@ -1,4 +1,5 @@
 import { CfnOutput } from 'aws-cdk-lib';
+import { ArnPrincipal } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import { BaseEvalEngine } from '.';
@@ -8,6 +9,7 @@ import { BaseInputHandler } from './input-handlers';
 export interface ControlBrokerProps {
   readonly api: Api;
   readonly inputBucket: Bucket;
+  readonly resultsBucket: Bucket;
   readonly evalEngine: BaseEvalEngine;
   readonly inputHandlers: BaseInputHandler[];
 }
@@ -17,6 +19,7 @@ export interface ControlBrokerProps {
  */
 export interface ControlBrokerParams {
   readonly inputBucket: Bucket;
+  readonly resultsBucket: Bucket;
 }
 
 export class ControlBroker extends Construct {
@@ -27,14 +30,18 @@ export class ControlBroker extends Construct {
     this.api = props.api;
     this.params = {
       inputBucket: props.inputBucket,
+      resultsBucket: props.resultsBucket,
     };
     this.evalEngine = props.evalEngine;
     props.inputHandlers.forEach((ih) => this.addInputHandler(ih));
     new CfnOutput(this, 'InputBucketName', { value: props.inputBucket.bucketName });
+    new CfnOutput(this, 'ResultsBucketName', { value: props.resultsBucket.bucketName });
   }
 
   public addInputHandler(inputHandler: BaseInputHandler) {
     this.api.addInputHandler(inputHandler);
+    this.params.inputBucket.grantRead(new ArnPrincipal(inputHandler.evalEngineCallerPrincipalArn));
+    this.params.resultsBucket.grantWrite(new ArnPrincipal(inputHandler.evalEngineCallerPrincipalArn));
     inputHandler.controlBrokerParams = this.params;
     return this.getUrlForInputHandler(inputHandler);
   }

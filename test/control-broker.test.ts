@@ -13,8 +13,9 @@ mockedPythonFunction.mockImplementation(() => {
   return {
     ...original.PythonFunction,
     functionArn: 'arn:aws:lambda:us-east-1:123456789012:function:mockfunction',
+    logGroup: { logGroupName: "/aws/lambda/test" },
     addPermission: () => {},
-    addEnvironment: () => {},
+    addEnvironment: () => { },
   };
 });
 
@@ -27,9 +28,11 @@ test('ControlBroker can be created and attached to a stack', () => {
   const evalEngine = new OpaEvalEngine(stack, 'EvalEngine', { binding: evalEngineBinding });
   expect(mockedPythonFunction).toHaveBeenCalled();
   const inputBucket = new Bucket(stack, 'CBInputBucket', {});
+  const resultsBucket = new Bucket(stack, 'CBResultsBucket', {});
   new ControlBroker(stack, 'TestControlBroker', {
     api,
     inputBucket,
+    resultsBucket,
     evalEngine,
     inputHandlers: [cfnInputHandler],
   });
