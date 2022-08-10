@@ -1148,6 +1148,7 @@ const controlBrokerParams: ControlBrokerParams = { ... }
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#control-broker.ControlBrokerParams.property.inputBucket">inputBucket</a></code> | <code>aws-cdk-lib.aws_s3.Bucket</code> | *No description.* |
+| <code><a href="#control-broker.ControlBrokerParams.property.resultsBucket">resultsBucket</a></code> | <code>aws-cdk-lib.aws_s3.Bucket</code> | *No description.* |
 
 ---
 
@@ -1155,6 +1156,16 @@ const controlBrokerParams: ControlBrokerParams = { ... }
 
 ```typescript
 public readonly inputBucket: Bucket;
+```
+
+- *Type:* aws-cdk-lib.aws_s3.Bucket
+
+---
+
+##### `resultsBucket`<sup>Required</sup> <a name="resultsBucket" id="control-broker.ControlBrokerParams.property.resultsBucket"></a>
+
+```typescript
+public readonly resultsBucket: Bucket;
 ```
 
 - *Type:* aws-cdk-lib.aws_s3.Bucket
@@ -1179,6 +1190,7 @@ const controlBrokerProps: ControlBrokerProps = { ... }
 | <code><a href="#control-broker.ControlBrokerProps.property.evalEngine">evalEngine</a></code> | <code><a href="#control-broker.BaseEvalEngine">BaseEvalEngine</a></code> | *No description.* |
 | <code><a href="#control-broker.ControlBrokerProps.property.inputBucket">inputBucket</a></code> | <code>aws-cdk-lib.aws_s3.Bucket</code> | *No description.* |
 | <code><a href="#control-broker.ControlBrokerProps.property.inputHandlers">inputHandlers</a></code> | <code><a href="#control-broker.BaseInputHandler">BaseInputHandler</a>[]</code> | *No description.* |
+| <code><a href="#control-broker.ControlBrokerProps.property.resultsBucket">resultsBucket</a></code> | <code>aws-cdk-lib.aws_s3.Bucket</code> | *No description.* |
 
 ---
 
@@ -1219,6 +1231,16 @@ public readonly inputHandlers: BaseInputHandler[];
 ```
 
 - *Type:* <a href="#control-broker.BaseInputHandler">BaseInputHandler</a>[]
+
+---
+
+##### `resultsBucket`<sup>Required</sup> <a name="resultsBucket" id="control-broker.ControlBrokerProps.property.resultsBucket"></a>
+
+```typescript
+public readonly resultsBucket: Bucket;
+```
+
+- *Type:* aws-cdk-lib.aws_s3.Bucket
 
 ---
 

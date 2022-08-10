@@ -13,7 +13,8 @@ mockedPythonFunction.mockImplementation(() => {
   return {
     ...original.PythonFunction,
     functionArn: 'arn:aws:lambda:us-east-1:123456789012:function:mockfunction',
-    logGroup: { logGroupName: "/aws/lambda/test" },
+    logGroup: { logGroupName: '/aws/lambda/test' },
+    role: { roleArn: 'arn:aws:iam::123456789012:role/MockTestHandlerRole' },
     addPermission: () => {},
     addEnvironment: () => { },
   };
