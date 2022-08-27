@@ -436,6 +436,7 @@ data "aws_iam_policy_document" "sfn_process_config_event" {
     resources = [
       module.lambda_eval_engine_cfn_guard.lambda_function_arn,
       module.lambda_output_handler.lambda_function_arn,
+      module.lambda_get_resource_config_compliance.lambda_function_arn,
     ]
   }
   statement {
@@ -512,10 +513,10 @@ resource "aws_sfn_state_machine" "process_config_event" {
           "ResultPath": "$.GetResourceConfigComplianceInitial",
           "Resource": "arn:aws:states:::lambda:invoke",
           "Parameters": {
-              "FunctionName": self.lambda_get_resource_config_compliance.function_name,
+              "FunctionName": module.lambda_get_resource_config_compliance.lambda_function_arn,
               "Payload": {
                   "ConfigEvent.$":"$.ConfigEvent",
-                  "ExpectedComplianceStatus": None
+                  "ExpectedComplianceStatus": null
               }
           },
           "ResultSelector": {
@@ -524,36 +525,21 @@ resource "aws_sfn_state_machine" "process_config_event" {
       },
       "GetIsCompliant": {
           "Type": "Task",
-          "Next": "PutEvaluations",
+          "Next": "ParseOutput",
           "ResultPath": "$.GetIsCompliant",
           "Resource": "arn:aws:states:::lambda:invoke",
           "Parameters": {
-              "FunctionName": self.lambda_requests_get.function_name,
+              "FunctionName": module.lambda_eval_engine_cfn_guard.lambda_function_arn,
               "Payload":{
-                  "Url.$":"$.SignApigwRequest.Payload.Response.ControlBrokerEvaluation.OutputHandlers.OPA.PresignedUrl",
               }
           },
           "ResultSelector": {
               "Payload.$": "$.Payload"
           },
-          "Retry": [
-              {
-                  "ErrorEquals": [
-                      "StatusCodeNot200Exception"
-                  ],
-                  "IntervalSeconds": 1,
-                  "MaxAttempts": 8,
-                  "BackoffRate": 2.0
-              }
-          ],
-          "Catch": [
-              {
-                  "ErrorEquals":[
-                      "States.ALL"
-                  ],
-                  "Next": "ResultsReportDoesNotYetExist"
-              }
-          ]
+      },
+      "ParseOutput" : {
+        "Type" : "Pass",
+        "End" : true,
       },
     }
   })
