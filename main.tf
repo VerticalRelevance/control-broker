@@ -228,7 +228,7 @@ module "lambda_custom_config" {
   source_path = "./resources/lambda/invoked_by_config"
 
   environment_variables = {
-    # ProcessingSfnArn = aws_sfn_state_machine.convert_then_lint.arn
+    # ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
   }
 
   attach_policy_json = true
@@ -317,7 +317,7 @@ module "lambda_eval_engine_cfn_guard" {
   source_path = "./resources/lambda/eval_engine_cfn_guard"
 
   environment_variables = {
-    # ProcessingSfnArn = aws_sfn_state_machine.convert_then_lint.arn
+    # ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
   }
 
   attach_policy_json = true
@@ -326,4 +326,137 @@ module "lambda_eval_engine_cfn_guard" {
   tags = {
     IsCompliant = true
   }
+}
+
+##################################################################
+#                       output handler 
+##################################################################
+
+data "aws_iam_policy_document" "lambda_output_handler" {
+  statement {
+    actions = [
+      "config:PutEvaluationResults",
+      "config:*",
+    ]
+    resources = [
+      "*",
+    ]
+  }
+}
+
+module "lambda_output_handler" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name                  = "${local.resource_prefix}-output_handler"
+  handler                        = "lambda_function.lambda_handler"
+  runtime                        = "python3.9"
+  timeout                        = 60
+  memory_size                    = 512
+  reserved_concurrent_executions = 1
+
+  source_path = "./resources/lambda/output_handler"
+
+  environment_variables = {
+    # ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
+  }
+
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_output_handler.json
+
+  tags = {
+    IsCompliant = true
+  }
+}
+
+
+# cwl - sfn
+
+resource "aws_cloudwatch_log_group" "sfn_process_config_event" {
+  name = "/aws/vendedlogs/states/${local.resource_prefix}-sfn_process_config_event"
+}
+
+# iam - sfn
+
+data "aws_iam_policy_document" "sfn_process_config_event" {
+  statement {
+    actions = [
+      "logs:*",
+    ]
+    resources = [
+      "*", #FIXME
+      aws_cloudwatch_log_group.sfn_process_config_event.arn,
+      "${aws_cloudwatch_log_group.sfn_process_config_event.arn}:*"
+    ]
+  }
+  statement {
+    actions = [
+      "lambda:InvokeFunction",
+    ]
+    resources = [
+      module.lambda_eval_engine_cfn_guard.lambda_function_arn,
+      module.lambda_output_handler.lambda_function_arn,
+    ]
+  }
+}
+
+module "policy_process_config_event" {
+  source = "terraform-aws-modules/iam/aws//modules/iam-policy"
+
+  name = "${local.resource_prefix}-process_config_event"
+  path = "/"
+
+  policy = data.aws_iam_policy_document.sfn_process_config_event.json
+}
+
+module "role_process_config_event" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role"
+  version = "4.7.0"
+
+  create_role       = true
+  role_requires_mfa = false
+
+  role_name = "${local.resource_prefix}-process_config_event"
+
+  trusted_role_arns = [
+    data.aws_caller_identity.i.arn
+  ]
+
+  trusted_role_services = [
+    "states.amazonaws.com"
+  ]
+
+  custom_role_policy_arns = [
+    module.policy_process_config_event.arn,
+  ]
+
+}
+
+# sfn
+
+resource "aws_sfn_state_machine" "process_config_event" {
+  name     = "${local.resource_prefix}-process_config_event"
+  role_arn = module.role_process_config_event.iam_role_arn
+  type     = "STANDARD"
+  # type = "EXPRESS"
+  logging_configuration {
+    log_destination        = "${aws_cloudwatch_log_group.sfn_process_config_event.arn}:*"
+    include_execution_data = true
+    # level                  = "ERROR"
+    level = "ALL"
+  }
+
+  definition = jsonencode({
+    "StartAt" : "ParseInput",
+    "States" : {
+      "ParseInput" : {
+        "Type" : "Pass",
+        "End" : true,
+        "ResultPath" : "$",
+        "Parameters" : {
+          "InvokedByConfig.$" : "$",
+          "InvokingEvent.$" : "States.StringToJson($.invokingEvent)",
+        }
+      },
+    }
+  })
 }
