@@ -6,30 +6,11 @@ from botocore.config import Config
 
 sfn = boto3.client('stepfunctions')
 
-def sync_sfn(*,SfnArn,Input:dict):
-    try:
-        r = sfn.start_sync_execution(
-            stateMachineArn = SfnArn,
-            input = json.dumps(Input)
-        )
-    except ClientError as e:
-        print(f'ClientError\n{e}')
-        raise
-    else:
-        print(r)
-        if r['status'] != 'SUCCEEDED':
-            print(f'ProcessingSfn Status not SUCCEEDED')
-            return False
-        else:
-            output = r['output']
-            print(f'output:\n{output}\n{type(output)}')
-            return output
-
-def async_sfn(*,SfnArn,Input:dict):
+def async_sfn(*,sfn_arn,input_:dict):
     try:
         r = sfn.start_execution(
-            stateMachineArn = SfnArn,
-            input = json.dumps(Input)
+            stateMachineArn = sfn_arn,
+            input = json.dumps(input_)
         )
     except ClientError as e:
         print(f'ClientError\n{e}')
@@ -68,12 +49,7 @@ def lambda_handler(event, context):
     config_rule_name = event["configRuleName"]
     print(f"config_rule_name:\n{config_rule_name}")
 
-    
     # invoke sfn, pass event as input    
     
-    # processed = sync_sfn(SfnArn=os.environ['ProcessingSfnArn'],Input=event)
-    # print(f'processed:\n{processed}')
-    # return bool(processed)
-    
-    # begun = async_sfn(SfnArn=os.environ['ProcessingSfnArn'],Input=event)
-    # print(f'begun:\n{begun}')
+    execution_arn = async_sfn(sfn_arn=os.environ['ProcessingSfnArn'],input_=event)
+    print(f'sfn execution_arn:\n{execution_arn}')

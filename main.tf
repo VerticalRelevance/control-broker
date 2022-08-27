@@ -206,11 +206,10 @@ resource "aws_config_config_rule" "sagemaker" {
 data "aws_iam_policy_document" "lambda_custom_config" {
   statement {
     actions = [
-      "states:StartSyncExecution",
       "states:StartExecution",
     ]
     resources = [
-      "*"
+      aws_sfn_state_machine.process_config_event.arn
     ]
   }
 }
@@ -228,7 +227,7 @@ module "lambda_custom_config" {
   source_path = "./resources/lambda/invoked_by_config"
 
   environment_variables = {
-    # ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
+    ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
   }
 
   attach_policy_json = true
@@ -367,7 +366,49 @@ module "lambda_output_handler" {
     IsCompliant = true
   }
 }
+##################################################################
+#                       output handler 
+##################################################################
 
+data "aws_iam_policy_document" "lambda_get_resource_config_compliance" {
+  statement {
+    actions = [
+      "config:PutEvaluationResults",
+      "config:*",
+    ]
+    resources = [
+      "*",
+    ]
+  }
+}
+
+module "lambda_get_resource_config_compliance" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name                  = "${local.resource_prefix}-get_resource_config_compliance"
+  handler                        = "lambda_function.lambda_handler"
+  runtime                        = "python3.9"
+  timeout                        = 60
+  memory_size                    = 512
+  reserved_concurrent_executions = 1
+
+  source_path = "./resources/lambda/get_resource_config_compliance"
+
+  environment_variables = {
+    # ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
+  }
+
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_get_resource_config_compliance.json
+
+  tags = {
+    IsCompliant = true
+  }
+}
+
+##################################################################
+#                       process config event 
+##################################################################
 
 # cwl - sfn
 
@@ -395,6 +436,14 @@ data "aws_iam_policy_document" "sfn_process_config_event" {
     resources = [
       module.lambda_eval_engine_cfn_guard.lambda_function_arn,
       module.lambda_output_handler.lambda_function_arn,
+    ]
+  }
+  statement {
+    actions = [
+      "config:*",
+    ]
+    resources = [
+    "*"
     ]
   }
 }
@@ -450,12 +499,61 @@ resource "aws_sfn_state_machine" "process_config_event" {
     "States" : {
       "ParseInput" : {
         "Type" : "Pass",
-        "End" : true,
+        "Next" : "GetResourceConfigComplianceInitial",
         "ResultPath" : "$",
         "Parameters" : {
-          "InvokedByConfig.$" : "$",
+          "ConfigEvent.$":"$"
           "InvokingEvent.$" : "States.StringToJson($.invokingEvent)",
         }
+      },
+      "GetResourceConfigComplianceInitial":{
+          "Type": "Task",
+          "Next":"GetIsCompliant", 
+          "ResultPath": "$.GetResourceConfigComplianceInitial",
+          "Resource": "arn:aws:states:::lambda:invoke",
+          "Parameters": {
+              "FunctionName": self.lambda_get_resource_config_compliance.function_name,
+              "Payload": {
+                  "ConfigEvent.$":"$.ConfigEvent",
+                  "ExpectedComplianceStatus": None
+              }
+          },
+          "ResultSelector": {
+              "Payload.$": "$.Payload"
+          },
+      },
+      "GetIsCompliant": {
+          "Type": "Task",
+          "Next": "PutEvaluations",
+          "ResultPath": "$.GetIsCompliant",
+          "Resource": "arn:aws:states:::lambda:invoke",
+          "Parameters": {
+              "FunctionName": self.lambda_requests_get.function_name,
+              "Payload":{
+                  "Url.$":"$.SignApigwRequest.Payload.Response.ControlBrokerEvaluation.OutputHandlers.OPA.PresignedUrl",
+              }
+          },
+          "ResultSelector": {
+              "Payload.$": "$.Payload"
+          },
+          "Retry": [
+              {
+                  "ErrorEquals": [
+                      "StatusCodeNot200Exception"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 8,
+                  "BackoffRate": 2.0
+              }
+          ],
+          "Catch": [
+              {
+                  "ErrorEquals":[
+                      "States.ALL"
+                  ],
+                  "Next": "ResultsReportDoesNotYetExist"
+              }
+          ]
       },
     }
   })
