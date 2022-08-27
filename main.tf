@@ -97,16 +97,16 @@ resource "aws_security_group" "g" {
   }
 }
 
-resource "aws_sagemaker_notebook_instance" "i" {
-  name                   = local.resource_prefix
-  role_arn               = local.console_sagemaker_role_notebook
-  instance_type          = "ml.t2.medium"
-  direct_internet_access = "Disabled"
-  security_groups = [
-    aws_security_group.g.id
-  ]
-  subnet_id = module.vpc.private_subnets[0]
-}
+# resource "aws_sagemaker_notebook_instance" "i" {
+#   name                   = local.resource_prefix
+#   role_arn               = local.console_sagemaker_role_notebook
+#   instance_type          = "ml.t2.medium"
+#   direct_internet_access = "Disabled"
+#   security_groups = [
+#     aws_security_group.g.id
+#   ]
+#   subnet_id = module.vpc.private_subnets[0]
+# }
 
 resource "aws_ecr_repository" "r" {
   name = local.resource_prefix
