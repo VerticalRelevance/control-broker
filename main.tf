@@ -101,11 +101,11 @@ resource "aws_sagemaker_notebook_instance" "i" {
   name          = local.resource_prefix
   role_arn      = local.console_sagemaker_role_notebook
   instance_type = "ml.t2.medium"
-  # direct_internet_access = "Disabled"
-  # security_groups = [
-  #   aws_security_group.g.id
-  # ]
-  # subnet_id = module.vpc.private_subnets[0]
+  direct_internet_access = "Disabled"
+  security_groups = [
+    aws_security_group.g.id
+  ]
+  subnet_id = module.vpc.private_subnets[0]
 }
 
 resource "aws_ecr_repository" "r" {
@@ -137,6 +137,16 @@ resource "aws_sagemaker_model" "m" {
   }
 }
 
+locals{
+  toggled_boolean_path="${path.module}/dev/toggled_boolean.json"
+  toggled_boolean=file(local.toggled_boolean_path)
+}
+
+resource "local_file" "toggled" {
+    content  = !local.toggled_boolean
+    filename = local.toggled_boolean_path
+}
+
 resource "aws_sagemaker_endpoint_configuration" "c" {
   name = local.resource_prefix
 
@@ -149,7 +159,7 @@ resource "aws_sagemaker_endpoint_configuration" "c" {
     }
   }
   
-  kms_key_arn=local.console_kms_key_arn
+  kms_key_arn=local.toggled_boolean ? local.console_kms_key_arn : null
 }
 
 
@@ -223,4 +233,36 @@ module "lambda_custom_config" {
 
   attach_policy_json = true
   policy_json        = data.aws_iam_policy_document.lambda_custom_config.json
+}
+
+
+##################################################################
+#                       PaC 
+##################################################################
+
+locals{
+  cfn_guard_config_events_policies_dir="${path.module}/resources/policy_as_code/cfn_guard/expected_schema_config_events"
+}
+
+resource "aws_s3_bucket" "pac" {
+  bucket_prefix= "${local.resource_prefix}-pac"
+}
+
+resource "aws_s3_bucket_public_access_block" "example" {
+  bucket = aws_s3_bucket.pac.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+
+resource "aws_s3_bucket_object" "cfn_guard_policies" {
+  for_each = fileset(local.cfn_guard_config_events_policies_dir, "*")
+
+  bucket = aws_s3_bucket.pac.id
+  key    = "cfn_guard/expected_schema_config_events/${each.value}"
+  source = "${local.cfn_guard_config_events_policies_dir}/${each.value}"
+  etag   = filemd5("${local.cfn_guard_config_events_policies_dir}/${each.value}")
 }

@@ -42,20 +42,32 @@ def lambda_handler(event, context):
     print(event)
     
     invoking_event = json.loads(event["invokingEvent"])
-    print(f'invoking_event:\n{invoking_event}')
-    
-    rule_parameters = json.loads(event["ruleParameters"])
-    print(f'rule_parameters:\n{rule_parameters}')
+    print(f"invoking_event:\n{invoking_event}")
     
     configuration_item = invoking_event["configurationItem"]
-    print(f'configuration_item:\n{configuration_item}')
-    
+    print(f"configuration_item:\n{configuration_item}")
+
     item_status = configuration_item["configurationItemStatus"]
-    print(f'item_status:\n{item_status}')
+    print(f"item_status:\n{item_status}")
     
-    resource_type = configuration_item['resourceType']
-    resource_configuration = configuration_item['configuration']
-    print(f'resource_configuration:\n{resource_configuration}')
+    if item_status == 'ResourceDeleted':
+        return True
+
+    resource_type = configuration_item["resourceType"]
+    print(f"resource_type:\n{resource_type}")
+
+    resource_configuration = configuration_item["configuration"]
+    print(f"resource_configuration:\n{resource_configuration}")
+
+    resource_id = configuration_item["resourceId"]
+    print(f"resource_id:\n{resource_id}")
+
+    result_token = event["resultToken"]
+    print(f"result_token:\n{result_token}")
+    
+    config_rule_name = event["configRuleName"]
+    print(f"config_rule_name:\n{config_rule_name}")
+
     
     # invoke sfn, pass event as input    
     
