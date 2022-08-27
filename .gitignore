@@ -3,6 +3,7 @@
 **/downloads/**
 **/.terraform/*
 **/builds/*
+**/.guard/**
 
 # VSCode extension
 

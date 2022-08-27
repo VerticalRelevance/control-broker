@@ -266,3 +266,11 @@ resource "aws_s3_bucket_object" "cfn_guard_policies" {
   source = "${local.cfn_guard_config_events_policies_dir}/${each.value}"
   etag   = filemd5("${local.cfn_guard_config_events_policies_dir}/${each.value}")
 }
+
+##################################################################
+#                       eval engine 
+##################################################################
+
+output "cfn_guard_install_cli_command" {
+  value = "curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/aws-cloudformation/cloudformation-guard/main/install-guard.sh | sh && cp -r ~/.guard ~/environment/control-broker/resources/lambda/eval_engine_cfn_guard/.guard"
+}
