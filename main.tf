@@ -505,6 +505,10 @@ resource "aws_sfn_state_machine" "process_config_event" {
         "Parameters" : {
           "ConfigEvent.$":"$"
           "InvokingEvent.$" : "States.StringToJson($.invokingEvent)",
+          "InputToBeAnalyzed":{
+            "Bucket" :aws_s3_bucket.input_to_be_analyzed.arn,
+            "Key":
+          }
         }
       },
       "GetResourceConfigComplianceInitial":{
@@ -523,6 +527,27 @@ resource "aws_sfn_state_machine" "process_config_event" {
               "Payload.$": "$.Payload"
           },
       },
+      "PutInputToBeAnalyzed" : {
+        "Type" : "Task",
+        "Next" : "FfCfnLint",
+        "ResultPath" : "$.PutInputToBeAnalyzed",
+        "Resource" : "arn:aws:states:::lambda:invoke",
+        "Parameters" : {
+          "FunctionName" : module.lambda_s3_put_object.lambda_function_name,
+          "Payload" : {
+            "Bucket.$" :"$.InputToBeAnalyzed.Bucket",
+            "Key.$" : "$.InputToBeAnalyzed.Key"
+            "Object" : {
+              "InputManifest" : {
+                "CustomInput.$" : "$.ConvertConfigEventToCfnCloudControl.Cfn"
+              }
+            }
+          }
+        },
+        "ResultSelector" : {
+          "InputManifest.$" : "$.Payload"
+        }
+      },
       "GetIsCompliant": {
           "Type": "Task",
           "Next": "ParseOutput",
@@ -531,6 +556,11 @@ resource "aws_sfn_state_machine" "process_config_event" {
           "Parameters": {
               "FunctionName": module.lambda_eval_engine_cfn_guard.lambda_function_arn,
               "Payload":{
+                "Rules":{
+                  "Bucket":aws_s3_bucket.pac.id,
+                  "Prefix":"cfn_guard/expected_schema_config_event_invoking_event"
+                },
+                
               }
           },
           "ResultSelector": {
