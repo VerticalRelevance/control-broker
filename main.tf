@@ -51,7 +51,7 @@ output "auth_ecr" {
 locals {
   console_sagemaker_role_notebook = "arn:aws:iam::446960196218:role/service-role/AmazonSageMaker-ExecutionRole-20220827T090729"
   console_sagemaker_role_model    = "arn:aws:iam::446960196218:role/service-role/AmazonSageMaker-ExecutionRole-20220827T090729"
-  console_kms_key_arn              = "arn:aws:kms:us-east-1:446960196218:key/2fe5b328-ecb5-4bac-8821-091c7bcc4b15"
+  console_kms_key_arn             = "arn:aws:kms:us-east-1:446960196218:key/2fe5b328-ecb5-4bac-8821-091c7bcc4b15"
 }
 
 
@@ -98,9 +98,9 @@ resource "aws_security_group" "g" {
 }
 
 resource "aws_sagemaker_notebook_instance" "i" {
-  name          = local.resource_prefix
-  role_arn      = local.console_sagemaker_role_notebook
-  instance_type = "ml.t2.medium"
+  name                   = local.resource_prefix
+  role_arn               = local.console_sagemaker_role_notebook
+  instance_type          = "ml.t2.medium"
   direct_internet_access = "Disabled"
   security_groups = [
     aws_security_group.g.id
@@ -137,14 +137,14 @@ resource "aws_sagemaker_model" "m" {
   }
 }
 
-locals{
-  toggled_boolean_path="${path.module}/dev/toggled_boolean.json"
-  toggled_boolean=file(local.toggled_boolean_path)
+locals {
+  toggled_boolean_path = "${path.module}/dev/toggled_boolean.json"
+  toggled_boolean      = file(local.toggled_boolean_path)
 }
 
 resource "local_file" "toggled" {
-    content  = !local.toggled_boolean
-    filename = local.toggled_boolean_path
+  content  = !local.toggled_boolean
+  filename = local.toggled_boolean_path
 }
 
 resource "aws_sagemaker_endpoint_configuration" "c" {
@@ -158,8 +158,8 @@ resource "aws_sagemaker_endpoint_configuration" "c" {
       memory_size_in_mb = 1024
     }
   }
-  
-  kms_key_arn=local.toggled_boolean ? local.console_kms_key_arn : null
+
+  kms_key_arn = local.toggled_boolean ? local.console_kms_key_arn : null
 }
 
 
@@ -240,12 +240,12 @@ module "lambda_custom_config" {
 #                       PaC 
 ##################################################################
 
-locals{
-  cfn_guard_config_events_policies_dir="${path.module}/resources/policy_as_code/cfn_guard/expected_schema_config_event_invoking_event"
+locals {
+  cfn_guard_config_events_policies_dir = "${path.module}/resources/policy_as_code/cfn_guard/expected_schema_config_event_invoking_event"
 }
 
 resource "aws_s3_bucket" "pac" {
-  bucket_prefix= "${local.resource_prefix}-pac"
+  bucket_prefix = "${local.resource_prefix}-pac"
 }
 
 resource "aws_s3_bucket_public_access_block" "example" {
@@ -273,4 +273,40 @@ resource "aws_s3_bucket_object" "cfn_guard_policies" {
 
 output "cfn_guard_install_cli_command" {
   value = "\ncurl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/aws-cloudformation/cloudformation-guard/main/install-guard.sh | sh && cp -r ~/.guard ${path.module}/control-broker/resources/lambda/eval_engine_cfn_guard/.guard"
+}
+
+data "aws_iam_policy_document" "lambda_eval_engine_cfn_guard" {
+  statement {
+    actions = [
+      "states:StartSyncExecution",
+      "states:StartExecution",
+    ]
+    resources = [
+      "*"
+    ]
+  }
+}
+
+module "lambda_eval_engine_cfn_guard" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name                  = "${local.resource_prefix}-eval_engine_cfn_guard"
+  handler                        = "lambda_function.lambda_handler"
+  runtime                        = "python3.9"
+  timeout                        = 60
+  memory_size                    = 512
+  reserved_concurrent_executions = 1
+
+  source_path = "./resources/lambda/eval_engine_cfn_guard"
+
+  environment_variables = {
+    # ProcessingSfnArn = aws_sfn_state_machine.convert_then_lint.arn
+  }
+
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_eval_engine_cfn_guard.json
+  
+  tags={
+    IsCompliant	=true
+  }
 }
