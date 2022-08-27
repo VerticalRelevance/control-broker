@@ -117,33 +117,38 @@ resource "aws_ecr_repository" "r" {
 }
 
 locals {
-    docker_image_name  = "m1" # i.e., not ec2ib
-    docker_tag_name    = "latest"
-    docker_build          = "docker build -t ${local.docker_image_name}:${local.docker_tag_name} ."
-    model_to_ecr     = "\n${local.docker_build} && docker tag  ${local.docker_image_name}:${local.docker_tag_name} ${aws_ecr_repository.r.repository_url}:${local.docker_image_name} && docker push ${aws_ecr_repository.r.repository_url}:${local.docker_image_name}"
-    model_image_name = "${aws_ecr_repository.r.repository_url}:${local.docker_image_name}"
+  docker_image_name = "m1" # i.e., not ec2ib
+  docker_tag_name   = "latest"
+  docker_build      = "docker build -t ${local.docker_image_name}:${local.docker_tag_name} ."
+  model_to_ecr      = "\n${local.docker_build} && docker tag  ${local.docker_image_name}:${local.docker_tag_name} ${aws_ecr_repository.r.repository_url}:${local.docker_image_name} && docker push ${aws_ecr_repository.r.repository_url}:${local.docker_image_name}"
+  model_image_name  = "${aws_ecr_repository.r.repository_url}:${local.docker_image_name}"
 }
 
-# resource "aws_sagemaker_model" "m" {
-#   name                   = local.resource_prefix
-#   execution_role_arn = local.console_sagemaker_role_model
+output "model_to_ecr" {
+  value = local.model_to_ecr
+}
 
-#   primary_container {
-#     image = data.aws_sagemaker_prebuilt_ecr_image.test.registry_path
-#   }
-# }
+resource "aws_sagemaker_model" "m" {
+  name               = local.resource_prefix
+  execution_role_arn = local.console_sagemaker_role_model
 
+  primary_container {
+    image = local.model_image_name
+  }
+}
 
-# resource "aws_sagemaker_endpoint_configuration" "c" {
-#   name   = local.resource_prefix
+resource "aws_sagemaker_endpoint_configuration" "c" {
+  name   = local.resource_prefix
 
-#   production_variants {
-#     variant_name           = "variant-1"
-#     model_name             = aws_sagemaker_model.m.name
-#     initial_instance_count = 1
-#     instance_type          = "ml.t2.medium"
-#   }
-# }
+  production_variants {
+    variant_name           = "variant-1"
+    model_name             = aws_sagemaker_model.m.name
+    serverless_config={
+      max_concurrency=1
+      memory_size_in_mb=1024
+    }
+  }
+}
 
 
 ##################################################################
