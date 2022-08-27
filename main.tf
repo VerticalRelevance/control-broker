@@ -6,7 +6,7 @@ terraform {
     }
   }
   backend "s3" {
-    bucket  = "cschneider-terraform-backend-02" #RER
+    bucket  = "cschneider-terraform-backend" #RER
     key     = "control-broker/terraform.tfstate"
     region  = "us-east-1"
     encrypt = true
@@ -49,9 +49,9 @@ output "auth_ecr" {
 ##################################################################
 
 locals {
-  console_sagemaker_role_notebook = "arn:aws:iam::446960196218:role/service-role/AmazonSageMaker-ExecutionRole-20220827T090729"
-  console_sagemaker_role_model    = "arn:aws:iam::446960196218:role/service-role/AmazonSageMaker-ExecutionRole-20220827T090729"
-  console_kms_key_arn             = "arn:aws:kms:us-east-1:446960196218:key/2fe5b328-ecb5-4bac-8821-091c7bcc4b15"
+  console_sagemaker_role_notebook = "arn:aws:iam::899456967600:role/service-role/AmazonSageMaker-ExecutionRole-20220827T144842"
+  console_sagemaker_role_model    = "arn:aws:iam::899456967600:role/service-role/AmazonSageMaker-ExecutionRole-20220827T144842"
+  console_kms_key_arn             = "arn:aws:kms:us-east-1:899456967600:key/65d929d1-d0e8-40ac-bb85-94314b242b4d"
 }
 
 
@@ -248,7 +248,7 @@ resource "aws_s3_bucket" "pac" {
   bucket_prefix = "${local.resource_prefix}-pac"
 }
 
-resource "aws_s3_bucket_public_access_block" "example" {
+resource "aws_s3_bucket_public_access_block" "pac" {
   bucket = aws_s3_bucket.pac.id
 
   block_public_acls       = true
@@ -271,18 +271,35 @@ resource "aws_s3_bucket_object" "cfn_guard_policies" {
 #                       eval engine 
 ##################################################################
 
+resource "aws_s3_bucket" "input_to_be_analyzed" {
+  bucket_prefix = "${local.resource_prefix}-input-to-be-analyzed"
+}
+
+resource "aws_s3_bucket_public_access_block" "input_to_be_analyzed" {
+  bucket = aws_s3_bucket.input_to_be_analyzed.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 output "cfn_guard_install_cli_command" {
-  value = "\ncurl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/aws-cloudformation/cloudformation-guard/main/install-guard.sh | sh && cp -r ~/.guard ${path.module}/control-broker/resources/lambda/eval_engine_cfn_guard/.guard"
+  value = "\ncurl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/aws-cloudformation/cloudformation-guard/main/install-guard.sh | sh && cp -r ~/.guard ~/environment/control-broker/resources/lambda/eval_engine_cfn_guard/.guard"
 }
 
 data "aws_iam_policy_document" "lambda_eval_engine_cfn_guard" {
   statement {
     actions = [
-      "states:StartSyncExecution",
-      "states:StartExecution",
+      "s3:Get*",
+      "s3:List*",
     ]
     resources = [
-      "*"
+      "*",
+      aws_s3_bucket.input_to_be_analyzed.arn,
+      "${aws_s3_bucket.input_to_be_analyzed.arn}*",
+      aws_s3_bucket.pac.arn,
+      "${aws_s3_bucket.pac.arn}*",
     ]
   }
 }
@@ -305,8 +322,8 @@ module "lambda_eval_engine_cfn_guard" {
 
   attach_policy_json = true
   policy_json        = data.aws_iam_policy_document.lambda_eval_engine_cfn_guard.json
-  
-  tags={
-    IsCompliant	=true
+
+  tags = {
+    IsCompliant = true
   }
 }

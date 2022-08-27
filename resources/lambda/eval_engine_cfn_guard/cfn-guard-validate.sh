@@ -1,7 +1,3 @@
 PATH=${PATH}:~/.guard/bin
-r=$(/tmp/.guard/bin/cfn-guard validate \
-    --output-format json \
-    --data /tmp/input_to_be_analyzed.json \
-    --rules /tmp/rules
-)
-echo $r
+#/tmp/.guard/bin/cfn-guard --version
+/tmp/.guard/bin/cfn-guard validate --data /tmp/input_to_be_analyzed.json --rules /tmp/rules -o json > /tmp/result.json

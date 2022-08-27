@@ -126,13 +126,28 @@ def lambda_handler(event, context):
     print(f'stdout_:\n{stdout_}')
     print(type(stdout_))
     
-    result_dict = json.loads(stdout_.split('---')[1])
-    print(f'result_dict:\n{result_dict}')
-    print(type(result_dict))
-
+    # result_dict = json.loads(stdout_.split('---')[1])
+    # print(f'result_dict:\n{result_dict}')
+    # print(type(result_dict))
     
-    r = {
-        'CfnGuardValidateResult': result_dict
-    }
+    result_path='/tmp/result.json'
     
-    return r
+    try:
+        Path(result_path).resolve(strict=True)
+    except FileNotFoundError:
+        # doesn't exist
+        raise
+    else:
+    
+        with open(result_path,'r') as f:
+            lines=f.readlines()
+            print(lines)
+            results=json.loads(f.read())
+            
+        print(f'results:\n{results}')
+        
+        r = {
+            'CfnGuardValidateResult': results
+        }
+        
+        return r
