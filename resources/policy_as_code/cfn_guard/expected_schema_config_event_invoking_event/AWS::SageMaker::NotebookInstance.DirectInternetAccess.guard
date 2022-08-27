@@ -1,5 +1,5 @@
 let configurationItem = configurationItem
 
-rule direct_internet_access_disabled when %configurationItem !empty {
+rule direct_internet_access_disabled when %configurationItem.resourceType == 'AWS::SageMaker::NotebookInstance' {
     %configurationItem.configuration.DirectInternetAccess == "Disabled"
 }

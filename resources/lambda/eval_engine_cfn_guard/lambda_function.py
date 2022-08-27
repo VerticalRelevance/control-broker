@@ -11,40 +11,47 @@ import errno
 s3 = boto3.client('s3')
 s3r = boto3.resource('s3')
 
-def s3_download(*,Bucket,Key,LocalPath):
+def s3_download(*,bucket,key,local_path):
     
     try:
         s3.download_file(
-            Bucket,
-            Key,
-            LocalPath
+            bucket,
+            key,
+            local_path
         )
     except ClientError as e:
-        print(f'ClientError:\nBucket: {Bucket}\nKey: {Key}\n{e}')
+        print(f'ClientError:\nbucket: {bucket}\nkey:\n{key}\n{e}')
         raise
     else:
-        print('No ClientError download_file')
+        # print(f'No ClientError download_file\nbucket:\n{bucket}\nkey:\n{key}')
         return True
 
-def s3_download_dir(*,Bucket, PathToS3Dir, LocalPath):
+def s3_download_dir(*,bucket, prefix=None, local_path):
+    # print(f'Begin s3_download_dir\nbucket:\n{bucket}\nprefix:\n{prefix}\nlocal_path:\n{local_path}')
     paginator = s3.get_paginator('list_objects')
-    for result in paginator.paginate(Bucket=Bucket, Delimiter='/', Prefix=PathToS3Dir):
+    
+    if prefix:
+        pagination = paginator.paginate(Bucket=bucket, Delimiter='/', Prefix=prefix)
+    else:
+        pagination = paginator.paginate(Bucket=bucket, Delimiter='/')
+            
+    for result in pagination:
         if result.get('CommonPrefixes') is not None:
             for subdir in result.get('CommonPrefixes'):
                 s3_download_dir(
-                    PathToS3Dir = subdir.get('Prefix'),
-                    LocalPath = LocalPath,
-                    Bucket = Bucket
+                    prefix = subdir.get('Prefix'),
+                    local_path = local_path,
+                    bucket = bucket
                 )
         for file in result.get('Contents', []):
-            dest_pathname = os.path.join(LocalPath, file.get('Key'))
+            dest_pathname = os.path.join(local_path, file.get('Key'))
             if not os.path.exists(os.path.dirname(dest_pathname)):
                 os.makedirs(os.path.dirname(dest_pathname))
             if not file.get('Key').endswith('/'):
                 s3_download(
-                    Bucket=Bucket,
-                    Key=file.get('Key'),
-                    LocalPath=dest_pathname
+                    bucket=bucket,
+                    key=file.get('Key'),
+                    local_path=dest_pathname
                 )
  
 def copyanything(source, destination):
@@ -84,12 +91,12 @@ def lambda_handler(event, context):
     
     # get rule
     
-    rule_path = '/tmp/rule.guard'
+    rules_dir = '/tmp/rules'
     
-    s3_download(
-        Bucket = event['Rules']['Bucket'],
-        Key = event['Rules']['Key'],
-        LocalPath = rule_path
+    s3_download_dir(
+        bucket = event['Rules']['Bucket'],
+        prefix = event['Rules']['Prefix'],
+        local_path = rules_dir
     )
     
     # get cfn
@@ -97,9 +104,9 @@ def lambda_handler(event, context):
     input_to_be_analyzed_path = '/tmp/input_to_be_analyzed.json'
     
     s3_download(
-        Bucket = event['InputToBeAnalyzed']['Bucket'],
-        Key = event['InputToBeAnalyzed']['Key'],
-        LocalPath = input_to_be_analyzed_path
+        bucket = event['InputToBeAnalyzed']['Bucket'],
+        key = event['InputToBeAnalyzed']['Key'],
+        local_path = input_to_be_analyzed_path
     )
     
     copyanything('./.guard','/tmp/.guard')
