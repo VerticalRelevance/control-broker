@@ -40,14 +40,18 @@ data "aws_caller_identity" "i" {}
 
 data "aws_organizations_organization" "o" {}
 
+output "auth_ecr" {
+  value = "\naws ecr get-login-password --region ${local.region} | docker login --username AWS --password-stdin ${data.aws_caller_identity.i.id}.dkr.ecr.${local.region}.amazonaws.com\n"
+}
+
 ##################################################################
 #               sagemaker RK demo resources
 ##################################################################
 
 locals {
-  console_sagemaker_role_notebook = "arn:aws:iam::446960196218:role/service-role/AmazonSageMaker-ExecutionRole-20220827T090729",
-  console_sagemaker_role_model = "arn:aws:iam::446960196218:role/service-role/AmazonSageMaker-ExecutionRole-20220827T090729",
-  console_kms_key_id="arn:aws:kms:us-east-1:446960196218:key/2fe5b328-ecb5-4bac-8821-091c7bcc4b15"
+  console_sagemaker_role_notebook = "arn:aws:iam::446960196218:role/service-role/AmazonSageMaker-ExecutionRole-20220827T090729"
+  console_sagemaker_role_model    = "arn:aws:iam::446960196218:role/service-role/AmazonSageMaker-ExecutionRole-20220827T090729"
+  console_kms_key_id              = "arn:aws:kms:us-east-1:446960196218:key/2fe5b328-ecb5-4bac-8821-091c7bcc4b15"
 }
 
 
@@ -94,9 +98,9 @@ resource "aws_security_group" "g" {
 }
 
 resource "aws_sagemaker_notebook_instance" "i" {
-  name                   = local.resource_prefix
-  role_arn               = local.console_sagemaker_role_notebook
-  instance_type          = "ml.t2.medium"
+  name          = local.resource_prefix
+  role_arn      = local.console_sagemaker_role_notebook
+  instance_type = "ml.t2.medium"
   # direct_internet_access = "Disabled"
   # security_groups = [
   #   aws_security_group.g.id
@@ -105,11 +109,19 @@ resource "aws_sagemaker_notebook_instance" "i" {
 }
 
 resource "aws_ecr_repository" "r" {
-  name = "${local.resource_prefix}"
+  name = local.resource_prefix
 
   image_scanning_configuration {
     scan_on_push = true
   }
+}
+
+locals {
+    docker_image_name  = "m1" # i.e., not ec2ib
+    docker_tag_name    = "latest"
+    docker_build          = "docker build -t ${local.docker_image_name}:${local.docker_tag_name} ."
+    model_to_ecr     = "\n${local.docker_build} && docker tag  ${local.docker_image_name}:${local.docker_tag_name} ${aws_ecr_repository.r.repository_url}:${local.docker_image_name} && docker push ${aws_ecr_repository.r.repository_url}:${local.docker_image_name}"
+    model_image_name = "${aws_ecr_repository.r.repository_url}:${local.docker_image_name}"
 }
 
 # resource "aws_sagemaker_model" "m" {
