@@ -366,8 +366,9 @@ module "lambda_output_handler" {
     IsCompliant = true
   }
 }
+
 ##################################################################
-#                       output handler 
+#                       get_resource_config_compliance 
 ##################################################################
 
 data "aws_iam_policy_document" "lambda_get_resource_config_compliance" {
@@ -400,6 +401,48 @@ module "lambda_get_resource_config_compliance" {
 
   attach_policy_json = true
   policy_json        = data.aws_iam_policy_document.lambda_get_resource_config_compliance.json
+
+  tags = {
+    IsCompliant = true
+  }
+}
+
+##################################################################
+#                       put object 
+##################################################################
+
+data "aws_iam_policy_document" "lambda_put_object" {
+  statement {
+    actions = [
+      "s3:List*",
+      "s3:PutObject*",
+    ]
+    resources = [
+      "*",
+       aws_s3_bucket.input_to_be_analyzed.arn,
+      "${aws_s3_bucket.input_to_be_analyzed.arn}*",
+    ]
+  }
+}
+
+module "lambda_put_object" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name                  = "${local.resource_prefix}-put_object"
+  handler                        = "lambda_function.lambda_handler"
+  runtime                        = "python3.9"
+  timeout                        = 60
+  memory_size                    = 512
+  reserved_concurrent_executions = 1
+
+  source_path = "./resources/lambda/put_object"
+
+  environment_variables = {
+    # ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
+  }
+
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_put_object.json
 
   tags = {
     IsCompliant = true
@@ -507,7 +550,7 @@ resource "aws_sfn_state_machine" "process_config_event" {
           "InvokingEvent.$" : "States.StringToJson($.invokingEvent)",
           "InputToBeAnalyzed":{
             "Bucket" :aws_s3_bucket.input_to_be_analyzed.arn,
-            "Key":
+            "Key.$":"States.Format('{}#{}',States.StringToJson($.invokingEvent).configurationItem.resourceType,States.StringToJson($.invokingEvent).configurationItem.resourceId)"
           }
         }
       },
@@ -537,11 +580,7 @@ resource "aws_sfn_state_machine" "process_config_event" {
           "Payload" : {
             "Bucket.$" :"$.InputToBeAnalyzed.Bucket",
             "Key.$" : "$.InputToBeAnalyzed.Key"
-            "Object" : {
-              "InputManifest" : {
-                "CustomInput.$" : "$.ConvertConfigEventToCfnCloudControl.Cfn"
-              }
-            }
+            "Object.$" : "$.InvokingEvent"
           }
         },
         "ResultSelector" : {
@@ -559,6 +598,10 @@ resource "aws_sfn_state_machine" "process_config_event" {
                 "Rules":{
                   "Bucket":aws_s3_bucket.pac.id,
                   "Prefix":"cfn_guard/expected_schema_config_event_invoking_event"
+                },
+                "InputToBeAnalyzed":{
+                  "Bucket.$" :"$.InputToBeAnalyzed.Bucket",
+                  "Key.$" : "$.InputToBeAnalyzed.Key"
                 },
                 
               }
