@@ -67,9 +67,9 @@ def copyanything(source, destination):
         else:
             raise
 
-def run_bash(*, BashPath):
-    subprocess.run(["chmod","u+rx", BashPath])
-    output = subprocess.run(["sh", f"{BashPath}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def run_bash(*, bash_path):
+    subprocess.run(["chmod","u+rx", bash_path])
+    output = subprocess.run(["sh", f"{bash_path}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print('raw subprocess output:')
     print(output)
     print('stdout:')
@@ -81,15 +81,15 @@ def run_bash(*, BashPath):
         'stderr': stderr
     }
     
-def re_search(RegexGroup,SearchMe):
-    m = re.search(RegexGroup,SearchMe)
+def re_search(regex,item):
+    m = re.search(regex,item)
     return m.group(1)
     
 def lambda_handler(event, context):
     
     print(event)
     
-    # get rule
+    # get rules
     
     rules_dir = '/tmp/rules'
     
@@ -117,7 +117,7 @@ def lambda_handler(event, context):
     
     # eval
     
-    cfn_guard_validate_result = run_bash(BashPath='/tmp/cfn-guard-validate.sh')
+    cfn_guard_validate_result = run_bash(bash_path='/tmp/cfn-guard-validate.sh')
     
     print(f'CfnGuardValidateResult:\n{cfn_guard_validate_result}')
     print(type(cfn_guard_validate_result))
