@@ -241,7 +241,7 @@ module "lambda_custom_config" {
 ##################################################################
 
 locals{
-  cfn_guard_config_events_policies_dir="${path.module}/resources/policy_as_code/cfn_guard/expected_schema_config_events"
+  cfn_guard_config_events_policies_dir="${path.module}/resources/policy_as_code/cfn_guard/expected_schema_config_event_invoking_event"
 }
 
 resource "aws_s3_bucket" "pac" {
@@ -262,7 +262,7 @@ resource "aws_s3_bucket_object" "cfn_guard_policies" {
   for_each = fileset(local.cfn_guard_config_events_policies_dir, "*")
 
   bucket = aws_s3_bucket.pac.id
-  key    = "cfn_guard/expected_schema_config_events/${each.value}"
+  key    = "cfn_guard/expected_schema_config_event_invoking_event/${each.value}"
   source = "${local.cfn_guard_config_events_policies_dir}/${each.value}"
   etag   = filemd5("${local.cfn_guard_config_events_policies_dir}/${each.value}")
 }
