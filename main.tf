@@ -51,7 +51,7 @@ output "auth_ecr" {
 locals {
   console_sagemaker_role_notebook = "arn:aws:iam::446960196218:role/service-role/AmazonSageMaker-ExecutionRole-20220827T090729"
   console_sagemaker_role_model    = "arn:aws:iam::446960196218:role/service-role/AmazonSageMaker-ExecutionRole-20220827T090729"
-  console_kms_key_id              = "arn:aws:kms:us-east-1:446960196218:key/2fe5b328-ecb5-4bac-8821-091c7bcc4b15"
+  console_kms_key_arn              = "arn:aws:kms:us-east-1:446960196218:key/2fe5b328-ecb5-4bac-8821-091c7bcc4b15"
 }
 
 
@@ -138,16 +138,18 @@ resource "aws_sagemaker_model" "m" {
 }
 
 resource "aws_sagemaker_endpoint_configuration" "c" {
-  name   = local.resource_prefix
+  name = local.resource_prefix
 
   production_variants {
-    variant_name           = "variant-1"
-    model_name             = aws_sagemaker_model.m.name
-    serverless_config={
-      max_concurrency=1
-      memory_size_in_mb=1024
+    variant_name = "variant-1"
+    model_name   = aws_sagemaker_model.m.name
+    serverless_config {
+      max_concurrency   = 1
+      memory_size_in_mb = 1024
     }
   }
+  
+  kms_key_arn=local.console_kms_key_arn
 }
 
 
