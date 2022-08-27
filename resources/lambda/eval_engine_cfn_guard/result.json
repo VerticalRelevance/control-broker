@@ -1,0 +1,2 @@
+CFN
+{"data_from":"1.json","rules_from":"1.guard","not_compliant":{"encrypted":[{"rule":"encrypted","path":"/someResource/encrypted","provided":true,"expected":false,"comparison":{"operator":"Eq","not_operator_exists":false},"message":"","error":null}]},"not_applicable":[],"compliant":[]}

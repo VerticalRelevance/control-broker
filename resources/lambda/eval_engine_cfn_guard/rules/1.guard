@@ -1,0 +1,6 @@
+let someResource = someResource
+
+rule encrypted when %someResource !empty {
+    #%someResource.encrypted == true
+    %someResource.encrypted == false
+}
