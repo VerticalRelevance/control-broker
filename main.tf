@@ -272,5 +272,5 @@ resource "aws_s3_bucket_object" "cfn_guard_policies" {
 ##################################################################
 
 output "cfn_guard_install_cli_command" {
-  value = "curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/aws-cloudformation/cloudformation-guard/main/install-guard.sh | sh && cp -r ~/.guard ~/environment/control-broker/resources/lambda/eval_engine_cfn_guard/.guard"
+  value = "\ncurl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/aws-cloudformation/cloudformation-guard/main/install-guard.sh | sh && cp -r ~/.guard ${path.module}/control-broker/resources/lambda/eval_engine_cfn_guard/.guard"
 }
