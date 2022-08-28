@@ -448,6 +448,47 @@ module "lambda_s3_put_object" {
     IsCompliant = true
   }
 }
+##################################################################
+#                       put evaluations 
+##################################################################
+
+data "aws_iam_policy_document" "lambda_put_evaluations" {
+  statement {
+    actions = [
+      "s3:List*",
+      "s3:PutObject*",
+    ]
+    resources = [
+      "*",
+      aws_s3_bucket.input_to_be_analyzed.arn,
+      "${aws_s3_bucket.input_to_be_analyzed.arn}*",
+    ]
+  }
+}
+
+module "lambda_put_evaluations" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name                  = "${local.resource_prefix}-put_evaluations"
+  handler                        = "lambda_function.lambda_handler"
+  runtime                        = "python3.9"
+  timeout                        = 60
+  memory_size                    = 512
+  reserved_concurrent_executions = 1
+
+  source_path = "./resources/lambda/put_evaluations"
+
+  environment_variables = {
+    # ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
+  }
+
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_put_evaluations.json
+
+  tags = {
+    IsCompliant = true
+  }
+}
 
 ##################################################################
 #                       process config event 
@@ -481,6 +522,7 @@ data "aws_iam_policy_document" "sfn_process_config_event" {
       module.lambda_output_handler.lambda_function_arn,
       module.lambda_get_resource_config_compliance.lambda_function_arn,
       module.lambda_s3_put_object.lambda_function_arn,
+      module.lambda_put_evaluations.lambda_function_arn,
     ]
   }
   statement {
@@ -618,7 +660,7 @@ resource "aws_sfn_state_machine" "process_config_event" {
       "OutputHandler" : {
         "Type" : "Task",
         "Next" : "ParseOutput",
-        "ResultPath" : "$.OutputHandler",
+        "ResultPath" : "$.PutEvaluations",
         "Resource" : "arn:aws:states:::lambda:invoke",
         "Parameters" : {
           "FunctionName" : module.lambda_output_handler.lambda_function_arn,
@@ -628,10 +670,55 @@ resource "aws_sfn_state_machine" "process_config_event" {
           "Payload.$" : "$.Payload"
         },
       },
-      "ParseOutput" : {
-        "Type" : "Pass",
-        "End" : true,
+      "PutEvaluations": {
+        "Type": "Task",
+        "Next": "GetResourceConfigCompliancee",
+        "ResultPath": "$.PutEvaluations",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "Parameters": {
+          "FunctionName" : module.lambda_put_evaluations.lambda_function_arn,
+            "Payload": {
+                "Compliance.$": "$.OutputHandler.Payload.IsCompliant",
+                "ConfigResultToken.$":"$.ConfigEvent.resultToken",
+                "ResourceId.$":"$.InvokingEvent.configurationItem.resourceId",
+                "ResourceType.$":"$.InvokingEvent.configurationItem.resourceType",
+            },
+        },
+        "ResultSelector": {"Payload.$": "$.Payload"},
       },
+      "GetResourceConfigCompliancee":{
+          "Type": "Task",
+          "Next":"ChoiceComplianceStatusIsAsExpected",
+          "ResultPath": "$.GetResourceConfigCompliancee",
+          "Resource": "arn:aws:states:::lambda:invoke",
+          "Parameters": {
+          "FunctionName" : module.lambda_get_resource_config_compliance.lambda_function_arn,
+              "Payload": {
+                  "ConfigEvent.$":"$.ConfigEvent",
+                  "ExpectedComplianceStatus.$": "$.OutputHandler.Payload.IsCompliant"
+              }
+          },
+          "ResultSelector": {
+              "Payload.$": "$.Payload"
+          },
+      },
+      "ChoiceComplianceStatusIsAsExpected": {
+          "Type":"Choice",
+          "Default":"ComplianceStatusIsAsExpectedFalse",
+          "Choices":[
+              {
+                  "Variable":"$.GetResourceConfigCompliancee.Payload.ComplianceIsAsExpected",
+                  "BooleanEquals":True,
+                  "Next":"ComplianceStatusIsAsExpectedTrue"
+              },
+          ]
+      },
+      "ComplianceStatusIsAsExpectedTrue":{
+          "Type":"Succeed"
+      },
+      "ComplianceStatusIsAsExpectedFalse":{
+          "Type":"Fail"
+      }
     }
   })
 }
