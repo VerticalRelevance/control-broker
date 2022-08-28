@@ -455,13 +455,10 @@ module "lambda_s3_put_object" {
 data "aws_iam_policy_document" "lambda_put_evaluations" {
   statement {
     actions = [
-      "s3:List*",
-      "s3:PutObject*",
+      "config:*",
     ]
     resources = [
-      "*",
-      aws_s3_bucket.input_to_be_analyzed.arn,
-      "${aws_s3_bucket.input_to_be_analyzed.arn}*",
+      "*"
     ]
   }
 }
@@ -659,8 +656,8 @@ resource "aws_sfn_state_machine" "process_config_event" {
       },
       "OutputHandler" : {
         "Type" : "Task",
-        "Next" : "ParseOutput",
-        "ResultPath" : "$.PutEvaluations",
+        "Next" : "PutEvaluations",
+        "ResultPath" : "$.OutputHandler",
         "Resource" : "arn:aws:states:::lambda:invoke",
         "Parameters" : {
           "FunctionName" : module.lambda_output_handler.lambda_function_arn,
@@ -670,54 +667,54 @@ resource "aws_sfn_state_machine" "process_config_event" {
           "Payload.$" : "$.Payload"
         },
       },
-      "PutEvaluations": {
-        "Type": "Task",
-        "Next": "GetResourceConfigCompliancee",
-        "ResultPath": "$.PutEvaluations",
-        "Resource": "arn:aws:states:::lambda:invoke",
-        "Parameters": {
+      "PutEvaluations" : {
+        "Type" : "Task",
+        "Next" : "GetResourceConfigCompliancee",
+        "ResultPath" : "$.PutEvaluations",
+        "Resource" : "arn:aws:states:::lambda:invoke",
+        "Parameters" : {
           "FunctionName" : module.lambda_put_evaluations.lambda_function_arn,
-            "Payload": {
-                "Compliance.$": "$.OutputHandler.Payload.IsCompliant",
-                "ConfigResultToken.$":"$.ConfigEvent.resultToken",
-                "ResourceId.$":"$.InvokingEvent.configurationItem.resourceId",
-                "ResourceType.$":"$.InvokingEvent.configurationItem.resourceType",
-            },
+          "Payload" : {
+            "Compliance.$" : "$.OutputHandler.Payload.IsCompliant",
+            "ConfigResultToken.$" : "$.ConfigEvent.resultToken",
+            "ResourceId.$" : "$.InvokingEvent.configurationItem.resourceId",
+            "ResourceType.$" : "$.InvokingEvent.configurationItem.resourceType",
+          },
         },
-        "ResultSelector": {"Payload.$": "$.Payload"},
+        "ResultSelector" : { "Payload.$" : "$.Payload" },
       },
-      "GetResourceConfigCompliancee":{
-          "Type": "Task",
-          "Next":"ChoiceComplianceStatusIsAsExpected",
-          "ResultPath": "$.GetResourceConfigCompliancee",
-          "Resource": "arn:aws:states:::lambda:invoke",
-          "Parameters": {
+      "GetResourceConfigCompliancee" : {
+        "Type" : "Task",
+        "Next" : "ChoiceComplianceStatusIsAsExpected",
+        "ResultPath" : "$.GetResourceConfigCompliancee",
+        "Resource" : "arn:aws:states:::lambda:invoke",
+        "Parameters" : {
           "FunctionName" : module.lambda_get_resource_config_compliance.lambda_function_arn,
-              "Payload": {
-                  "ConfigEvent.$":"$.ConfigEvent",
-                  "ExpectedComplianceStatus.$": "$.OutputHandler.Payload.IsCompliant"
-              }
+          "Payload" : {
+            "ConfigEvent.$" : "$.ConfigEvent",
+            "ExpectedComplianceStatus.$" : "$.OutputHandler.Payload.IsCompliant"
+          }
+        },
+        "ResultSelector" : {
+          "Payload.$" : "$.Payload"
+        },
+      },
+      "ChoiceComplianceStatusIsAsExpected" : {
+        "Type" : "Choice",
+        "Default" : "ComplianceStatusIsAsExpectedFalse",
+        "Choices" : [
+          {
+            "Variable" : "$.GetResourceConfigCompliancee.Payload.ComplianceIsAsExpected",
+            "BooleanEquals" : true,
+            "Next" : "ComplianceStatusIsAsExpectedTrue"
           },
-          "ResultSelector": {
-              "Payload.$": "$.Payload"
-          },
+        ]
       },
-      "ChoiceComplianceStatusIsAsExpected": {
-          "Type":"Choice",
-          "Default":"ComplianceStatusIsAsExpectedFalse",
-          "Choices":[
-              {
-                  "Variable":"$.GetResourceConfigCompliancee.Payload.ComplianceIsAsExpected",
-                  "BooleanEquals":True,
-                  "Next":"ComplianceStatusIsAsExpectedTrue"
-              },
-          ]
+      "ComplianceStatusIsAsExpectedTrue" : {
+        "Type" : "Succeed"
       },
-      "ComplianceStatusIsAsExpectedTrue":{
-          "Type":"Succeed"
-      },
-      "ComplianceStatusIsAsExpectedFalse":{
-          "Type":"Fail"
+      "ComplianceStatusIsAsExpectedFalse" : {
+        "Type" : "Fail"
       }
     }
   })
