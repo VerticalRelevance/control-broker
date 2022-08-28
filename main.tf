@@ -411,7 +411,7 @@ module "lambda_get_resource_config_compliance" {
 #                       put object 
 ##################################################################
 
-data "aws_iam_policy_document" "lambda_put_object" {
+data "aws_iam_policy_document" "lambda_s3_put_object" {
   statement {
     actions = [
       "s3:List*",
@@ -419,30 +419,30 @@ data "aws_iam_policy_document" "lambda_put_object" {
     ]
     resources = [
       "*",
-       aws_s3_bucket.input_to_be_analyzed.arn,
+      aws_s3_bucket.input_to_be_analyzed.arn,
       "${aws_s3_bucket.input_to_be_analyzed.arn}*",
     ]
   }
 }
 
-module "lambda_put_object" {
+module "lambda_s3_put_object" {
   source = "terraform-aws-modules/lambda/aws"
 
-  function_name                  = "${local.resource_prefix}-put_object"
+  function_name                  = "${local.resource_prefix}-s3_put_object"
   handler                        = "lambda_function.lambda_handler"
   runtime                        = "python3.9"
   timeout                        = 60
   memory_size                    = 512
   reserved_concurrent_executions = 1
 
-  source_path = "./resources/lambda/put_object"
+  source_path = "./resources/lambda/s3_put_object"
 
   environment_variables = {
     # ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
   }
 
   attach_policy_json = true
-  policy_json        = data.aws_iam_policy_document.lambda_put_object.json
+  policy_json        = data.aws_iam_policy_document.lambda_s3_put_object.json
 
   tags = {
     IsCompliant = true
@@ -480,6 +480,7 @@ data "aws_iam_policy_document" "sfn_process_config_event" {
       module.lambda_eval_engine_cfn_guard.lambda_function_arn,
       module.lambda_output_handler.lambda_function_arn,
       module.lambda_get_resource_config_compliance.lambda_function_arn,
+      module.lambda_s3_put_object.lambda_function_arn,
     ]
   }
   statement {
@@ -487,7 +488,7 @@ data "aws_iam_policy_document" "sfn_process_config_event" {
       "config:*",
     ]
     resources = [
-    "*"
+      "*"
     ]
   }
 }
@@ -539,46 +540,51 @@ resource "aws_sfn_state_machine" "process_config_event" {
   }
 
   definition = jsonencode({
-    "StartAt" : "ParseInput",
+    "StartAt" : "ParseInput0",
     "States" : {
-      "ParseInput" : {
+      "ParseInput0" : {
         "Type" : "Pass",
-        "Next" : "GetResourceConfigComplianceInitial",
+        "Next" : "ParseInput1",
         "ResultPath" : "$",
         "Parameters" : {
-          "ConfigEvent.$":"$"
+          "ConfigEvent.$" : "$"
           "InvokingEvent.$" : "States.StringToJson($.invokingEvent)",
-          "InputToBeAnalyzed":{
-            "Bucket" :aws_s3_bucket.input_to_be_analyzed.arn,
-            "Key.$":"States.Format('{}#{}',States.StringToJson($.invokingEvent).configurationItem.resourceType,States.StringToJson($.invokingEvent).configurationItem.resourceId)"
-          }
         }
       },
-      "GetResourceConfigComplianceInitial":{
-          "Type": "Task",
-          "Next":"GetIsCompliant", 
-          "ResultPath": "$.GetResourceConfigComplianceInitial",
-          "Resource": "arn:aws:states:::lambda:invoke",
-          "Parameters": {
-              "FunctionName": module.lambda_get_resource_config_compliance.lambda_function_arn,
-              "Payload": {
-                  "ConfigEvent.$":"$.ConfigEvent",
-                  "ExpectedComplianceStatus": null
-              }
-          },
-          "ResultSelector": {
-              "Payload.$": "$.Payload"
-          },
+      "ParseInput1" : {
+        "Type" : "Pass",
+        "Next" : "GetResourceConfigComplianceInitial",
+        "ResultPath" : "$.InputToBeAnalyzed",
+        "Parameters" : {
+          "Bucket" : aws_s3_bucket.input_to_be_analyzed.id,
+          "Key.$" : "States.Format('{}#{}',$.InvokingEvent.configurationItem.resourceType,$.InvokingEvent.configurationItem.resourceId)"
+        }
+      },
+      "GetResourceConfigComplianceInitial" : {
+        "Type" : "Task",
+        "Next" : "PutInputToBeAnalyzed",
+        "ResultPath" : "$.GetResourceConfigComplianceInitial",
+        "Resource" : "arn:aws:states:::lambda:invoke",
+        "Parameters" : {
+          "FunctionName" : module.lambda_get_resource_config_compliance.lambda_function_arn,
+          "Payload" : {
+            "ConfigEvent.$" : "$.ConfigEvent",
+            "ExpectedComplianceStatus" : null
+          }
+        },
+        "ResultSelector" : {
+          "Payload.$" : "$.Payload"
+        },
       },
       "PutInputToBeAnalyzed" : {
         "Type" : "Task",
-        "Next" : "FfCfnLint",
+        "Next" : "EvalEngine",
         "ResultPath" : "$.PutInputToBeAnalyzed",
         "Resource" : "arn:aws:states:::lambda:invoke",
         "Parameters" : {
           "FunctionName" : module.lambda_s3_put_object.lambda_function_name,
           "Payload" : {
-            "Bucket.$" :"$.InputToBeAnalyzed.Bucket",
+            "Bucket.$" : "$.InputToBeAnalyzed.Bucket",
             "Key.$" : "$.InputToBeAnalyzed.Key"
             "Object.$" : "$.InvokingEvent"
           }
@@ -587,28 +593,40 @@ resource "aws_sfn_state_machine" "process_config_event" {
           "InputManifest.$" : "$.Payload"
         }
       },
-      "GetIsCompliant": {
-          "Type": "Task",
-          "Next": "ParseOutput",
-          "ResultPath": "$.GetIsCompliant",
-          "Resource": "arn:aws:states:::lambda:invoke",
-          "Parameters": {
-              "FunctionName": module.lambda_eval_engine_cfn_guard.lambda_function_arn,
-              "Payload":{
-                "Rules":{
-                  "Bucket":aws_s3_bucket.pac.id,
-                  "Prefix":"cfn_guard/expected_schema_config_event_invoking_event"
-                },
-                "InputToBeAnalyzed":{
-                  "Bucket.$" :"$.InputToBeAnalyzed.Bucket",
-                  "Key.$" : "$.InputToBeAnalyzed.Key"
-                },
-                
-              }
-          },
-          "ResultSelector": {
-              "Payload.$": "$.Payload"
-          },
+      "EvalEngine" : {
+        "Type" : "Task",
+        "Next" : "OutputHandler",
+        "ResultPath" : "$.EvalEngine",
+        "Resource" : "arn:aws:states:::lambda:invoke",
+        "Parameters" : {
+          "FunctionName" : module.lambda_eval_engine_cfn_guard.lambda_function_arn,
+          "Payload" : {
+            "Rules" : {
+              "Bucket" : aws_s3_bucket.pac.id,
+              "Prefix" : "cfn_guard/expected_schema_config_event_invoking_event"
+            },
+            "InputToBeAnalyzed" : {
+              "Bucket.$" : "$.InputToBeAnalyzed.Bucket",
+              "Key.$" : "$.InputToBeAnalyzed.Key"
+            },
+          }
+        },
+        "ResultSelector" : {
+          "Payload.$" : "$.Payload"
+        },
+      },
+      "OutputHandler" : {
+        "Type" : "Task",
+        "Next" : "ParseOutput",
+        "ResultPath" : "$.OutputHandler",
+        "Resource" : "arn:aws:states:::lambda:invoke",
+        "Parameters" : {
+          "FunctionName" : module.lambda_output_handler.lambda_function_arn,
+          "Payload.$" : "$.EvalEngine.Payload"
+        },
+        "ResultSelector" : {
+          "Payload.$" : "$.Payload"
+        },
       },
       "ParseOutput" : {
         "Type" : "Pass",
