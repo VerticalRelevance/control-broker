@@ -284,6 +284,46 @@ module "lambda_s3_put_object" {
   }
 }
 
+##################################################################
+#                       asff 
+##################################################################
+
+data "aws_iam_policy_document" "lambda_put_asff" {
+  statement {
+    actions = [
+      "securityhub:BatchImportFindings",
+      "securityhub:*",
+    ]
+    resources = [
+      "*",
+    ]
+  }
+}
+
+module "lambda_put_asff" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name                  = "${local.resource_prefix}-put_asff"
+  handler                        = "lambda_function.lambda_handler"
+  runtime                        = "python3.9"
+  timeout                        = 60
+  memory_size                    = 512
+#   reserved_concurrent_executions = 4
+
+  source_path = "./resources/lambda/put_asff"
+
+  environment_variables = {
+    # ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
+  }
+
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_put_asff.json
+
+  tags = {
+    IsCompliant = true
+  }
+}
+
 
 ##################################################################
 #                       process config event 
@@ -435,7 +475,7 @@ resource "aws_sfn_state_machine" "process_config_event" {
       },
       "OutputHandler" : {
         "Type" : "Task",
-        "End" : true,
+        "Next" : "PutASFF",
         "ResultPath" : "$.OutputHandler",
         "Resource" : "arn:aws:states:::lambda:invoke",
         "Parameters" : {
@@ -446,6 +486,20 @@ resource "aws_sfn_state_machine" "process_config_event" {
           "Payload.$" : "$.Payload"
         },
       },
+      "PutASFF" : {
+        "Type" : "Task",
+        "End" : true,
+        "ResultPath" : "$.PutASFF",
+        "Resource" : "arn:aws:states:::lambda:invoke",
+        "Parameters" : {
+          "FunctionName" : module.lambda_put_asff.lambda_function_arn,
+          "Payload.$" : "$.EvalEngine.Payload"
+        },
+        "ResultSelector" : {
+          "Payload.$" : "$.Payload"
+        },
+      },
+      
     }
   })
 }
