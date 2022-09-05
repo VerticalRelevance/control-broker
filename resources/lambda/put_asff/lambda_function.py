@@ -1,4 +1,4 @@
-import json, os, datetime, time
+import json, os, datetime, time, re
 
 import boto3
 from botocore.exceptions import ClientError
@@ -43,8 +43,6 @@ class ControlBrokerASFF():
         finding_type="ControlBroker/CfnGuard/expected_schema_config_event_invoking_event"
         
         finding_id=f'{useful_root}/{now}'
-        
-        print(region)
         
         mapping={
             'Severity':{
@@ -207,6 +205,14 @@ class ControlBrokerASFF():
             
         ] 
 
+    def re_search(self,regex,item):
+        
+        m = re.search(regex,item)
+        try:
+            return m.group(1)
+        except AttributeError:
+            return None
+
     def get_arn(self,*,
         resource_aws_id,
         resource_type,
@@ -216,7 +222,9 @@ class ControlBrokerASFF():
     ):
         
         def resource_type_to_service(resource_type):
-            return '::'.split(resource_type)[1].lower()
+            print(resource_type)
+            
+            return self.re_search('AWS::(\w+?)::\w+',resource_type)
         
         def service_to_arn_region_section(service,region):
             
@@ -232,7 +240,7 @@ class ControlBrokerASFF():
                 return ""
                 
             else:
-                return f"{region}"
+                return region
         
         def service_to_arn_account_section(service,account_id):
             
@@ -278,17 +286,20 @@ class ControlBrokerASFF():
                     raise
          
         
-        service=resource_type_to_service(resource_type),
+        service=resource_type_to_service(resource_type)
    
-            
-        arn=':'.join([
+        arn_items=[
             'arn',
             partition,
             service,
             service_to_arn_region_section(service,region),
             service_to_arn_account_section(service,resource_aws_id),
             resource_type_to_arn_suffix(resource_type,resource_id)
-        ])
+        ]
+        
+        print(arn_items)
+            
+        arn=':'.join(arn_items)
         
         print(arn)
         
