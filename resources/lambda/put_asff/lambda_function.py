@@ -258,7 +258,7 @@ class ControlBrokerASFF():
             else:
                 return f"{account_id}"
                 
-        def resource_type_to_arn_suffix(resource_type,resource_id):
+        def resource_type_to_arn_suffix_prefix(resource_type):
             
             no_prefix=[
                 'AWS::SQS::Queue',
@@ -277,14 +277,28 @@ class ControlBrokerASFF():
                 return resource_id
                 
             elif resource_type in prefix_is_lowercase_of_type:
-                return f'{resource_type.lower()}/{resource_id}'
+                return f'{resource_type.lower()}/'
             
             else:
                 try:
-                    return f'{custom_prefixes[resource_type]}/{resource_id}'
+                    return f'{custom_prefixes[resource_type]}/'
                 except KeyError:
                     raise
          
+        def resource_id_to_arn_suffix_suffix(resource_type,resource_id):
+            
+            resource_type_to_regex={
+                'AWS::SQS::Queue':'https://sqs\..+?\.amazonaws.com/\d{12}/(.+?)$'
+            }
+        
+            try:
+                return self.re_search(
+                    resource_type_to_regex[resource_type],
+                    resource_id
+                )
+            except KeyError:
+                return resource_id
+        
         
         service=resource_type_to_service(resource_type)
    
@@ -294,7 +308,8 @@ class ControlBrokerASFF():
             service,
             service_to_arn_region_section(service,region),
             service_to_arn_account_section(service,resource_aws_id),
-            resource_type_to_arn_suffix(resource_type,resource_id)
+            resource_type_to_arn_suffix_prefix(resource_type),
+            resource_id_to_arn_suffix_suffix(resource_type,resource_id)
         ]
         
         print(arn_items)
