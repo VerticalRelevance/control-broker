@@ -379,23 +379,22 @@ resource "aws_sfn_state_machine" "process_config_event" {
     "States" : {
       "ParseInput0" : {
         "Type" : "Pass",
+        "Next" : "ParseInput1",
+        "ResultPath" : "$",
+        "Parameters" : {
+          "SnsMessage.$" : "$"
+        }
+      },
+      "ParseInput1" : {
+        "Type" : "Pass",
+        # "Next" : "GetResourceConfigComplianceInitial",
         "End" : true
-        #     "Next" : "ParseInput1",
-        #     "ResultPath" : "$",
-        #     "Parameters" : {
-        #       "ConfigEvent.$" : "$"
-        #       "InvokingEvent.$" : "States.StringToJson($.invokingEvent)",
-        #     }
-        #   },
-        #   "ParseInput1" : {
-        #     "Type" : "Pass",
-        #     "Next" : "GetResourceConfigComplianceInitial",
-        #     "ResultPath" : "$.InputToBeAnalyzed",
-        #     "Parameters" : {
-        #       "Bucket" : aws_s3_bucket.input_to_be_analyzed.id,
-        #       "Key.$" : "States.Format('{}#{}',$.InvokingEvent.configurationItem.resourceType,$.InvokingEvent.configurationItem.resourceId)"
-        #     }
-        #   },
+        "ResultPath" : "$.InputToBeAnalyzed",
+        "Parameters" : {
+          "Bucket" : aws_s3_bucket.input_to_be_analyzed.id,
+          "Key.$" : "States.Format('{}#{}',$.SnsMessage.configurationItem.resourceType,$.SnsMessage.configurationItem.resourceId)"
+        }
+      },
         #   "PutInputToBeAnalyzed" : {
         #     "Type" : "Task",
         #     "Next" : "EvalEngine",
@@ -448,7 +447,6 @@ resource "aws_sfn_state_machine" "process_config_event" {
         #       "Payload.$" : "$.Payload"
         #     },
         #   },
-      }
     }
   })
 }

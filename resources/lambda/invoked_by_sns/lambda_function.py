@@ -41,6 +41,16 @@ def parse_event_for_sns_message(event):
                 else:
                     return json.loads(message)
 
+def parse_sns_message_for_configuration_item(sns_message):
+    try:
+        configuration_item=sns_message['configurationItem']
+    except KeyError:
+        return False
+    else:
+        print(f'configuration_item:\n{configuration_item}')
+        return configuration_item
+
+
 def lambda_handler(event, context):
     
     print(event)
@@ -49,18 +59,18 @@ def lambda_handler(event, context):
     print(f'sns_message\n{sns_message}')
 
     if not sns_message:
+        print('cannot resolve sns_message')
         return False
         
-    spoke_account_ids=json.loads(os.environ['SpokeAccountIds'])
-    print(f'spoke_account_ids:\n{spoke_account_ids}\n{type(spoke_account_ids)}')
-
-
-    configuration_item=sns_message['configurationItem']
-    print(f'configuration_item:\n{configuration_item}')
+    configuration_item=parse_sns_message_for_configuration_item(sns_message)
     
-    if configuration_item['awsAccountId'] not in spoke_account_ids:
-        print(f"configuration_item.awsAccountId ({configuration_item['awsAccountId']}) not in spoke_account_ids:\n{spoke_account_ids}")
+    if not configuration_item:
+        print('cannot resolve configuration_item')
+        return False
+    
+    if configuration_item['awsAccountId'] not in json.loads(os.environ['SpokeAccountIds']):
+        print(f"configuration_item.awsAccountId ({configuration_item['awsAccountId']}) not in spoke_account_ids:\n{json.loads(os.environ['SpokeAccountIds'])}")
         return False
         
-    execution_arn = async_sfn(sfn_arn=os.environ['ProcessingSfnArn'],input_=configuration_item)
+    execution_arn = async_sfn(sfn_arn=os.environ['ProcessingSfnArn'],input_=sns_message)
     print(f'sfn execution_arn:\n{execution_arn}')
