@@ -2,8 +2,28 @@ import json, os, datetime, time
 
 import boto3
 from botocore.exceptions import ClientError
+from botocore.config import Config
 
-sh = boto3.client('securityhub')
+
+
+boto3_config = Config(
+    region_name = 'us-east-1',
+    signature_version = 'v4',
+    retries = {
+        'max_attempts': 10,
+        'mode': 'standard'
+    }
+)
+
+session = boto3.Session(
+    profile_name='615251248113_AWSAdministratorAccess',
+)
+
+
+sh = session.client(
+    'securityhub',
+    config=boto3_config
+)
 
 
 class ControlBrokerASFF():
@@ -12,16 +32,19 @@ class ControlBrokerASFF():
         resource_aws_id,
         resource_type,
         resource_id,
+        region,
         is_compliant,
     ):
         
-        now=datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+        now=datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         
         useful_root=f'ControlBroker-IsCompliant-{is_compliant}'
         
         finding_type="ControlBroker/CfnGuard/expected_schema_config_event_invoking_event"
         
         finding_id=f'{useful_root}/{now}'
+        
+        print(region)
         
         mapping={
             'Severity':{
@@ -38,7 +61,7 @@ class ControlBrokerASFF():
             	"AwsAccountId": resource_aws_id,
             	"Compliance": {
             # 		"RelatedRequirements": ["string"],
-            		"Status": is_compliant,
+            		"Status": str(is_compliant),
             # 		"StatusReasons": [{
             # 			"Description": "string",
             # 			"ReasonCode": "string"
@@ -155,13 +178,14 @@ class ControlBrokerASFF():
             # 		},
             		"Id": resource_id,
             # 		"Partition": "string",
-            # 		"Region": "string",
+            		"Region": region,
             # 		"ResourceRole": "string",
             # 		"Tags": {
             # 			"string": "string"
             # 		},
             		"Type": resource_type
             	}],
+        		"Region": region,
                 "SchemaVersion": "2018-10-08",
                 "Severity": {
             		"Label": mapping['Severity']['is_compliant'][is_compliant],
@@ -178,6 +202,82 @@ class ControlBrokerASFF():
             
         ] 
 
+    def get_arn(*,
+        resource_aws_id,
+        resource_type,
+        resource_id,
+        parition='aws'
+    ):
+        
+        def resource_type_to_service(resource_type):
+            
+        
+        def resource_type_to_arn_suffix(resource_type,resource_id):
+            
+            no_prefix=[
+                'AWS::SQS::Queue',
+                'AWS::S3::Bucket',
+            ]
+            
+            prefix_is_lowercase_of_type=[
+                'AWS::EC2::Instance'
+            ]
+            
+            custom_prefixes={
+                'AWS::RDS::DBInstance':'db:'
+            }
+            
+            if resource_type in no_prefix:
+                return resource_id
+                
+            elif resource_type in prefix_is_lowercase_of_type:
+                return f'{resource_type.lower()}/{resource_id}'
+            
+            else:
+                try:
+                    return f'{custom_prefixes[resource_type]}/{resource_id}'
+                except KeyError:
+                    raise
+        
+        def service_to_arn_account_section(service,account_id):
+            
+            global_services=[
+                "iam",
+                "route53",
+                "s3",
+                "sts",
+                "waf",
+            ]
+            
+            if service in global_services:
+                return ""
+                
+            else:
+                return f"{account_id}"
+                
+        def service_to_arn_region_section(service,region):
+            
+            global_services=[
+                "iam",
+                "route53",
+                "s3",
+                "sts",
+                "waf",
+            ]
+            
+            if service in global_services:
+                return ""
+                
+            else:
+                return f"{region}"
+            
+            
+        arn=':'.join(
+            'arn',
+            {partition},
+            
+        )
+            
     
     def put_asff(self):
         try:
@@ -202,6 +302,7 @@ def lambda_handler(event, context):
     
     c=ControlBrokerASFF(
         resource_aws_id=event['ResourceAwsId'],
+        region=event['Region'],
         resource_type=event['ResourceType'],
         resource_id=event['ResourceId'],
         is_compliant=event['IsCompliant']
