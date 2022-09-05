@@ -356,6 +356,7 @@ data "aws_iam_policy_document" "sfn_process_config_event" {
       module.lambda_eval_engine_cfn_guard.lambda_function_arn,
       module.lambda_output_handler.lambda_function_arn,
       module.lambda_s3_put_object.lambda_function_arn,
+      module.lambda_put_asff.lambda_function_arn,
     ]
   }
   statement {
@@ -493,11 +494,11 @@ resource "aws_sfn_state_machine" "process_config_event" {
         "Resource" : "arn:aws:states:::lambda:invoke",
         "Parameters" : {
           "FunctionName" : module.lambda_put_asff.lambda_function_arn,
-          "Payload.$" : {
-            "ResourceAwsId.$":"$.SnsMessage.awsAccountId",
-            "ResourceId.$":"$.SnsMessage.configurationItem.ResourceId",
+          "Payload" : {
+            "ResourceAwsId.$":"$.SnsMessage.configurationItem.awsAccountId",
+            "ResourceId.$":"$.SnsMessage.configurationItem.resourceId",
             "ResourceType.$":"$.SnsMessage.configurationItem.resourceType",
-            "IsCompliant.$":"$.OutputHandler.IsCompliant",
+            "IsCompliant.$":"$.OutputHandler.Payload.IsCompliant",
           }
         },
         "ResultSelector" : {
