@@ -71,7 +71,12 @@ class ControlBrokerASFF():
             	"Description": useful_root,
             	"GeneratorId": finding_id,
             	"Id": finding_id,
-            	"ProductArn": "string",
+            	"ProductArn": self.get_arn(
+            	    resource_aws_id=resource_aws_id,
+                    resource_type=resource_type,
+                    resource_id=resource_id,
+                    region=region,
+            	 ),
             	"Resources": [{
             # 		"DataClassification": {
             # 			"DetailedResultsLocation": "string",
@@ -202,16 +207,49 @@ class ControlBrokerASFF():
             
         ] 
 
-    def get_arn(*,
+    def get_arn(self,*,
         resource_aws_id,
         resource_type,
         resource_id,
-        parition='aws'
+        region,
+        partition='aws'
     ):
         
         def resource_type_to_service(resource_type):
-            
+            return '::'.split(resource_type)[1].lower()
         
+        def service_to_arn_region_section(service,region):
+            
+            global_services=[
+                "iam",
+                "route53",
+                "s3",
+                "sts",
+                "waf",
+            ]
+            
+            if service in global_services:
+                return ""
+                
+            else:
+                return f"{region}"
+        
+        def service_to_arn_account_section(service,account_id):
+            
+            global_services=[
+                "iam",
+                "route53",
+                "s3",
+                "sts",
+                "waf",
+            ]
+            
+            if service in global_services:
+                return ""
+                
+            else:
+                return f"{account_id}"
+                
         def resource_type_to_arn_suffix(resource_type,resource_id):
             
             no_prefix=[
@@ -238,45 +276,23 @@ class ControlBrokerASFF():
                     return f'{custom_prefixes[resource_type]}/{resource_id}'
                 except KeyError:
                     raise
+         
         
-        def service_to_arn_account_section(service,account_id):
+        service=resource_type_to_service(resource_type),
+   
             
-            global_services=[
-                "iam",
-                "route53",
-                "s3",
-                "sts",
-                "waf",
-            ]
-            
-            if service in global_services:
-                return ""
-                
-            else:
-                return f"{account_id}"
-                
-        def service_to_arn_region_section(service,region):
-            
-            global_services=[
-                "iam",
-                "route53",
-                "s3",
-                "sts",
-                "waf",
-            ]
-            
-            if service in global_services:
-                return ""
-                
-            else:
-                return f"{region}"
-            
-            
-        arn=':'.join(
+        arn=':'.join([
             'arn',
-            {partition},
-            
-        )
+            partition,
+            service,
+            service_to_arn_region_section(service,region),
+            service_to_arn_account_section(service,resource_aws_id),
+            resource_type_to_arn_suffix(resource_type,resource_id)
+        ])
+        
+        print(arn)
+        
+        return arn
             
     
     def put_asff(self):
