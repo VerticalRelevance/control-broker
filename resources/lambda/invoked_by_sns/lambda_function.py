@@ -3,6 +3,18 @@ import json, os
 import boto3
 from botocore.exceptions import ClientError
 
+def async_sfn(*,sfn_arn,input_:dict):
+    try:
+        r = sfn.start_execution(
+            stateMachineArn = sfn_arn,
+            input = json.dumps(input_)
+        )
+    except ClientError as e:
+        print(f'ClientError\n{e}')
+        raise
+    else:
+        return r['executionArn']
+
 def parse_event_for_sns_message(event):
     
     try:
@@ -27,9 +39,6 @@ def parse_event_for_sns_message(event):
                 else:
                     return json.loads(message)
 
-def process_configuration_item(configuration_item):
-    print(f'beging process_configuration_item')
-
 def lambda_handler(event, context):
     
     print(event)
@@ -50,4 +59,5 @@ def lambda_handler(event, context):
         print(f"configuration_item.awsAccountId ({configuration_item['awsAccountId']}) not in spoke_account_ids:\n{spoke_account_ids}")
         return False
         
-    process_configuration_item(configuration_item)
+    execution_arn = async_sfn(sfn_arn=os.environ['ProcessingSfnArn'],input_=configuration_item)
+    print(f'sfn execution_arn:\n{execution_arn}')
