@@ -224,7 +224,7 @@ class ControlBrokerASFF():
         def resource_type_to_service(resource_type):
             print(resource_type)
             
-            return self.re_search('AWS::(\w+?)::\w+',resource_type)
+            return self.re_search('AWS::(\w+?)::\w+',resource_type).lower()
         
         def service_to_arn_region_section(service,region):
             
@@ -274,7 +274,7 @@ class ControlBrokerASFF():
             }
             
             if resource_type in no_prefix:
-                return resource_id
+                return ''
                 
             elif resource_type in prefix_is_lowercase_of_type:
                 return f'{resource_type.lower()}/'
@@ -287,18 +287,25 @@ class ControlBrokerASFF():
          
         def resource_id_to_arn_suffix_suffix(resource_type,resource_id):
             
+            print(resource_type)
+            
             resource_type_to_regex={
-                'AWS::SQS::Queue':'https://sqs\..+?\.amazonaws.com/\d{12}/(.+?)$'
+                'AWS::SQS::Queue':'https://sqs\..+?\.amazonaws.com/\d{12}/(.+)'
             }
         
             try:
-                return self.re_search(
-                    resource_type_to_regex[resource_type],
-                    resource_id
-                )
+                regex=resource_type_to_regex[resource_type]
             except KeyError:
                 return resource_id
-        
+            else:
+                resource_id= self.re_search(
+                    regex,
+                    resource_id
+                )
+                
+                print(f'\n\n{resource_id}\n\n')
+                
+                return resource_id
         
         service=resource_type_to_service(resource_type)
    
@@ -308,8 +315,7 @@ class ControlBrokerASFF():
             service,
             service_to_arn_region_section(service,region),
             service_to_arn_account_section(service,resource_aws_id),
-            resource_type_to_arn_suffix_prefix(resource_type),
-            resource_id_to_arn_suffix_suffix(resource_type,resource_id)
+            f'{resource_type_to_arn_suffix_prefix(resource_type)}{resource_id_to_arn_suffix_suffix(resource_type,resource_id)}'
         ]
         
         print(arn_items)
