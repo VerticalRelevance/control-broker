@@ -1,0 +1,5 @@
+let configurationItem = configurationItem
+
+rule kms_key_id_exists when %configurationItem.resourceType == 'AWS::SageMaker::EndpointConfig' {
+    %configurationItem.configuration.KmsKeyId exists
+}
