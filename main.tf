@@ -56,7 +56,8 @@ resource "local_file" "toggled" {
 resource "aws_sqs_queue" "q" {
   name                        = "${local.resource_prefix}-event-generator-via-toggle-cbd.fifo"
   fifo_queue                  = true
-  content_based_deduplication = local.toggled_boolean
+  # content_based_deduplication = local.toggled_boolean
+  content_based_deduplication=true
 }
 
 data "aws_iam_policy_document" "lambda_toggle_sqs_cbd" {
@@ -78,7 +79,7 @@ module "lambda_toggle_sqs_cbd" {
   runtime                        = "python3.9"
   timeout                        = 60
   memory_size                    = 512
-  reserved_concurrent_executions = 1
+  # reserved_concurrent_executions = 10
 
   source_path = "./resources/lambda/toggle_sqs_cbd"
 
@@ -91,19 +92,18 @@ module "lambda_toggle_sqs_cbd" {
 }
 
 resource "aws_cloudwatch_event_rule" "r" {
-    name = local.resource_prefix
-    schedule_expression = "rate(1 minutes)"
+  name                = local.resource_prefix
+  schedule_expression = "rate(1 minute)"
 }
 
 resource "aws_cloudwatch_event_target" "t" {
-    rule = aws_cloudwatch_event_rule.r.name
-    target_id = "check_foo"
-    arn = lambda_toggle_sqs_cbd.lambda_function_arn
+  rule      = aws_cloudwatch_event_rule.r.name
+  arn       = module.lambda_toggle_sqs_cbd.lambda_function_arn
 }
 
 resource "aws_lambda_permission" "p" {
-    action = "lambda:InvokeFunction"
-    function_name = lambda_toggle_sqs_cbd.lambda_function_name
-    principal = "events.amazonaws.com"
-    source_arn = aws_cloudwatch_event_rule.r.arn
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_toggle_sqs_cbd.lambda_function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.r.arn
 }
