@@ -54,23 +54,25 @@ locals {
 #                      invoked by sns
 ##################################################################
 
-# resource "aws_lambda_permission" "invoked_by_sns" {
-#   action        = "lambda:InvokeFunction"
-#   function_name = module.lambda_invoked_by_sns.lambda_function_name
-#   principal     = "sns.amazonaws.com"
-#   statement_id  = "ConfigCanInvoke"
-# }
-
-data "aws_iam_policy_document" "lambda_invoked_by_sns" {
-  statement {
-    actions = [
-      "states:StartExecution",
-    ]
-    resources = [
-      aws_sfn_state_machine.process_config_event.arn
-    ]
-  }
+resource "aws_sns_topic_subscription" "user_updates_sqs_target" {
+  topic_arn = local.config_agg_sns_topic_arn
+  protocol  = "lambda"
+  endpoint  = module.lambda_invoked_by_sns.lambda_function_arn
+#   filter_policy={
+      
+#   }
 }
+
+# data "aws_iam_policy_document" "lambda_invoked_by_sns" {
+#   statement {
+#     actions = [
+#       "states:StartExecution",
+#     ]
+#     resources = [
+#       aws_sfn_state_machine.process_config_event.arn
+#     ]
+#   }
+# }
 
 module "lambda_invoked_by_sns" {
   source = "terraform-aws-modules/lambda/aws"
@@ -80,14 +82,14 @@ module "lambda_invoked_by_sns" {
   runtime                        = "python3.9"
   timeout                        = 60
   memory_size                    = 512
-  reserved_concurrent_executions = 1
+#   reserved_concurrent_executions = 1
 
   source_path = "./resources/lambda/invoked_by_sns"
 
   environment_variables = {
-    ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
+    # ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
   }
 
-  attach_policy_json = true
-  policy_json        = data.aws_iam_policy_document.lambda_invoked_by_sns.json
+#   attach_policy_json = true
+#   policy_json        = data.aws_iam_policy_document.lambda_invoked_by_sns.json
 }
