@@ -53,13 +53,6 @@ resource "local_file" "toggled" {
 #                       generate events
 ##################################################################
 
-resource "aws_sqs_queue" "q1" {
-  name                        = "${local.resource_prefix}-event-generator-via-toggle-cbd-01.fifo"
-  fifo_queue                  = true
-  # content_based_deduplication = local.toggled_boolean
-  content_based_deduplication=true
-}
-
 data "aws_iam_policy_document" "lambda_toggle_sqs_cbd" {
   statement {
     actions = [
@@ -96,6 +89,22 @@ resource "aws_cloudwatch_event_rule" "r" {
   schedule_expression = "rate(1 minute)"
 }
 
+resource "aws_lambda_permission" "p" {
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_toggle_sqs_cbd.lambda_function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.r.arn
+}
+
+#1
+
+resource "aws_sqs_queue" "q1" {
+  name                        = "${local.resource_prefix}-event-generator-via-toggle-cbd-01.fifo"
+  fifo_queue                  = true
+  # content_based_deduplication = local.toggled_boolean
+  content_based_deduplication=true
+}
+
 resource "aws_cloudwatch_event_target" "t1" {
   rule      = aws_cloudwatch_event_rule.r.name
   arn       = module.lambda_toggle_sqs_cbd.lambda_function_arn
@@ -104,12 +113,23 @@ resource "aws_cloudwatch_event_target" "t1" {
   })
 }
 
-resource "aws_lambda_permission" "p" {
-  action        = "lambda:InvokeFunction"
-  function_name = module.lambda_toggle_sqs_cbd.lambda_function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.r.arn
+#2
+
+resource "aws_sqs_queue" "q2" {
+  name                        = "${local.resource_prefix}-event-generator-via-toggle-cbd-02.fifo"
+  fifo_queue                  = true
+  # content_based_deduplication = local.toggled_boolean
+  content_based_deduplication=true
 }
+
+resource "aws_cloudwatch_event_target" "t2" {
+  rule      = aws_cloudwatch_event_rule.r.name
+  arn       = module.lambda_toggle_sqs_cbd.lambda_function_arn
+  input=jsonencode({
+      "QueueUrl":aws_sqs_queue.q2.arn
+  })
+}
+
 
 ##################################################################
 #                       config 
