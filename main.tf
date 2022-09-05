@@ -496,7 +496,7 @@ resource "aws_sfn_state_machine" "process_config_event" {
           "FunctionName" : module.lambda_put_asff.lambda_function_arn,
           "Payload" : {
             "ResourceAwsId.$":"$.SnsMessage.configurationItem.awsAccountId",
-            "ResourceId.$":"$.SnsMessage.configurationItem.resourceId",
+            "Region":"$.SnsMessage.configurationItem.awsRegion",
             "ResourceType.$":"$.SnsMessage.configurationItem.resourceType",
             "IsCompliant.$":"$.OutputHandler.Payload.IsCompliant",
           }
