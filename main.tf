@@ -387,66 +387,65 @@ resource "aws_sfn_state_machine" "process_config_event" {
       },
       "ParseInput1" : {
         "Type" : "Pass",
-        # "Next" : "GetResourceConfigComplianceInitial",
-        "End" : true
+        "Next" : "PutInputToBeAnalyzed",
         "ResultPath" : "$.InputToBeAnalyzed",
         "Parameters" : {
           "Bucket" : aws_s3_bucket.input_to_be_analyzed.id,
           "Key.$" : "States.Format('{}#{}',$.SnsMessage.configurationItem.resourceType,$.SnsMessage.configurationItem.resourceId)"
         }
       },
-        #   "PutInputToBeAnalyzed" : {
-        #     "Type" : "Task",
-        #     "Next" : "EvalEngine",
-        #     "ResultPath" : "$.PutInputToBeAnalyzed",
-        #     "Resource" : "arn:aws:states:::lambda:invoke",
-        #     "Parameters" : {
-        #       "FunctionName" : module.lambda_s3_put_object.lambda_function_name,
-        #       "Payload" : {
-        #         "Bucket.$" : "$.InputToBeAnalyzed.Bucket",
-        #         "Key.$" : "$.InputToBeAnalyzed.Key"
-        #         "Object.$" : "$.InvokingEvent"
-        #       }
-        #     },
-        #     "ResultSelector" : {
-        #       "InputManifest.$" : "$.Payload"
-        #     }
-        #   },
-        #   "EvalEngine" : {
-        #     "Type" : "Task",
-        #     "Next" : "OutputHandler",
-        #     "ResultPath" : "$.EvalEngine",
-        #     "Resource" : "arn:aws:states:::lambda:invoke",
-        #     "Parameters" : {
-        #       "FunctionName" : module.lambda_eval_engine_cfn_guard.lambda_function_arn,
-        #       "Payload" : {
-        #         "Rules" : {
-        #           "Bucket" : aws_s3_bucket.pac.id,
-        #           "Prefix" : "cfn_guard/expected_schema_config_event_invoking_event"
-        #         },
-        #         "InputToBeAnalyzed" : {
-        #           "Bucket.$" : "$.InputToBeAnalyzed.Bucket",
-        #           "Key.$" : "$.InputToBeAnalyzed.Key"
-        #         },
-        #       }
-        #     },
-        #     "ResultSelector" : {
-        #       "Payload.$" : "$.Payload"
-        #     },
-        #   },
-        #   "OutputHandler" : {
-        #     "Type" : "Task",
-        #     "Next" : "PutEvaluations",
-        #     "ResultPath" : "$.OutputHandler",
-        #     "Resource" : "arn:aws:states:::lambda:invoke",
-        #     "Parameters" : {
-        #       "FunctionName" : module.lambda_output_handler.lambda_function_arn,
-        #       "Payload.$" : "$.EvalEngine.Payload"
-        #     },
-        #     "ResultSelector" : {
-        #       "Payload.$" : "$.Payload"
-        #     },
-        #   },
+      "PutInputToBeAnalyzed" : {
+        "Type" : "Task",
+        "Next" : "EvalEngine",
+        "ResultPath" : "$.PutInputToBeAnalyzed",
+        "Resource" : "arn:aws:states:::lambda:invoke",
+        "Parameters" : {
+          "FunctionName" : module.lambda_s3_put_object.lambda_function_name,
+          "Payload" : {
+            "Bucket.$" : "$.InputToBeAnalyzed.Bucket",
+            "Key.$" : "$.InputToBeAnalyzed.Key"
+            "Object.$" : "$.SnsMessage"
+          }
+        },
+        "ResultSelector" : {
+          "InputManifest.$" : "$.Payload"
+        }
+      },
+      "EvalEngine" : {
+        "Type" : "Task",
+        "Next" : "OutputHandler",
+        "ResultPath" : "$.EvalEngine",
+        "Resource" : "arn:aws:states:::lambda:invoke",
+        "Parameters" : {
+          "FunctionName" : module.lambda_eval_engine_cfn_guard.lambda_function_arn,
+          "Payload" : {
+            "Rules" : {
+              "Bucket" : aws_s3_bucket.pac.id,
+              "Prefix" : "cfn_guard/expected_schema_config_event_invoking_event"
+            },
+            "InputToBeAnalyzed" : {
+              "Bucket.$" : "$.InputToBeAnalyzed.Bucket",
+              "Key.$" : "$.InputToBeAnalyzed.Key"
+            },
+          }
+        },
+        "ResultSelector" : {
+          "Payload.$" : "$.Payload"
+        },
+      },
+      "OutputHandler" : {
+        "Type" : "Task",
+        "End" : true,
+        "ResultPath" : "$.OutputHandler",
+        "Resource" : "arn:aws:states:::lambda:invoke",
+        "Parameters" : {
+          "FunctionName" : module.lambda_output_handler.lambda_function_arn,
+          "Payload.$" : "$.EvalEngine.Payload"
+        },
+        "ResultSelector" : {
+          "Payload.$" : "$.Payload"
+        },
+      },
     }
   })
 }
