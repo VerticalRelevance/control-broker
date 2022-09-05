@@ -54,7 +54,7 @@ locals {
 #                      invoked by sns
 ##################################################################
 
-resource "aws_sns_topic_subscription" "user_updates_sqs_target" {
+resource "aws_sns_topic_subscription" "lambda_invoked_by_sns" {
   topic_arn = local.config_agg_sns_topic_arn
   protocol  = "lambda"
   endpoint  = module.lambda_invoked_by_sns.lambda_function_arn
@@ -62,6 +62,14 @@ resource "aws_sns_topic_subscription" "user_updates_sqs_target" {
       
 #   }
 }
+
+resource "aws_lambda_permission" "lambda_invoked_by_sns" {
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_invoked_by_sns.lambda_function_arn
+  principal     = "sns.amazonaws.com"
+  source_arn    = local.config_agg_sns_topic_arn
+}
+
 
 # data "aws_iam_policy_document" "lambda_invoked_by_sns" {
 #   statement {
