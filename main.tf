@@ -493,7 +493,12 @@ resource "aws_sfn_state_machine" "process_config_event" {
         "Resource" : "arn:aws:states:::lambda:invoke",
         "Parameters" : {
           "FunctionName" : module.lambda_put_asff.lambda_function_arn,
-          "Payload.$" : "$.EvalEngine.Payload"
+          "Payload.$" : {
+            "ResourceAwsId.$":"$.SnsMessage.awsAccountId",
+            "ResourceId.$":"$.SnsMessage.configurationItem.ResourceId",
+            "ResourceType.$":"$.SnsMessage.configurationItem.resourceType",
+            "IsCompliant.$":"$.OutputHandler.IsCompliant",
+          }
         },
         "ResultSelector" : {
           "Payload.$" : "$.Payload"
