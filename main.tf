@@ -39,15 +39,15 @@ data "aws_caller_identity" "i" {}
 
 data "aws_organizations_organization" "o" {}
 
-locals {
-  toggled_boolean_path = "${path.module}/dev/toggled_boolean.json"
-  toggled_boolean      = file(local.toggled_boolean_path)
-}
+# locals {
+#   toggled_boolean_path = "${path.module}/dev/toggled_boolean.json"
+#   toggled_boolean      = file(local.toggled_boolean_path)
+# }
 
-resource "local_file" "toggled" {
-  content  = !local.toggled_boolean
-  filename = local.toggled_boolean_path
-}
+# resource "local_file" "toggled" {
+#   content  = !local.toggled_boolean
+#   filename = local.toggled_boolean_path
+# }
 
 ##################################################################
 #                       generate events
@@ -59,7 +59,8 @@ data "aws_iam_policy_document" "lambda_toggle_sqs_cbd" {
       "sqs:*",
     ]
     resources = [
-      aws_sqs_queue.q1.arn
+      aws_sqs_queue.q1.arn,
+      aws_sqs_queue.q2.arn,
     ]
   }
 }
@@ -76,9 +77,7 @@ module "lambda_toggle_sqs_cbd" {
 
   source_path = "./resources/lambda/toggle_sqs_cbd"
 
-  environment_variables = {
-    QueueUrl = aws_sqs_queue.q1.url
-  }
+#   environment_variables = {}
 
   attach_policy_json = true
   policy_json        = data.aws_iam_policy_document.lambda_toggle_sqs_cbd.json
@@ -109,7 +108,7 @@ resource "aws_cloudwatch_event_target" "t1" {
   rule      = aws_cloudwatch_event_rule.r.name
   arn       = module.lambda_toggle_sqs_cbd.lambda_function_arn
   input=jsonencode({
-      "QueueUrl":aws_sqs_queue.q1.arn
+      "QueueUrl":aws_sqs_queue.q1.url
   })
 }
 
@@ -126,7 +125,7 @@ resource "aws_cloudwatch_event_target" "t2" {
   rule      = aws_cloudwatch_event_rule.r.name
   arn       = module.lambda_toggle_sqs_cbd.lambda_function_arn
   input=jsonencode({
-      "QueueUrl":aws_sqs_queue.q2.arn
+      "QueueUrl":aws_sqs_queue.q2.url
   })
 }
 
@@ -135,64 +134,64 @@ resource "aws_cloudwatch_event_target" "t2" {
 #                       config 
 ##################################################################
 
-# resource "aws_lambda_permission" "custom_config" {
-#   action        = "lambda:InvokeFunction"
-#   function_name = module.lambda_custom_config.lambda_function_name
-#   principal     = "config.amazonaws.com"
-#   statement_id  = "ConfigCanInvoke"
-# }
+resource "aws_lambda_permission" "custom_config" {
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_custom_config.lambda_function_name
+  principal     = "config.amazonaws.com"
+  statement_id  = "ConfigCanInvoke"
+}
 
-# resource "aws_config_config_rule" "r" {
+resource "aws_config_config_rule" "r" {
 
-#   name = "${local.resource_prefix}"
+  name = "${local.resource_prefix}"
 
-#   source {
-#     owner             = "CUSTOM_LAMBDA"
-#     source_identifier = module.lambda_custom_config.lambda_function_arn
-#     source_detail {
-#       message_type = "ConfigurationItemChangeNotification"
-#     }
+  source {
+    owner             = "CUSTOM_LAMBDA"
+    source_identifier = module.lambda_custom_config.lambda_function_arn
+    source_detail {
+      message_type = "ConfigurationItemChangeNotification"
+    }
+  }
+
+  depends_on = [
+    aws_lambda_permission.custom_config,
+  ]
+
+  scope {
+    compliance_resource_types = [
+      "AWS::SQS::Queue",
+    ]
+  }
+
+}
+
+data "aws_iam_policy_document" "lambda_custom_config" {
+  statement {
+    actions = [
+      "config:*",
+    ]
+    resources = [
+      "*"
+    ]
+  }
+}
+
+module "lambda_custom_config" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name                  = "${local.resource_prefix}-invoked_by_config"
+  handler                        = "lambda_function.lambda_handler"
+  runtime                        = "python3.9"
+  timeout                        = 60
+  memory_size                    = 512
+#   reserved_concurrent_executions = 1
+
+  source_path = "./resources/lambda/invoked_by_config"
+
+#   environment_variables = {
+#     ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
 #   }
 
-#   depends_on = [
-#     aws_lambda_permission.custom_config,
-#   ]
-
-#   scope {
-#     compliance_resource_types = [
-#       "AWS::SQS::Queue",
-#     ]
-#   }
-
-# }
-
-# data "aws_iam_policy_document" "lambda_custom_config" {
-#   statement {
-#     actions = [
-#       "config:*",
-#     ]
-#     resources = [
-#       "*"
-#     ]
-#   }
-# }
-
-# module "lambda_custom_config" {
-#   source = "terraform-aws-modules/lambda/aws"
-
-#   function_name                  = "${local.resource_prefix}-invoked_by_config"
-#   handler                        = "lambda_function.lambda_handler"
-#   runtime                        = "python3.9"
-#   timeout                        = 60
-#   memory_size                    = 512
-# #   reserved_concurrent_executions = 1
-
-#   source_path = "./resources/lambda/invoked_by_config"
-
-# #   environment_variables = {
-# #     ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
-# #   }
-
-#   attach_policy_json = true
-#   policy_json        = data.aws_iam_policy_document.lambda_custom_config.json
-# }
+  attach_policy_json = true
+  policy_json        = data.aws_iam_policy_document.lambda_custom_config.json
+}

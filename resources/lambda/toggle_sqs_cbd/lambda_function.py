@@ -53,6 +53,7 @@ def lambda_handler(event, context):
     
     # queue_url=os.environ['QueueUrl']
     queue_url=event['QueueUrl']
+    print(f'queue_url:\n{queue_url}')
     
     toggle_sqs_cbd(queue_url)
     
