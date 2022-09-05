@@ -76,16 +76,16 @@ resource "aws_lambda_permission" "lambda_invoked_by_sns" {
 }
 
 
-# data "aws_iam_policy_document" "lambda_invoked_by_sns" {
-#   statement {
-#     actions = [
-#       "states:StartExecution",
-#     ]
-#     resources = [
-#       aws_sfn_state_machine.process_config_event.arn
-#     ]
-#   }
-# }
+data "aws_iam_policy_document" "lambda_invoked_by_sns" {
+  statement {
+    actions = [
+      "states:StartExecution",
+    ]
+    resources = [
+      aws_sfn_state_machine.process_config_event.arn
+    ]
+  }
+}
 
 module "lambda_invoked_by_sns" {
   source = "terraform-aws-modules/lambda/aws"
@@ -100,12 +100,12 @@ module "lambda_invoked_by_sns" {
   source_path = "./resources/lambda/invoked_by_sns"
 
   environment_variables = {
-    SpokeAccountIds = local.spoke_accounts
-    ProcessingSfnArn=aws_sfn_state_machine.process_config_event.arn
+    SpokeAccountIds  = local.spoke_accounts
+    ProcessingSfnArn = aws_sfn_state_machine.process_config_event.arn
   }
 
-  #   attach_policy_json = true
-  #   policy_json        = data.aws_iam_policy_document.lambda_invoked_by_sns.json
+     attach_policy_json = true
+     policy_json        = data.aws_iam_policy_document.lambda_invoked_by_sns.json
 }
 
 
@@ -186,7 +186,7 @@ module "lambda_eval_engine_cfn_guard" {
   runtime                        = "python3.9"
   timeout                        = 60
   memory_size                    = 512
-  reserved_concurrent_executions = 4
+#   reserved_concurrent_executions = 4
 
   source_path = "./resources/lambda/eval_engine_cfn_guard"
 
@@ -226,7 +226,7 @@ module "lambda_output_handler" {
   runtime                        = "python3.9"
   timeout                        = 60
   memory_size                    = 512
-  reserved_concurrent_executions = 4
+#   reserved_concurrent_executions = 4
 
   source_path = "./resources/lambda/output_handler"
 
@@ -268,7 +268,7 @@ module "lambda_s3_put_object" {
   runtime                        = "python3.9"
   timeout                        = 60
   memory_size                    = 512
-  reserved_concurrent_executions = 4
+#   reserved_concurrent_executions = 4
 
   source_path = "./resources/lambda/s3_put_object"
 
@@ -379,75 +379,76 @@ resource "aws_sfn_state_machine" "process_config_event" {
     "States" : {
       "ParseInput0" : {
         "Type" : "Pass",
-        "End":true
-    #     "Next" : "ParseInput1",
-    #     "ResultPath" : "$",
-    #     "Parameters" : {
-    #       "ConfigEvent.$" : "$"
-    #       "InvokingEvent.$" : "States.StringToJson($.invokingEvent)",
-    #     }
-    #   },
-    #   "ParseInput1" : {
-    #     "Type" : "Pass",
-    #     "Next" : "GetResourceConfigComplianceInitial",
-    #     "ResultPath" : "$.InputToBeAnalyzed",
-    #     "Parameters" : {
-    #       "Bucket" : aws_s3_bucket.input_to_be_analyzed.id,
-    #       "Key.$" : "States.Format('{}#{}',$.InvokingEvent.configurationItem.resourceType,$.InvokingEvent.configurationItem.resourceId)"
-    #     }
-    #   },
-    #   "PutInputToBeAnalyzed" : {
-    #     "Type" : "Task",
-    #     "Next" : "EvalEngine",
-    #     "ResultPath" : "$.PutInputToBeAnalyzed",
-    #     "Resource" : "arn:aws:states:::lambda:invoke",
-    #     "Parameters" : {
-    #       "FunctionName" : module.lambda_s3_put_object.lambda_function_name,
-    #       "Payload" : {
-    #         "Bucket.$" : "$.InputToBeAnalyzed.Bucket",
-    #         "Key.$" : "$.InputToBeAnalyzed.Key"
-    #         "Object.$" : "$.InvokingEvent"
-    #       }
-    #     },
-    #     "ResultSelector" : {
-    #       "InputManifest.$" : "$.Payload"
-    #     }
-    #   },
-    #   "EvalEngine" : {
-    #     "Type" : "Task",
-    #     "Next" : "OutputHandler",
-    #     "ResultPath" : "$.EvalEngine",
-    #     "Resource" : "arn:aws:states:::lambda:invoke",
-    #     "Parameters" : {
-    #       "FunctionName" : module.lambda_eval_engine_cfn_guard.lambda_function_arn,
-    #       "Payload" : {
-    #         "Rules" : {
-    #           "Bucket" : aws_s3_bucket.pac.id,
-    #           "Prefix" : "cfn_guard/expected_schema_config_event_invoking_event"
-    #         },
-    #         "InputToBeAnalyzed" : {
-    #           "Bucket.$" : "$.InputToBeAnalyzed.Bucket",
-    #           "Key.$" : "$.InputToBeAnalyzed.Key"
-    #         },
-    #       }
-    #     },
-    #     "ResultSelector" : {
-    #       "Payload.$" : "$.Payload"
-    #     },
-    #   },
-    #   "OutputHandler" : {
-    #     "Type" : "Task",
-    #     "Next" : "PutEvaluations",
-    #     "ResultPath" : "$.OutputHandler",
-    #     "Resource" : "arn:aws:states:::lambda:invoke",
-    #     "Parameters" : {
-    #       "FunctionName" : module.lambda_output_handler.lambda_function_arn,
-    #       "Payload.$" : "$.EvalEngine.Payload"
-    #     },
-    #     "ResultSelector" : {
-    #       "Payload.$" : "$.Payload"
-    #     },
-    #   },
+        "End" : true
+        #     "Next" : "ParseInput1",
+        #     "ResultPath" : "$",
+        #     "Parameters" : {
+        #       "ConfigEvent.$" : "$"
+        #       "InvokingEvent.$" : "States.StringToJson($.invokingEvent)",
+        #     }
+        #   },
+        #   "ParseInput1" : {
+        #     "Type" : "Pass",
+        #     "Next" : "GetResourceConfigComplianceInitial",
+        #     "ResultPath" : "$.InputToBeAnalyzed",
+        #     "Parameters" : {
+        #       "Bucket" : aws_s3_bucket.input_to_be_analyzed.id,
+        #       "Key.$" : "States.Format('{}#{}',$.InvokingEvent.configurationItem.resourceType,$.InvokingEvent.configurationItem.resourceId)"
+        #     }
+        #   },
+        #   "PutInputToBeAnalyzed" : {
+        #     "Type" : "Task",
+        #     "Next" : "EvalEngine",
+        #     "ResultPath" : "$.PutInputToBeAnalyzed",
+        #     "Resource" : "arn:aws:states:::lambda:invoke",
+        #     "Parameters" : {
+        #       "FunctionName" : module.lambda_s3_put_object.lambda_function_name,
+        #       "Payload" : {
+        #         "Bucket.$" : "$.InputToBeAnalyzed.Bucket",
+        #         "Key.$" : "$.InputToBeAnalyzed.Key"
+        #         "Object.$" : "$.InvokingEvent"
+        #       }
+        #     },
+        #     "ResultSelector" : {
+        #       "InputManifest.$" : "$.Payload"
+        #     }
+        #   },
+        #   "EvalEngine" : {
+        #     "Type" : "Task",
+        #     "Next" : "OutputHandler",
+        #     "ResultPath" : "$.EvalEngine",
+        #     "Resource" : "arn:aws:states:::lambda:invoke",
+        #     "Parameters" : {
+        #       "FunctionName" : module.lambda_eval_engine_cfn_guard.lambda_function_arn,
+        #       "Payload" : {
+        #         "Rules" : {
+        #           "Bucket" : aws_s3_bucket.pac.id,
+        #           "Prefix" : "cfn_guard/expected_schema_config_event_invoking_event"
+        #         },
+        #         "InputToBeAnalyzed" : {
+        #           "Bucket.$" : "$.InputToBeAnalyzed.Bucket",
+        #           "Key.$" : "$.InputToBeAnalyzed.Key"
+        #         },
+        #       }
+        #     },
+        #     "ResultSelector" : {
+        #       "Payload.$" : "$.Payload"
+        #     },
+        #   },
+        #   "OutputHandler" : {
+        #     "Type" : "Task",
+        #     "Next" : "PutEvaluations",
+        #     "ResultPath" : "$.OutputHandler",
+        #     "Resource" : "arn:aws:states:::lambda:invoke",
+        #     "Parameters" : {
+        #       "FunctionName" : module.lambda_output_handler.lambda_function_arn,
+        #       "Payload.$" : "$.EvalEngine.Payload"
+        #     },
+        #     "ResultSelector" : {
+        #       "Payload.$" : "$.Payload"
+        #     },
+        #   },
+      }
     }
   })
 }

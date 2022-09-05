@@ -3,6 +3,8 @@ import json, os
 import boto3
 from botocore.exceptions import ClientError
 
+sfn = boto3.client('stepfunctions')
+
 def async_sfn(*,sfn_arn,input_:dict):
     try:
         r = sfn.start_execution(
@@ -44,13 +46,14 @@ def lambda_handler(event, context):
     print(event)
     
     sns_message=parse_event_for_sns_message(event)
+    print(f'sns_message\n{sns_message}')
 
     if not sns_message:
         return False
         
-    spoke_account_ids=os.environ['SpokeAccountIds']
-    print(spoke_account_ids)
-    print(type(spoke_account_ids))
+    spoke_account_ids=json.loads(os.environ['SpokeAccountIds'])
+    print(f'spoke_account_ids:\n{spoke_account_ids}\n{type(spoke_account_ids)}')
+
 
     configuration_item=sns_message['configurationItem']
     print(f'configuration_item:\n{configuration_item}')
