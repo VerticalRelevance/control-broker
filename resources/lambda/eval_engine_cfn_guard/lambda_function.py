@@ -12,7 +12,6 @@ s3 = boto3.client('s3')
 s3r = boto3.resource('s3')
 
 def s3_download(*,bucket,key,local_path):
-    
     try:
         s3.download_file(
             bucket,

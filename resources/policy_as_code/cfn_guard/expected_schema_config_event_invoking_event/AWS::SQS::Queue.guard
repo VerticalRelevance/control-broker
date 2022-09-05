@@ -1,5 +1,5 @@
 let configurationItem = configurationItem
 
-rule direct_internet_access_disabled when %configurationItem.resourceType == 'AWS::SQS::Queue' {
+rule content_based_deduplication_true when %configurationItem.resourceType == 'AWS::SQS::Queue' {
     %configurationItem.configuration.ContentBasedDeduplication == "true"
 }
