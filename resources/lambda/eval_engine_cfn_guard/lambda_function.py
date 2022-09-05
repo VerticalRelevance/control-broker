@@ -57,7 +57,6 @@ def s3_download_dir(*,bucket, prefix=None, local_path):
 def copyanything(source, destination):
     try:
         if os.path.exists(destination):
-            # shutil.rmtree(destination) # permission error
             print('Using existing .guard - lambda reused') 
             return True
         shutil.copytree(source, destination)
