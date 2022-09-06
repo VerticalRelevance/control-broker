@@ -15,15 +15,13 @@ boto3_config = Config(
     }
 )
 
-session = boto3.Session(
-    profile_name='615251248113_AWSAdministratorAccess',
-)
 
-
-sh = session.client(
+sh = boto3.client(
     'securityhub',
     config=boto3_config
 )
+
+lambda_aws_account_id=boto3.client('sts').get_caller_identity().get('Account')
 
 
 class ControlBrokerASFF():
@@ -69,11 +67,8 @@ class ControlBrokerASFF():
             	"Description": useful_root,
             	"GeneratorId": finding_id,
             	"Id": finding_id,
-            	"ProductArn": self.get_arn(
+            	"ProductArn": self.get_security_hub_product_arn(
             	    resource_aws_id=resource_aws_id,
-                    resource_type=resource_type,
-                    resource_id=resource_id,
-                    region=region,
             	 ),
             	"Resources": [{
             # 		"DataClassification": {
@@ -213,7 +208,15 @@ class ControlBrokerASFF():
         except AttributeError:
             return None
 
-    def get_arn(self,*,
+    def get_security_hub_product_arn(self,region):
+        
+        product_arn= f'arn:aws:securityhub:{region}:{lambda_aws_account_id}:product/{lambda_aws_account_id}/default'
+        
+        print(f'product_arn:\n{product_arn}')
+        
+        return product_arn
+        
+    def get_resource_arn(self,*,
         resource_aws_id,
         resource_type,
         resource_id,
