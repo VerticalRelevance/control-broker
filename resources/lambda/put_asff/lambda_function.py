@@ -62,7 +62,8 @@ class ControlBrokerASFF():
         
         self.findings=[
            {
-            	"AwsAccountId": resource_aws_id,
+            	"AwsAccountId": lambda_aws_account_id,
+            # 	"AwsAccountId": resource_aws_id,
             	"Compliance": {
             # 		"RelatedRequirements": ["string"],
             		"Status": mapping['Compliance']['Status']['is_compliant'][is_compliant],
