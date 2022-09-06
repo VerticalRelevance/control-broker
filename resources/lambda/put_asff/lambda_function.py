@@ -49,6 +49,14 @@ class ControlBrokerASFF():
                     False:'MEDIUM',
                 }
                     
+            },
+            'Compliance':{
+                'Status':{
+                    'is_compliant':{
+                        True:'PASSED',
+                        False:'FAILED',
+                    }
+                }
             }
         }
         
@@ -57,7 +65,7 @@ class ControlBrokerASFF():
             	"AwsAccountId": resource_aws_id,
             	"Compliance": {
             # 		"RelatedRequirements": ["string"],
-            		"Status": str(is_compliant),
+            		"Status": mapping['Compliance']['Status']['is_compliant'][is_compliant],
             # 		"StatusReasons": [{
             # 			"Description": "string",
             # 			"ReasonCode": "string"
@@ -68,7 +76,7 @@ class ControlBrokerASFF():
             	"GeneratorId": finding_id,
             	"Id": finding_id,
             	"ProductArn": self.get_security_hub_product_arn(
-            	    resource_aws_id=resource_aws_id,
+            	    region=region
             	 ),
             	"Resources": [{
             # 		"DataClassification": {
