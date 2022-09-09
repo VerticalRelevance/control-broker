@@ -20,6 +20,7 @@ from aws_cdk import (
     aws_events_targets,
     aws_apigatewayv2,
     aws_s3objectlambda,
+    aws_lambda_event_sources,
     # experimental
     aws_apigatewayv2_alpha,
     aws_apigatewayv2_authorizers_alpha,
@@ -43,3 +44,29 @@ class HubStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.pac_framework = pac_framework
+        
+        self.lambda_invoked_by_sqs = aws_lambda.Function(
+            self,
+            "InvokedByApigwConfigEvent",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(60),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/invoked_by_sqs"
+            ),
+        )
+        
+        # self.lambda_invoked_by_sqs.role.add_to_policy(
+        #     aws_iam.PolicyStatement(
+        #         actions=[
+        #             ":",
+        #         ],
+        #         resources=["*"],
+        #     )
+        # )
+        
+        queue_subscribed_to_agg_sns=aws_sqs.Queue(self,"SubscribedToAggSns")
+        
+        event_source_sqs = aws_lambda_event_sources.SqsEventSource(queue)
+        self.lambda_invoked_by_sqs.add_event_source(event_source_sqs)
