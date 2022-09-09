@@ -10,3 +10,6 @@ __pycache__
 cdk.out
 .env
 .~c9_*
+
+builds/*
+.terraform/*
