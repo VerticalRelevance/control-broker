@@ -18,7 +18,6 @@ terraform {
 }
 provider "aws" {
   region  = local.region
-  profile = "047395971161_AWSAdministratorAccess"
 
   skip_get_ec2_platforms      = true
   skip_metadata_api_check     = true
