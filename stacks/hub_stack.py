@@ -22,6 +22,7 @@ from aws_cdk import (
     aws_apigatewayv2,
     aws_s3objectlambda,
     aws_lambda_event_sources,
+    aws_sns_subscriptions,
     # experimental
     aws_apigatewayv2_alpha,
     aws_apigatewayv2_authorizers_alpha,
@@ -40,12 +41,14 @@ class HubStack(Stack):
         construct_id: str,
         pac_framework: str,
         config_sns_topic:str,
+        spoke_accounts:list,
         **kwargs,
     ) -> None:
 
         super().__init__(scope, construct_id, **kwargs)
 
         self.pac_framework = pac_framework
+        self.spoke_accounts = spoke_accounts
         
         self.topic_config=aws_sns.Topic.from_topic_arn(self,"Config",
             f'arn:aws:sns:{os.getenv("CDK_DEFAULT_REGION")}:{os.getenv("CDK_DEFAULT_ACCOUNT")}:{config_sns_topic}'
@@ -53,14 +56,17 @@ class HubStack(Stack):
         
         self.lambda_invoked_by_sqs = aws_lambda.Function(
             self,
-            "InvokedByApigwConfigEvent",
+            "InvokedBySqs",
             runtime=aws_lambda.Runtime.PYTHON_3_9,
             handler="lambda_function.lambda_handler",
-            timeout=Duration.seconds(60),
+            timeout=Duration.seconds(20),
             memory_size=1024,
             code=aws_lambda.Code.from_asset(
                 "./supplementary_files/lambdas/invoked_by_sqs"
             ),
+            environment={
+                "SpokeAccounts": self.spoke_accounts
+            },
         )
         
         # self.lambda_invoked_by_sqs.role.add_to_policy(
@@ -74,5 +80,7 @@ class HubStack(Stack):
         
         queue_subscribed_to_config_topic=aws_sqs.Queue(self,"SubscribedToConfigTopic")
         
-        event_source_sqs = aws_lambda_event_sources.SqsEventSource(queue_subscribed_to_agg_sns)
+        self.topic_config.add_subscription(aws_sns_subscriptions.SqsSubscription(queue_subscribed_to_config_topic))
+        
+        event_source_sqs = aws_lambda_event_sources.SqsEventSource(queue_subscribed_to_config_topic)
         self.lambda_invoked_by_sqs.add_event_source(event_source_sqs)
