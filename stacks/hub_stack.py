@@ -32,6 +32,7 @@ from aws_cdk import (
 
 from constructs import Construct
 
+from utils.mixins import re_search
 
 class HubStack(Stack):
     def __init__(
@@ -65,6 +66,14 @@ class HubStack(Stack):
             },
         }
         
+        pac_path='./supplementary_files/pac_frameworks/cfn-guard/AWS/ConfigurationItem'
+        resource_types_subject_to_pac=[]
+        for root, dirs, files in os.walk(pac_path):
+            for filename in files:
+                path = os.path.join(root, filename)
+                print(filename)
+                resource_types_subject_to_pac.append(re_search('(.+).guard',filename)
+        
         self.topic_config=aws_sns.Topic.from_topic_arn(self,"Config",
             f'arn:aws:sns:{os.getenv("CDK_DEFAULT_REGION")}:{os.getenv("CDK_DEFAULT_ACCOUNT")}:{config_sns_topic}'
         )
@@ -97,9 +106,16 @@ class HubStack(Stack):
         
         self.topic_config.add_subscription(aws_sns_subscriptions.SqsSubscription(queue_subscribed_to_config_topic))
         
-        event_source_sqs = aws_lambda_event_sources.SqsEventSource(queue_subscribed_to_config_topic)
-        
-        self.lambda_invoked_by_sqs.add_event_source(event_source_sqs,
+        event_source_sqs = aws_lambda_event_sources.SqsEventSource(queue_subscribed_to_config_topic,
             batch_size=self.dev_config[self.is_dev]['SQS']['BatchSize'], 
             # max_batching_window=Duration.minutes(5),
         )
+        
+        self.lambda_invoked_by_sqs.add_event_source(event_source_sqs)
+        
+    def re_search(self,regex,item):
+        m=re.search(regex,item)
+        try:
+            return m.group(1)
+        except AttributeError:
+            return None

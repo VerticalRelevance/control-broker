@@ -1,3 +1,4 @@
+import re
 from aws_cdk import SecretValue
 from constructs import Construct
 
@@ -41,3 +42,10 @@ class SecretConfigStackMixin:
             secret_id = self.node.try_get_context(self.SECRET_CONFIG_SECRET_ID_CDK_CONTEXT_VARIABLE)
             self.__secrets = SecretConfigJson(secret_id)
         return self.__secrets
+        
+def re_search(regex,item):
+    m=re.search(regex,item)
+    try:
+        return m.group(1)
+    except AttributeError:
+        return None

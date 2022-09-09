@@ -15,9 +15,13 @@ def lambda_handler(event, context):
         
         message_account_id=message['configurationItem']['awsAccountId']
         
+        message_resource_type=message['configurationItem']['resourceType']
+        
         spoke_accounts=json.loads(os.environ['SpokeAccounts'])
         
-        if message_account_id in spoke_accounts:
+        resource_types_subject_to_pac=json.loads(os.environ['ResourceTypesSubjectToPac'])
+        
+        if message_account_id in spoke_accounts and message_resource_type in resource_types_subject_to_pac:
             
             print(f'message_account_id ({message_account_id}) is in spoke_accounts:\n{spoke_accounts}')
             
