@@ -19,6 +19,7 @@ hub_stack = HubStack(
     f"HubStack{STACK_VERSION}",
     env=env,
     pac_framework=app.node.try_get_context("control-broker/pac-framework"),
+    config_sns_topic=app.node.try_get_context("control-broker/config-sns-topic"),
 )
 
 app.synth()

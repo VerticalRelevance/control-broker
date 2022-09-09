@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_iam,
     aws_config,
     aws_sqs,
+    aws_sns,
     aws_s3,
     aws_s3_deployment,
     aws_s3_notifications,
@@ -38,12 +39,17 @@ class HubStack(Stack):
         scope: Construct,
         construct_id: str,
         pac_framework: str,
+        config_sns_topic:str,
         **kwargs,
     ) -> None:
 
         super().__init__(scope, construct_id, **kwargs)
 
         self.pac_framework = pac_framework
+        
+        self.topic_config=aws_sns.Topic.from_topic_arn(self,"Config",
+            f'arn:aws:sns:{os.getenv("CDK_DEFAULT_REGION")}:{os.getenv("CDK_DEFAULT_ACCOUNT")}:{config_sns_topic}'
+        )
         
         self.lambda_invoked_by_sqs = aws_lambda.Function(
             self,
@@ -66,7 +72,7 @@ class HubStack(Stack):
         #     )
         # )
         
-        queue_subscribed_to_agg_sns=aws_sqs.Queue(self,"SubscribedToAggSns")
+        queue_subscribed_to_config_topic=aws_sqs.Queue(self,"SubscribedToConfigTopic")
         
-        event_source_sqs = aws_lambda_event_sources.SqsEventSource(queue)
+        event_source_sqs = aws_lambda_event_sources.SqsEventSource(queue_subscribed_to_agg_sns)
         self.lambda_invoked_by_sqs.add_event_source(event_source_sqs)

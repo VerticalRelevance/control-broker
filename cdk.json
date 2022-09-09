@@ -26,6 +26,7 @@
     "@aws-cdk/core:target-partitions": [
       "aws"
     ],
-    "control-broker/pac-framework":"cfn-guard"
+    "control-broker/pac-framework":"cfn-guard",
+    "control-broker/config-sns-topic":"aws-controltower-AllConfigNotifications"
   }
 }
