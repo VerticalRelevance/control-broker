@@ -1,5 +1,4 @@
-import os
-import json
+import os, json
 from typing import List, Sequence
 from os import path
 
@@ -42,6 +41,7 @@ class HubStack(Stack):
         pac_framework: str,
         config_sns_topic:str,
         spoke_accounts:list,
+        is_dev:bool,
         **kwargs,
     ) -> None:
 
@@ -49,6 +49,21 @@ class HubStack(Stack):
 
         self.pac_framework = pac_framework
         self.spoke_accounts = spoke_accounts
+        self.is_dev=is_dev
+        
+        
+        self.dev_config={
+            True:{
+                'SQS':{
+                    'BatchSize':1
+                }
+            },
+            False:{
+                'SQS':{
+                    'BatchSize':10
+                }
+            },
+        }
         
         self.topic_config=aws_sns.Topic.from_topic_arn(self,"Config",
             f'arn:aws:sns:{os.getenv("CDK_DEFAULT_REGION")}:{os.getenv("CDK_DEFAULT_ACCOUNT")}:{config_sns_topic}'
@@ -65,7 +80,7 @@ class HubStack(Stack):
                 "./supplementary_files/lambdas/invoked_by_sqs"
             ),
             environment={
-                "SpokeAccounts": self.spoke_accounts
+                "SpokeAccounts": json.dumps(self.spoke_accounts)
             },
         )
         
@@ -83,4 +98,8 @@ class HubStack(Stack):
         self.topic_config.add_subscription(aws_sns_subscriptions.SqsSubscription(queue_subscribed_to_config_topic))
         
         event_source_sqs = aws_lambda_event_sources.SqsEventSource(queue_subscribed_to_config_topic)
-        self.lambda_invoked_by_sqs.add_event_source(event_source_sqs)
+        
+        self.lambda_invoked_by_sqs.add_event_source(event_source_sqs,
+            batch_size=self.dev_config[self.is_dev]['SQS']['BatchSize'], 
+            # max_batching_window=Duration.minutes(5),
+        )

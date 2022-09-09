@@ -25,6 +25,7 @@ hub_stack = HubStack(
     pac_framework=app.node.try_get_context("control-broker/pac-framework"),
     config_sns_topic=app.node.try_get_context("control-broker/config-sns-topic"),
     spoke_accounts=spoke_accounts,
+    is_dev=True,
 )
 
 app.synth()

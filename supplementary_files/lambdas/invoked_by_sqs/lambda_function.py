@@ -14,7 +14,8 @@ def lambda_handler(event, context):
         message=json.loads(body['Message'])
         
         message_account_id=message['configurationItem']['awsAccountId']
-        spoke_accounts=os.environ['SpokeAccounts']
+        
+        spoke_accounts=json.loads(os.environ['SpokeAccounts'])
         
         if message_account_id in spoke_accounts:
             
