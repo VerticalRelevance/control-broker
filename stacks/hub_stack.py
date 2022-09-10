@@ -202,6 +202,33 @@ class HubStack(Stack):
         
         #
         
+        self.lambda_put_asff = aws_lambda.Function(
+            self,
+            "PutAsff",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(20),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/put_asff"
+            ),
+            environment={
+            },
+        )
+        
+        self.lambda_put_asff.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "securityhub:BatchImportFindings",
+                ],
+                resources=[
+                    "*",
+                ],
+            )
+        )
+        
+        #
+        
         self.lambda_output_handler = aws_lambda.Function(
             self,
             "OutputHandler",
@@ -213,7 +240,20 @@ class HubStack(Stack):
                 "./supplementary_files/lambdas/output_handlers/cfn-guard"
             ),
             environment={
+                'PutAssfLambda':self.lambda_put_asff.function_name
             },
+        )
+        
+        self.lambda_output_handler.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "lambda:InvokeFunction",
+                ],
+                resources=[
+                    self.lambda_put_asff.function_arn,
+                    "*",
+                ],
+            )
         )
         
         #
