@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_config,
     aws_sqs,
     aws_sns,
+    aws_ec2,
     aws_s3,
     aws_s3_deployment,
     aws_s3_notifications,
@@ -67,16 +68,34 @@ class HubStack(Stack):
         }
         
         pac_path='./supplementary_files/pac_frameworks/cfn-guard/AWS/ConfigurationItem'
-        resource_types_subject_to_pac=[]
+        self.resource_types_subject_to_pac=[]
         for root, dirs, files in os.walk(pac_path):
             for filename in files:
-                path = os.path.join(root, filename)
-                print(filename)
-                resource_types_subject_to_pac.append(re_search('(.+).guard',filename)
+                self.resource_types_subject_to_pac.append(re_search('(AWS::\w+::\w+)\.?.+\.guard',filename))
+        
+        print(self.resource_types_subject_to_pac)
         
         self.topic_config=aws_sns.Topic.from_topic_arn(self,"Config",
             f'arn:aws:sns:{os.getenv("CDK_DEFAULT_REGION")}:{os.getenv("CDK_DEFAULT_ACCOUNT")}:{config_sns_topic}'
         )
+        
+        self.queue_subscribed_to_config_topic=aws_sqs.Queue(self,"SubscribedToConfigTopic")
+        
+        self.topic_config.add_subscription(aws_sns_subscriptions.SqsSubscription(self.queue_subscribed_to_config_topic))
+        
+        event_source_sqs = aws_lambda_event_sources.SqsEventSource(self.queue_subscribed_to_config_topic,
+            batch_size=self.dev_config[self.is_dev]['SQS']['BatchSize'], 
+            # max_batching_window=Duration.minutes(5),
+        )
+        
+        self.vpc = aws_ec2.Vpc(self, "VpcHub",
+            cidr="10.0.0.0/16"
+        )
+        
+        self.sg=ec2.SecurityGroup(self, "SgHub",
+            vpc=self.vpc
+        )
+        
         
         self.lambda_invoked_by_sqs = aws_lambda.Function(
             self,
@@ -89,33 +108,29 @@ class HubStack(Stack):
                 "./supplementary_files/lambdas/invoked_by_sqs"
             ),
             environment={
-                "SpokeAccounts": json.dumps(self.spoke_accounts)
+                "SpokeAccounts": json.dumps(self.spoke_accounts),
+                "ResourceTypesSubjectToPac": json.dumps(self.resource_types_subject_to_pac),
+                "QueueUrl": self.queue_subscribed_to_config_topic.queue_url,
             },
+            vpc=self.vpc,
+            security_groups=[
+                self.sg
+            ],
+            vpc_subnets=self.vpc.private_subnets[0]
         )
         
-        # self.lambda_invoked_by_sqs.role.add_to_policy(
-        #     aws_iam.PolicyStatement(
-        #         actions=[
-        #             ":",
-        #         ],
-        #         resources=["*"],
-        #     )
-        # )
+        #AWSLambdaVPCAccessExecutionRole
         
-        queue_subscribed_to_config_topic=aws_sqs.Queue(self,"SubscribedToConfigTopic")
-        
-        self.topic_config.add_subscription(aws_sns_subscriptions.SqsSubscription(queue_subscribed_to_config_topic))
-        
-        event_source_sqs = aws_lambda_event_sources.SqsEventSource(queue_subscribed_to_config_topic,
-            batch_size=self.dev_config[self.is_dev]['SQS']['BatchSize'], 
-            # max_batching_window=Duration.minutes(5),
+        self.lambda_invoked_by_sqs.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "sqs:*",
+                ],
+                resources=[
+                    "*",
+                    self.queue_subscribed_to_config_topic.queue_arn,
+                ],
+            )
         )
         
         self.lambda_invoked_by_sqs.add_event_source(event_source_sqs)
-        
-    def re_search(self,regex,item):
-        m=re.search(regex,item)
-        try:
-            return m.group(1)
-        except AttributeError:
-            return None

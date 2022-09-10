@@ -1,12 +1,30 @@
 import json, os
+import boto3
+
+from botocore.exceptions import ClientError
+
+sqs= boto3.client("sqs")
 
 def process_message(message):
     print('begin process_message')
 
+def delete_message(*,queue_url,receipt_handle):
+    
+    try:
+        sqs.delete_message(
+            QueueUrl=queue_url,
+            ReceiptHandle=receipt_handle
+        )
+    except ClientError as e:
+        print(f'ClientError:\n{e}')
+        raise
+    else:
+        return True
+
 def lambda_handler(event, context):
 
     print(event)
-
+    
     for record in event['Records']:
         
         body=json.loads(record['body'])
@@ -27,4 +45,7 @@ def lambda_handler(event, context):
             
             process_message(message)
         
-        
+        delete_message(
+            queue_url=os.environ['SpokeAccounts'],
+            receipt_handle=record['receiptHandle']
+        )
