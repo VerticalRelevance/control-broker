@@ -175,7 +175,9 @@ def lambda_handler(event, context):
             print(f'results:\n{results}')
             
             output = {
-                'CfnGuardValidateResults': results
+                'CfnGuardValidateResults': results,
+                'InputToBeEvaluated':event['InputToBeEvaluated']['Input'],
+                "InputType": event["InputType"]
             }
             
             invoke_lambda_async(

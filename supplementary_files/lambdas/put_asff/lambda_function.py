@@ -262,11 +262,18 @@ def lambda_handler(event, context):
     
     print(event)
     
+    if event["InputType"]=='ConfigEvent':
+        configuration_item=event['InputToBeEvaluated']['configurationItem']
+        resource_aws_id=configuration_item['awsAccountId'],
+        resource_region=configuration_item['awsRegion'],
+        resource_type=configuration_item['resourceType'],
+        resource_id=configuration_item['resourceId'],
+    
     c=ControlBrokerASFF(
-        resource_aws_id=event['ResourceAwsId'],
-        region=event['Region'],
-        resource_type=event['ResourceType'],
-        resource_id=event['ResourceId'],
+        resource_aws_id=resource_aws_id,
+        region=resource_region,
+        resource_type=resource_type,
+        resource_id=resource_id,
         is_compliant=event['IsCompliant']
     )
     c.main()
