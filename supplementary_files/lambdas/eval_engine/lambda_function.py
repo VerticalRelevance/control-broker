@@ -8,6 +8,25 @@ import errno
 
 s3 = boto3.client('s3')
 s3r = boto3.resource('s3')
+lambda_ = boto3.client('lambda')
+
+def invoke_lambda_async(*, function_name:str=None, payload:typing.Mapping[str, str]=None):
+    if function_name == None:
+        raise Exception('ERROR: function_name parameter cannot be NULL')
+    payloadStr = json.dumps(payload)
+    payloadBytesArr = bytes(payloadStr, encoding='utf8')
+    try:
+        r=lambda_.invoke(
+            FunctionName=function_name,
+            InvocationType='Event',
+            Payload=payloadBytesArr
+        )
+    except ClientError as e:
+        print(f'ClientError:\n{e}')
+        raise
+    else:
+        print(r)
+        return True
 
 def s3_download(*,bucket,key,local_path):
     try:
@@ -108,7 +127,7 @@ def lambda_handler(event, context):
     # )
     
     with open(input_to_be_analyzed_path,'w') as f:
-        json.dump(event['InputToBeEvaluated'],f,indent=2)
+        json.dump(event['InputToBeEvaluated']['Input'],f,indent=2)
     
     copyanything('./.guard','/tmp/.guard')
     
@@ -155,8 +174,13 @@ def lambda_handler(event, context):
                     
             print(f'results:\n{results}')
             
-            r = {
+            output = {
                 'CfnGuardValidateResults': results
             }
             
-            return r
+            invoke_lambda_async(
+                function_name=os.environ['OutputHandlerLambda'],
+                payload=output
+            )
+            
+            return output

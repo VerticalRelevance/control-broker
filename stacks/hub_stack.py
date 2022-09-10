@@ -202,6 +202,22 @@ class HubStack(Stack):
         
         #
         
+        self.lambda_output_handler = aws_lambda.Function(
+            self,
+            "OutputHandler",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(20),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/output_handlers/cfn-guard"
+            ),
+            environment={
+            },
+        )
+        
+        #
+        
         self.lambda_eval_engine = aws_lambda.Function(
             self,
             "EvalEngine",
@@ -216,8 +232,8 @@ class HubStack(Stack):
                 "RulesS3":json.dumps({
                     "Bucket":self.bucket_pac_policies.bucket_name,
                     "Prefix":"AWS/ConfigEvent"
-                })
-                    
+                }),
+                'OutputHandlerLambda':self.lambda_output_handler.function_name
             },
         )
         
@@ -230,6 +246,17 @@ class HubStack(Stack):
                 resources=[
                     self.bucket_pac_policies.bucket_arn,
                     self.bucket_pac_policies.arn_for_objects("*"),
+                    "*",
+                ],
+            )
+        )
+        self.lambda_eval_engine.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "lambda:InvokeFunction",
+                ],
+                resources=[
+                    self.lambda_output_handler.function_arn,
                     "*",
                 ],
             )
@@ -258,8 +285,8 @@ class HubStack(Stack):
                     "lambda:InvokeFunction",
                 ],
                 resources=[
-                    "*",
                     self.lambda_eval_engine.function_arn,
+                    "*",
                 ],
             )
         )

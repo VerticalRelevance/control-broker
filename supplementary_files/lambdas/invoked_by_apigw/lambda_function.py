@@ -22,7 +22,6 @@ def invoke_lambda_async(*, function_name:str=None, payload:typing.Mapping[str, s
         raise
     else:
         print(r)
-        # output=r["Payload"].read()
         return True
 
 def lambda_handler(event, context):
@@ -39,7 +38,7 @@ def lambda_handler(event, context):
         "ResponseExpectedByConsumer": None
     }
     
-    invoke_lambda(
+    invoke_lambda_async(
         function_name=os.environ['EvalEngineLambda'],
         payload=eval_engine_input
     )

@@ -96,6 +96,7 @@ def lambda_handler(event, context):
         try:
             configuration_item=message['configurationItem']
         except KeyError:
+            print('ignored: no configurationItem')
             delete_message(
                 queue_url=os.environ['QueueUrl'],
                 receipt_handle=record['receiptHandle']
@@ -105,7 +106,6 @@ def lambda_handler(event, context):
             
             message_resource_type=configuration_item['resourceType']
         
-            
             if message_account_id in spoke_accounts and message_resource_type in resource_types_subject_to_pac:
                 
                 print(f'message_account_id ({message_account_id}) is in spoke_accounts:\n{spoke_accounts}\nand message_resource_type({message_resource_type}) is in resource_types_subject_to_pac:\n{resource_types_subject_to_pac}')
