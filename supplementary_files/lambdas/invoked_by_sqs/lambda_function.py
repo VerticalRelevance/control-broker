@@ -16,33 +16,32 @@ def sign_request(*,
     input_:dict,
 ):
     
-    def get_host(full_invoke_url):
-        m = re.search('https://(.*)/.*',full_invoke_url)
-        return m.group(1)
+    # def get_host(full_invoke_url):
+    #     m = re.search('https://(.+?)/.*',full_invoke_url)
+    #     return m.group(1)
     
-    host = get_host(full_invoke_url)
+    # # host = get_host(full_invoke_url)
+    # host = full_invoke_url
     
-    auth = BotoAWSRequestsAuth(
-        aws_host= host,
-        aws_region=region,
-        aws_service='execute-api'
-    )
+    # auth = BotoAWSRequestsAuth(
+    #     aws_host= host,
+    #     aws_region=region,
+    #     aws_service='execute-api'
+    # )
     
     print(f'begin request\nfull_invoke_url\n{full_invoke_url}\njson input\n{input_}')
     
     r = requests.post(
         full_invoke_url,
-        auth = auth,
+        # auth = auth,
         json = input_
     )
     
     print(f'signed request headers:\n{dict(r.request.headers)}')
     
-    content = json.loads(r.content)
-    
     r = {
         'StatusCode':r.status_code,
-        'Content': content
+        'Content': r.json()
     }
     
     print(f'formatted response:\n{r}')

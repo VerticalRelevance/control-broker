@@ -170,7 +170,7 @@ class HubStack(Stack):
             },
         )
         
-        self.api_cb.root.add_method("GET", aws_apigateway.LambdaIntegration(self.lambda_invoked_by_apigw))
+        self.api_cb.root.add_method("POST", aws_apigateway.LambdaIntegration(self.lambda_invoked_by_apigw))
         
         self.lambda_invoked_by_sqs = aws_lambda.Function(
             self,
