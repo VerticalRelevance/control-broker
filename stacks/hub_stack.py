@@ -118,48 +118,22 @@ class HubStack(Stack):
                     aws_iam.PolicyStatement(
                         effect=aws_iam.Effect.ALLOW,
                         actions=["execute-api:Invoke"],
-                        principals=["*"],
+                        principals=[aws_iam.AnyPrincipal()],
                         resources=["execute-api:/*"]
                     ),
                     aws_iam.PolicyStatement(
                         effect=aws_iam.Effect.DENY,
                         actions=["execute-api:Invoke"],
-                        principals=["*"],
+                        principals=[aws_iam.AnyPrincipal()],
                         resources=["execute-api:/*"],
                         conditions={
                             "StringNotEquals": {
-                               "aws:SourceVpc": "vpc-1a2b3c4d"
+                               "aws:SourceVpc": self.vpc.vpc_id
                             }
                         }
                     ),
                 ]
             )
-            {
-                "Version": "2012-10-17",
-                "Statement": [
-                    {
-                        "Effect": "Allow",
-                        "Principal": "*",
-                        "Action": "execute-api:Invoke",
-                        "Resource": [
-                            "execute-api:/*"
-                        ]
-                    },
-                    {
-                        "Effect": "Deny",
-                        "Principal": "*",
-                        "Action": "execute-api:Invoke",
-                        "Resource": [
-                            "execute-api:/*"
-                        ],
-                        "Condition" : {
-                            "StringNotEquals": {
-                               "aws:SourceVpc": "vpc-1a2b3c4d"
-                            }
-                        }
-                    }
-                ]
-            }
         )
         
         self.lambda_invoked_by_apigw = aws_lambda.Function(
