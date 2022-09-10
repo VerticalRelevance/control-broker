@@ -145,7 +145,7 @@ class HubStack(Stack):
             ),
             deploy_options=aws_apigateway.StageOptions(
                 access_log_destination=aws_apigateway.LogGroupLogDestination(self.log_group_api),
-                access_log_format=aws_apigateway.AccessLogFormat.json_with_standard_fields()
+                logging_level=aws_apigateway.MethodLoggingLevel.INFO
             ),
             policy=aws_iam.PolicyDocument(
                 statements=[
@@ -213,7 +213,7 @@ class HubStack(Stack):
             ]
         )
         
-        #AWSLambdaVPCAccessExecutionRole
+        self.lambda_invoked_by_sqs.role.add_managed_policy(aws_iam.ManagedPolicy.from_aws_managed_policy_name('AWSLambdaVPCAccessExecutionRole'))
         
         self.lambda_invoked_by_sqs.role.add_to_policy(
             aws_iam.PolicyStatement(
