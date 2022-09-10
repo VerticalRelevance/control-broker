@@ -151,3 +151,19 @@ class HubStack(Stack):
                 ]
             )
         )
+        
+        self.lambda_invoked_by_apigw = aws_lambda.Function(
+            self,
+            "InvokedByApigw",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(20),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/invoked_by_apigw"
+            ),
+            environment={
+            },
+        )
+        
+        self.api.root.add_method("GET", aws_apigateway.LambdaIntegration(lambda_invoked_by_apigw))
