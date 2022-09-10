@@ -108,9 +108,11 @@ def lambda_handler(event, context):
             
             if message_account_id in spoke_accounts and message_resource_type in resource_types_subject_to_pac:
                 
-                print(f'message_account_id ({message_account_id}) is in spoke_accounts:\n{spoke_accounts}')
+                print(f'message_account_id ({message_account_id}) is in spoke_accounts:\n{spoke_accounts}\nand message_resource_type({message_resource_type}) is in resource_types_subject_to_pac:\n{resource_types_subject_to_pac}')
                 
                 process_message_subject_to_pac(message)
+            
+            print(f'ignored: message_account_id ({message_account_id}) is NOT in spoke_accounts:\n{spoke_accounts}\nOR message_resource_type({message_resource_type}) is NOT in resource_types_subject_to_pac:\n{resource_types_subject_to_pac}')
             
             delete_message(
                 queue_url=os.environ['QueueUrl'],

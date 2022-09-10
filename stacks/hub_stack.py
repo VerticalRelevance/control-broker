@@ -129,6 +129,11 @@ class HubStack(Stack):
             # )
         )
         
+        self.log_group_api = aws_logs.LogGroup(
+            self,
+            "ApiControlBroker",
+            retention=aws_logs.RetentionDays.ONE_DAY
+        )
         
         self.api_cb = aws_apigateway.RestApi(self, "ApiCb",
             rest_api_name="ControlBroker",
@@ -137,6 +142,10 @@ class HubStack(Stack):
                 vpc_endpoints=[
                     self.endpoint
                 ]
+            ),
+            deploy_options=aws_apigateway.StageOptions(
+                access_log_destination=aws_apigateway.LogGroupLogDestination(self.log_group_api),
+                access_log_format=aws_apigateway.AccessLogFormat.json_with_standard_fields()
             ),
             policy=aws_iam.PolicyDocument(
                 statements=[
