@@ -264,10 +264,10 @@ def lambda_handler(event, context):
     
     if event["InputType"]=='ConfigEvent':
         configuration_item=event['InputToBeEvaluated']['configurationItem']
-        resource_aws_id=configuration_item['awsAccountId'],
-        resource_region=configuration_item['awsRegion'],
-        resource_type=configuration_item['resourceType'],
-        resource_id=configuration_item['resourceId'],
+        resource_aws_id=configuration_item['awsAccountId']
+        resource_region=configuration_item['awsRegion']
+        resource_type=configuration_item['resourceType']
+        resource_id=configuration_item['resourceId']
     
     c=ControlBrokerASFF(
         resource_aws_id=resource_aws_id,
