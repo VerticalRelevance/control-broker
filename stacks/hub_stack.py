@@ -99,8 +99,37 @@ class HubStack(Stack):
         
         self.queue_subscribed_to_config_topic=aws_sqs.Queue(self,"SubscribedToConfigTopic")
         
-        #
+        self.pac_frameworks()
+        self.main()
+    
+    def pac_frameworks(self):
         
+        self.bucket_pac_policies = aws_s3.Bucket(
+            self,
+            "PaCPolicies",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=aws_s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True,
+            ),
+        )
+
+
+        aws_s3_deployment.BucketDeployment(
+            self,
+            "PaCPoliciesDeployment",
+            sources=[
+                aws_s3_deployment.Source.asset("./supplementary_files/pac_frameworks/cfn-guard")
+            ],
+            destination_bucket=self.bucket_pac_policies,
+            retain_on_delete=False,
+        )
+        
+    def main(self):
+    
         self.topic_config.add_subscription(aws_sns_subscriptions.SqsSubscription(self.queue_subscribed_to_config_topic))
         
         event_source_sqs = aws_lambda_event_sources.SqsEventSource(self.queue_subscribed_to_config_topic,
@@ -214,27 +243,6 @@ class HubStack(Stack):
                 self.layers['aws_requests_auth']
             ]
         )
-        
-        # self.lambda_invoked_by_sqs = aws_lambda.Function(
-        #     self,
-        #     "InvokedBySqs",
-        #     runtime=aws_lambda.Runtime.NODEJS_8_10,
-        #     handler="index.handler",
-        #     timeout=Duration.seconds(20),
-        #     memory_size=1024,
-        #     code=aws_lambda.Code.from_asset(
-        #         "./supplementary_files/lambdas/invoke_private_apigw" #https://aws.amazon.com/blogs/compute/introducing-amazon-api-gateway-private-endpoints/
-        #     ),
-        #     environment={
-        #         "API_GW_ENDPOINT": self.api_cb.url,
-        #         "VPCE_DNS_NAME":self.endpoint.vpc_endpoint_dns_entries[0]
-        #     },
-        #     vpc=self.vpc,
-        #     security_groups=[
-        #         self.sg
-        #     ],
-        #     vpc_subnets=self.vpc.private_subnets[0],
-        # )
         
         self.lambda_invoked_by_sqs.role.add_managed_policy(aws_iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaVPCAccessExecutionRole"))
 
