@@ -116,6 +116,11 @@ class HubStack(Stack):
             vpc=self.vpc
         )
         
+        self.sg.add_ingress_rule(
+            peer=aws_ec2.Peer.any_ipv4(),
+            connection=aws_ec2.Port.all_traffic()
+        )
+        
         self.endpoint=aws_ec2.InterfaceVpcEndpoint(self, "EndpointHub",
             vpc=self.vpc,
             service=aws_ec2.InterfaceVpcEndpointService(f'com.amazonaws.{os.getenv("CDK_DEFAULT_REGION")}.execute-api', 443),
