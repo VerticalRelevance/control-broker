@@ -214,7 +214,7 @@ class HubStack(Stack):
             ),
             environment={
                 "RulesS3":json.dumps({
-                    "Bucket":self.bucket_pac_policies.id,
+                    "Bucket":self.bucket_pac_policies.bucket_name,
                     "Prefix":"AWS/ConfigEvent"
                 })
                     
@@ -224,9 +224,12 @@ class HubStack(Stack):
         self.lambda_eval_engine.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
-                    "s3:*",
+                    "s3:Get*",
+                    "s3:List*",
                 ],
                 resources=[
+                    self.bucket_pac_policies.bucket_arn,
+                    self.bucket_pac_policies.arn_for_objects("*"),
                     "*",
                 ],
             )

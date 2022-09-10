@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 
 lambda_ = boto3.client('lambda')
 
-def invoke_lambda(*, function_name:str=None, payload:typing.Mapping[str, str]=None):
+def invoke_lambda_async(*, function_name:str=None, payload:typing.Mapping[str, str]=None):
     if function_name == None:
         raise Exception('ERROR: function_name parameter cannot be NULL')
     payloadStr = json.dumps(payload)
@@ -14,14 +14,16 @@ def invoke_lambda(*, function_name:str=None, payload:typing.Mapping[str, str]=No
     try:
         r=lambda_.invoke(
             FunctionName=function_name,
-            InvocationType="RequestResponse",
+            InvocationType='Event',
             Payload=payloadBytesArr
         )
     except ClientError as e:
         print(f'ClientError:\n{e}')
         raise
     else:
-        output=r["Payload"].read()
+        print(r)
+        # output=r["Payload"].read()
+        return True
 
 def lambda_handler(event, context):
 
