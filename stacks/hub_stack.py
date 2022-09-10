@@ -19,7 +19,7 @@ from aws_cdk import (
     aws_logs,
     aws_events,
     aws_events_targets,
-    aws_apigatewayv2,
+    aws_apigateway,
     aws_s3objectlambda,
     aws_lambda_event_sources,
     aws_sns_subscriptions,
@@ -92,10 +92,17 @@ class HubStack(Stack):
             cidr="10.0.0.0/16"
         )
         
-        self.sg=ec2.SecurityGroup(self, "SgHub",
+        self.sg=aws_ec2.SecurityGroup(self, "SgHub",
             vpc=self.vpc
         )
         
+        self.endpoint=aws_ec2.InterfaceVpcEndpoint(self, "EndpointHub",
+            vpc=self.vpc,
+            service=aws_ec2.InterfaceVpcEndpointService(f'com.amazonaws.{os.getenv("CDK_DEFAULT_REGION")}.execute-api', 443),
+            # subnets=aws_ec2.SubnetSelection(
+            #     availability_zones=["us-east-1a", "us-east-1c"]
+            # )
+        )
         
         self.lambda_invoked_by_sqs = aws_lambda.Function(
             self,
@@ -134,3 +141,13 @@ class HubStack(Stack):
         )
         
         self.lambda_invoked_by_sqs.add_event_source(event_source_sqs)
+        
+        self.api_cb = aws_apigateway.RestApi(self, "ApiCb",
+            rest_api_name="ControlBroker",
+            endpoint_configuration=aws_apigateway.EndpointConfiguration(
+                types=[aws_apigateway.EndpointType.PRIVATE],
+                vpc_endpoints=[
+                    self.endpoint
+                ]
+            )
+        )

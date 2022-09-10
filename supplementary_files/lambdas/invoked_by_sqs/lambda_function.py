@@ -5,7 +5,7 @@ from botocore.exceptions import ClientError
 
 sqs= boto3.client("sqs")
 
-def process_message(message):
+def process_message_subject_to_pac(message):
     print('begin process_message')
 
 def delete_message(*,queue_url,receipt_handle):
@@ -43,9 +43,9 @@ def lambda_handler(event, context):
             
             print(f'message_account_id ({message_account_id}) is in spoke_accounts:\n{spoke_accounts}')
             
-            process_message(message)
+            process_message_subject_to_pac(message)
         
         delete_message(
-            queue_url=os.environ['SpokeAccounts'],
+            queue_url=os.environ['QueueUrl'],
             receipt_handle=record['receiptHandle']
         )
