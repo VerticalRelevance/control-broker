@@ -39,7 +39,7 @@ def lambda_handler(event, context):
     
     invoke_lambda(
         function_name=os.environ['EvalEngineLambda'],
-        paload=eval_engine_input
+        payload=eval_engine_input
     )
 
     

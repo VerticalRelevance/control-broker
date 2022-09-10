@@ -213,6 +213,11 @@ class HubStack(Stack):
                 "./supplementary_files/lambdas/eval_engine"
             ),
             environment={
+                "RulesS3":json.dumps({
+                    "Bucket":self.bucket_pac_policies.id,
+                    "Prefix":"AWS/ConfigEvent"
+                })
+                    
             },
         )
         
@@ -240,18 +245,18 @@ class HubStack(Stack):
                 "./supplementary_files/lambdas/invoked_by_apigw"
             ),
             environment={
-                'EvalEngineLambda':self.lambda_eval_engine.lambda_function_name
+                'EvalEngineLambda':self.lambda_eval_engine.function_name
             },
         )
         
         self.lambda_invoked_by_apigw.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
-                    "lambda:InvokeInvokeFunction",
+                    "lambda:InvokeFunction",
                 ],
                 resources=[
                     "*",
-                    self.lambda_eval_engine.lambda_function_arn,
+                    self.lambda_eval_engine.function_arn,
                 ],
             )
         )

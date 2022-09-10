@@ -1,11 +1,9 @@
-import json
+import json, os, re
 import subprocess
 import shutil
 import boto3
 from botocore.exceptions import ClientError
-import os
 from pathlib import Path
-import re
 import errno
 
 s3 = boto3.client('s3')
@@ -91,9 +89,11 @@ def lambda_handler(event, context):
     
     rules_dir = '/tmp/rules'
     
+    rules_s3=json.loads(os.environ['RulesS3'])
+    
     s3_download_dir(
-        bucket = event['Rules']['Bucket'],
-        prefix = event['Rules']['Prefix'],
+        bucket = rules_s3['Bucket'],
+        prefix = rules_s3['Prefix'],
         local_path = rules_dir
     )
     
@@ -101,11 +101,14 @@ def lambda_handler(event, context):
     
     input_to_be_analyzed_path = '/tmp/input_to_be_analyzed.json'
     
-    s3_download(
-        bucket = event['InputToBeAnalyzed']['Bucket'],
-        key = event['InputToBeAnalyzed']['Key'],
-        local_path = input_to_be_analyzed_path
-    )
+    # s3_download(
+    #     bucket = event['InputToBeAnalyzed']['Bucket'],
+    #     key = event['InputToBeAnalyzed']['Key'],
+    #     local_path = input_to_be_analyzed_path
+    # )
+    
+    with open(input_to_be_analyzed_path,'w') as f:
+        json.dump(event['InputToBeEvaluated'],f,indent=2)
     
     copyanything('./.guard','/tmp/.guard')
     
