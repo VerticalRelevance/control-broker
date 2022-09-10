@@ -127,6 +127,7 @@ class HubStack(Stack):
             security_groups=[
                 self.sg
             ],
+            private_dns_enabled=True
         )
         
         self.log_group_api = aws_logs.LogGroup(
