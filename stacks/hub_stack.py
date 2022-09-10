@@ -201,6 +201,7 @@ class HubStack(Stack):
                 "ResourceTypesSubjectToPac": json.dumps(self.resource_types_subject_to_pac),
                 "QueueUrl": self.queue_subscribed_to_config_topic.queue_url,
                 "ControlBrokerApigwEndpointUrl": self.api_cb.url,
+                "VPCEndpointDNSName":self.endpoint.vpc_endpoint_dns_entries[0]
             },
             vpc=self.vpc,
             security_groups=[
@@ -213,8 +214,35 @@ class HubStack(Stack):
             ]
         )
         
-        self.lambda_invoked_by_sqs.role.add_managed_policy(aws_iam.ManagedPolicy.from_aws_managed_policy_name('AWSLambdaVPCAccessExecutionRole'))
+        self.lambda_invoked_by_sqs = aws_lambda.Function(
+            self,
+            "InvokedBySqs",
+            runtime=aws_lambda.Runtime.NODEJS_8_10,
+            handler="index.handler",
+            timeout=Duration.seconds(20),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/invoke_private_apigw" #https://aws.amazon.com/blogs/compute/introducing-amazon-api-gateway-private-endpoints/
+            ),
+            environment={
+                "API_GW_ENDPOINT": self.api_cb.url,
+                "VPCE_DNS_NAME":self.endpoint.vpc_endpoint_dns_entries[0]
+            },
+            vpc=self.vpc,
+            security_groups=[
+                self.sg
+            ],
+            vpc_subnets=self.vpc.private_subnets[0],
+            layers=[
+                self.layers['requests'],
+                self.layers['aws_requests_auth']
+            ]
+        )
         
+        
+        
+        self.lambda_invoked_by_sqs.role.add_managed_policy(aws_iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaVPCAccessExecutionRole"))
+
         self.lambda_invoked_by_sqs.role.add_to_policy(
             aws_iam.PolicyStatement(
                 actions=[
