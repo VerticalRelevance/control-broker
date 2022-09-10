@@ -104,6 +104,80 @@ class HubStack(Stack):
             # )
         )
         
+        
+        self.api_cb = aws_apigateway.RestApi(self, "ApiCb",
+            rest_api_name="ControlBroker",
+            endpoint_configuration=aws_apigateway.EndpointConfiguration(
+                types=[aws_apigateway.EndpointType.PRIVATE],
+                vpc_endpoints=[
+                    self.endpoint
+                ]
+            ),
+            policy=aws_iam.PolicyDocument(
+                statements=[
+                    aws_iam.PolicyStatement(
+                        effect=aws_iam.Effect.ALLOW,
+                        actions=["execute-api:Invoke"],
+                        principals=["*"],
+                        resources=["execute-api:/*"]
+                    ),
+                    aws_iam.PolicyStatement(
+                        effect=aws_iam.Effect.DENY,
+                        actions=["execute-api:Invoke"],
+                        principals=["*"],
+                        resources=["execute-api:/*"],
+                        conditions={
+                            "StringNotEquals": {
+                               "aws:SourceVpc": "vpc-1a2b3c4d"
+                            }
+                        }
+                    ),
+                ]
+            )
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": "*",
+                        "Action": "execute-api:Invoke",
+                        "Resource": [
+                            "execute-api:/*"
+                        ]
+                    },
+                    {
+                        "Effect": "Deny",
+                        "Principal": "*",
+                        "Action": "execute-api:Invoke",
+                        "Resource": [
+                            "execute-api:/*"
+                        ],
+                        "Condition" : {
+                            "StringNotEquals": {
+                               "aws:SourceVpc": "vpc-1a2b3c4d"
+                            }
+                        }
+                    }
+                ]
+            }
+        )
+        
+        self.lambda_invoked_by_apigw = aws_lambda.Function(
+            self,
+            "InvokedByApigw",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(20),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/invoked_by_apigw"
+            ),
+            environment={
+            },
+        )
+        
+        self.api_cb.root.add_method("GET", aws_apigateway.LambdaIntegration(self.lambda_invoked_by_apigw))
+        
         self.lambda_invoked_by_sqs = aws_lambda.Function(
             self,
             "InvokedBySqs",
@@ -118,6 +192,7 @@ class HubStack(Stack):
                 "SpokeAccounts": json.dumps(self.spoke_accounts),
                 "ResourceTypesSubjectToPac": json.dumps(self.resource_types_subject_to_pac),
                 "QueueUrl": self.queue_subscribed_to_config_topic.queue_url,
+                "ControlBrokerApigwEndpointUrl": self.api_cb.url,
             },
             vpc=self.vpc,
             security_groups=[
@@ -141,29 +216,3 @@ class HubStack(Stack):
         )
         
         self.lambda_invoked_by_sqs.add_event_source(event_source_sqs)
-        
-        self.api_cb = aws_apigateway.RestApi(self, "ApiCb",
-            rest_api_name="ControlBroker",
-            endpoint_configuration=aws_apigateway.EndpointConfiguration(
-                types=[aws_apigateway.EndpointType.PRIVATE],
-                vpc_endpoints=[
-                    self.endpoint
-                ]
-            )
-        )
-        
-        self.lambda_invoked_by_apigw = aws_lambda.Function(
-            self,
-            "InvokedByApigw",
-            runtime=aws_lambda.Runtime.PYTHON_3_9,
-            handler="lambda_function.lambda_handler",
-            timeout=Duration.seconds(20),
-            memory_size=1024,
-            code=aws_lambda.Code.from_asset(
-                "./supplementary_files/lambdas/invoked_by_apigw"
-            ),
-            environment={
-            },
-        )
-        
-        self.api.root.add_method("GET", aws_apigateway.LambdaIntegration(lambda_invoked_by_apigw))
