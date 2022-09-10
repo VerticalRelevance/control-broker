@@ -1,12 +1,71 @@
-import json, os
-import boto3
+import json, os, re
 
+import boto3
 from botocore.exceptions import ClientError
 
+import requests
+from aws_requests_auth.boto_utils import BotoAWSRequestsAuth
+
 sqs= boto3.client("sqs")
+session = boto3.session.Session()
+region = session.region_name
+
+def sign_request(*,
+    full_invoke_url:str,
+    region:str,
+    input_:dict,
+):
+    
+    def get_host(full_invoke_url):
+        m = re.search('https://(.*)/.*',full_invoke_url)
+        return m.group(1)
+    
+    host = get_host(full_invoke_url)
+    
+    auth = BotoAWSRequestsAuth(
+        aws_host= host,
+        aws_region=region,
+        aws_service='execute-api'
+    )
+    
+    print(f'begin request\nfull_invoke_url\n{full_invoke_url}\njson input\n{input}')
+    
+    r = requests.post(
+        full_invoke_url,
+        auth = auth,
+        json = input
+    )
+    
+    print(f'signed request headers:\n{dict(r.request.headers)}')
+    
+    content = json.loads(r.content)
+    
+    r = {
+        'StatusCode':r.status_code,
+        'Content': content
+    }
+    
+    print(f'formatted response:\n{r}')
+    
+    return True
 
 def process_message_subject_to_pac(message):
     print('begin process_message')
+    
+    cb_input_object = {
+        "Context":None,
+        "Input": message
+    }
+    
+    print(f'cb_input_object:\n{cb_input_object}')
+    
+    # sign request
+    
+    sign_request(
+        full_invoke_url = os.environ['ControlBrokerApigwEndpointUrl'],
+        region = region,
+        input_ = cb_input_object
+    )
 
 def delete_message(*,queue_url,receipt_handle):
     

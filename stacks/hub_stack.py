@@ -67,7 +67,7 @@ class HubStack(Stack):
             },
         }
         
-        pac_path='./supplementary_files/pac_frameworks/cfn-guard/AWS/ConfigurationItem'
+        pac_path='./supplementary_files/pac_frameworks/cfn-guard/AWS/ConfigEvent'
         self.resource_types_subject_to_pac=[]
         for root, dirs, files in os.walk(pac_path):
             for filename in files:
@@ -79,7 +79,27 @@ class HubStack(Stack):
             f'arn:aws:sns:{os.getenv("CDK_DEFAULT_REGION")}:{os.getenv("CDK_DEFAULT_ACCOUNT")}:{config_sns_topic}'
         )
         
+        self.layers = {
+            'requests': aws_lambda_python_alpha.PythonLayerVersion(self,
+                    "requests",
+                    entry="./supplementary_files/lambda_layers/requests",
+                    compatible_runtimes=[
+                        aws_lambda.Runtime.PYTHON_3_9
+                    ]
+                ),
+            'aws_requests_auth':aws_lambda_python_alpha.PythonLayerVersion(
+                    self,
+                    "aws_requests_auth",
+                    entry="./supplementary_files/lambda_layers/aws_requests_auth",
+                    compatible_runtimes=[
+                        aws_lambda.Runtime.PYTHON_3_9
+                    ]
+                ),
+        }
+        
         self.queue_subscribed_to_config_topic=aws_sqs.Queue(self,"SubscribedToConfigTopic")
+        
+        #
         
         self.topic_config.add_subscription(aws_sns_subscriptions.SqsSubscription(self.queue_subscribed_to_config_topic))
         
@@ -172,7 +192,11 @@ class HubStack(Stack):
             security_groups=[
                 self.sg
             ],
-            vpc_subnets=self.vpc.private_subnets[0]
+            vpc_subnets=self.vpc.private_subnets[0],
+            layers=[
+                self.layers['requests'],
+                self.layers['aws_requests_auth']
+            ]
         )
         
         #AWSLambdaVPCAccessExecutionRole
