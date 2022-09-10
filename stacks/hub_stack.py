@@ -99,6 +99,13 @@ class HubStack(Stack):
         
         self.queue_subscribed_to_config_topic=aws_sqs.Queue(self,"SubscribedToConfigTopic")
         
+        self.topic_config.add_subscription(aws_sns_subscriptions.SqsSubscription(self.queue_subscribed_to_config_topic))
+        
+        self.event_source_sqs = aws_lambda_event_sources.SqsEventSource(self.queue_subscribed_to_config_topic,
+            batch_size=self.dev_config[self.is_dev]['SQS']['BatchSize'], 
+            # max_batching_window=Duration.minutes(5),
+        )
+        
         self.pac_frameworks()
         self.main()
     
@@ -129,13 +136,6 @@ class HubStack(Stack):
         )
         
     def main(self):
-    
-        self.topic_config.add_subscription(aws_sns_subscriptions.SqsSubscription(self.queue_subscribed_to_config_topic))
-        
-        event_source_sqs = aws_lambda_event_sources.SqsEventSource(self.queue_subscribed_to_config_topic,
-            batch_size=self.dev_config[self.is_dev]['SQS']['BatchSize'], 
-            # max_batching_window=Duration.minutes(5),
-        )
         
         self.vpc = aws_ec2.Vpc(self, "VpcHub",
             cidr="10.0.0.0/16"
@@ -200,6 +200,35 @@ class HubStack(Stack):
             )
         )
         
+        #
+        
+        self.lambda_eval_engine = aws_lambda.Function(
+            self,
+            "EvalEngine",
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            handler="lambda_function.lambda_handler",
+            timeout=Duration.seconds(20),
+            memory_size=1024,
+            code=aws_lambda.Code.from_asset(
+                "./supplementary_files/lambdas/eval_engine"
+            ),
+            environment={
+            },
+        )
+        
+        self.lambda_eval_engine.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "s3:*",
+                ],
+                resources=[
+                    "*",
+                ],
+            )
+        )
+        
+        #
+        
         self.lambda_invoked_by_apigw = aws_lambda.Function(
             self,
             "InvokedByApigw",
@@ -211,10 +240,25 @@ class HubStack(Stack):
                 "./supplementary_files/lambdas/invoked_by_apigw"
             ),
             environment={
+                'EvalEngineLambda':self.lambda_eval_engine.lambda_function_name
             },
         )
         
+        self.lambda_invoked_by_apigw.role.add_to_policy(
+            aws_iam.PolicyStatement(
+                actions=[
+                    "lambda:InvokeInvokeFunction",
+                ],
+                resources=[
+                    "*",
+                    self.lambda_eval_engine.lambda_function_arn,
+                ],
+            )
+        )
+        
         self.api_cb.root.add_method("POST", aws_apigateway.LambdaIntegration(self.lambda_invoked_by_apigw))
+        
+        #
         
         self.lambda_invoked_by_sqs = aws_lambda.Function(
             self,
@@ -258,4 +302,4 @@ class HubStack(Stack):
             )
         )
         
-        self.lambda_invoked_by_sqs.add_event_source(event_source_sqs)
+        self.lambda_invoked_by_sqs.add_event_source(self.event_source_sqs)
