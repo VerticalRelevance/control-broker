@@ -28,12 +28,12 @@ def sign_request(*,
         aws_service='execute-api'
     )
     
-    print(f'begin request\nfull_invoke_url\n{full_invoke_url}\njson input\n{input}')
+    print(f'begin request\nfull_invoke_url\n{full_invoke_url}\njson input\n{input_}')
     
     r = requests.post(
         full_invoke_url,
         auth = auth,
-        json = input
+        json = input_
     )
     
     print(f'signed request headers:\n{dict(r.request.headers)}')
@@ -84,27 +84,36 @@ def lambda_handler(event, context):
 
     print(event)
     
+    spoke_accounts=json.loads(os.environ['SpokeAccounts'])
+    
+    resource_types_subject_to_pac=json.loads(os.environ['ResourceTypesSubjectToPac'])
+    
     for record in event['Records']:
         
         body=json.loads(record['body'])
         
         message=json.loads(body['Message'])
         
-        message_account_id=message['configurationItem']['awsAccountId']
-        
-        message_resource_type=message['configurationItem']['resourceType']
-        
-        spoke_accounts=json.loads(os.environ['SpokeAccounts'])
-        
-        resource_types_subject_to_pac=json.loads(os.environ['ResourceTypesSubjectToPac'])
-        
-        if message_account_id in spoke_accounts and message_resource_type in resource_types_subject_to_pac:
+        try:
+            configuration_item=message['configurationItem']
+        except KeyError:
+            delete_message(
+                queue_url=os.environ['QueueUrl'],
+                receipt_handle=record['receiptHandle']
+            )
+        else:
+            message_account_id=configuration_item['awsAccountId']
             
-            print(f'message_account_id ({message_account_id}) is in spoke_accounts:\n{spoke_accounts}')
-            
-            process_message_subject_to_pac(message)
+            message_resource_type=configuration_item['resourceType']
         
-        delete_message(
-            queue_url=os.environ['QueueUrl'],
-            receipt_handle=record['receiptHandle']
-        )
+            
+            if message_account_id in spoke_accounts and message_resource_type in resource_types_subject_to_pac:
+                
+                print(f'message_account_id ({message_account_id}) is in spoke_accounts:\n{spoke_accounts}')
+                
+                process_message_subject_to_pac(message)
+            
+            delete_message(
+                queue_url=os.environ['QueueUrl'],
+                receipt_handle=record['receiptHandle']
+            )
