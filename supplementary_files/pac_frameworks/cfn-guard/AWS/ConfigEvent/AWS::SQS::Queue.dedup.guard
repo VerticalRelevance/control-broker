@@ -1,5 +1,0 @@
-let configurationItem = configurationItem
-
-rule content_based_deduplication_true when %configurationItem.resourceType == 'AWS::SQS::Queue' {
-    %configurationItem.configuration.ContentBasedDeduplication == "true"
-}
