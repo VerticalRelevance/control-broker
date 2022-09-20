@@ -1,15 +1,34 @@
 version: 0.2
 
+env:
+  variables:
+    CDK_DEFAULT_ACCOUNT: "615251248113"
+    CDK_DEFAULT_REGION: "us-east-1"
 phases:
   install:
     runtime-versions:
       python: 3.9
+      nodejs: 16
     commands:
       - pip install --upgrade pip
+      - npm install --location=global typescript
+      - npm install --location=global ts-node
+      - npm install --location=global aws-cdk
+      - cdk --version
   build:
     commands:
-      # - python3 -m venv .venv
-      # - source .venv/bin/activate
+      - python3 -m venv .venv
+      - source .venv/bin/activate
       - pip install -r requirements.txt
+      - |
+          cat ```
+          [default]
+          aws_access_key_id=${AWS_ACCESS_KEY}
+          aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}
+          aws_session_token=${AWS_SESSION_TOKEN}
+          ``` > ~/.aws/config
       - cdk bootstrap
       - cdk deploy
+
+
+  
