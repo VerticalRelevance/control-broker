@@ -42,7 +42,6 @@ class HubStack(Stack):
         construct_id: str,
         pac_framework: str,
         config_sns_topic:str,
-        spoke_accounts:list,
         is_dev:bool,
         **kwargs,
     ) -> None:
@@ -50,7 +49,6 @@ class HubStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.pac_framework = pac_framework
-        self.spoke_accounts = spoke_accounts
         self.is_dev=is_dev
         
         
@@ -346,7 +344,6 @@ class HubStack(Stack):
                 "./supplementary_files/lambdas/invoked_by_sqs"
             ),
             environment={
-                "SpokeAccounts": json.dumps(self.spoke_accounts),
                 "ResourceTypesSubjectToPac": json.dumps(self.resource_types_subject_to_pac),
                 "QueueUrl": self.queue_subscribed_to_config_topic.queue_url,
                 "ControlBrokerApigwEndpointUrl": self.api_cb.url,

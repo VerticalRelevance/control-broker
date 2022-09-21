@@ -83,8 +83,8 @@ def lambda_handler(event, context):
 
     print(event)
     
-    spoke_accounts=json.loads(os.environ['SpokeAccounts'])
-    
+    cb_account_id = context.invoked_function_arn.split(":")[4]
+
     resource_types_subject_to_pac=json.loads(os.environ['ResourceTypesSubjectToPac'])
     
     for record in event['Records']:
@@ -106,13 +106,13 @@ def lambda_handler(event, context):
             
             message_resource_type=configuration_item['resourceType']
         
-            if message_account_id in spoke_accounts and message_resource_type in resource_types_subject_to_pac:
+            if message_account_id != cb_account_id and message_resource_type in resource_types_subject_to_pac:
                 
-                print(f'message_account_id ({message_account_id}) is in spoke_accounts:\n{spoke_accounts}\nand message_resource_type({message_resource_type}) is in resource_types_subject_to_pac:\n{resource_types_subject_to_pac}')
+                print(f'message_account_id ({message_account_id}) does not originate from the control broker account:\n{cb_account_id}\nand message_resource_type({message_resource_type}) is in resource_types_subject_to_pac:\n{resource_types_subject_to_pac}')
                 
                 process_message_subject_to_pac(message)
             
-            print(f'ignored: message_account_id ({message_account_id}) is NOT in spoke_accounts:\n{spoke_accounts}\nOR message_resource_type({message_resource_type}) is NOT in resource_types_subject_to_pac:\n{resource_types_subject_to_pac}')
+            print(f'ignored: message_account_id ({message_account_id}) is originates from the control broker account:\n{cb_account_id}\nOR message_resource_type({message_resource_type}) is NOT in resource_types_subject_to_pac:\n{resource_types_subject_to_pac}')
             
             delete_message(
                 queue_url=os.environ['QueueUrl'],
