@@ -32,6 +32,9 @@ def lambda_handler(event, context):
     rules_compliant=[i['compliant'] for i in results if i['compliant']]
     print(f'rules_compliant:\n{rules_compliant}')
     
+    rules_compliant=sum(rules_compliant,[])
+    print(f'rules_compliant:\n{rules_compliant}')
+    
     rules_not_compliant=[i['not_compliant'] for i in results if i['not_compliant']]
     print(f'rules_not_compliant:\n{rules_not_compliant}')
     
@@ -40,6 +43,8 @@ def lambda_handler(event, context):
     print(f'compliance_decision:\n{compliance_decision}')
 
     output= {
+        "RulesNotCompliant":rules_not_compliant,
+        "RulesCompliant":rules_compliant,
         "IsCompliant":compliance_decision,
         'InputToBeEvaluated':event['InputToBeEvaluated'],
         "InputType": event["InputType"]

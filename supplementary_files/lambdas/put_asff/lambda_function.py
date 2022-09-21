@@ -27,20 +27,19 @@ lambda_aws_account_id=boto3.client('sts').get_caller_identity().get('Account')
 class ControlBrokerASFF():
     
     def __init__(self,*,
-        resource_aws_id,
+        resource_aws_account_id,
         resource_type,
         resource_id,
         region,
         is_compliant,
+        rule
     ):
         
         now=datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         
-        useful_root=f'ControlBroker-IsCompliant-{is_compliant}'
+        finding_id=f'{resource_aws_account_id}/{resource_type}/{resource_id}/{rule}
         
-        finding_type="ControlBroker/CfnGuard/expected_schema_config_event_invoking_event"
-        
-        finding_id=f'{useful_root}/{now}'
+        finding_type="ControlBroker/CfnGuard"
         
         mapping={
             'Severity':{
@@ -63,7 +62,7 @@ class ControlBrokerASFF():
         self.findings=[
            {
             	"AwsAccountId": lambda_aws_account_id,
-            # 	"AwsAccountId": resource_aws_id,
+            # 	"AwsAccountId": resource_aws_account_id,
             	"Compliance": {
             # 		"RelatedRequirements": ["string"],
             		"Status": mapping['Compliance']['Status']['is_compliant'][is_compliant],
@@ -128,7 +127,7 @@ class ControlBrokerASFF():
         return product_arn
         
     def get_resource_arn(self,*,
-        resource_aws_id,
+        resource_aws_account_id,
         resource_type,
         resource_id,
         region,
@@ -228,7 +227,7 @@ class ControlBrokerASFF():
             partition,
             service,
             service_to_arn_region_section(service,region),
-            service_to_arn_account_section(service,resource_aws_id),
+            service_to_arn_account_section(service,resource_aws_account_id),
             f'{resource_type_to_arn_suffix_prefix(resource_type)}{resource_id_to_arn_suffix_suffix(resource_type,resource_id)}'
         ]
         
@@ -264,16 +263,34 @@ def lambda_handler(event, context):
     
     if event["InputType"]=='ConfigEvent':
         configuration_item=event['InputToBeEvaluated']['configurationItem']
-        resource_aws_id=configuration_item['awsAccountId']
+        resource_aws_account_id=configuration_item['awsAccountId']
         resource_region=configuration_item['awsRegion']
         resource_type=configuration_item['resourceType']
         resource_id=configuration_item['resourceId']
     
-    c=ControlBrokerASFF(
-        resource_aws_id=resource_aws_id,
-        region=resource_region,
-        resource_type=resource_type,
-        resource_id=resource_id,
-        is_compliant=event['IsCompliant']
-    )
-    c.main()
+    rules_not_compliant=event['RulesNotCompliant']
+    
+    rules_compliant=event['RulesCompliant']
+        
+    for rule in rules_not_compliant:
+        c=ControlBrokerASFF(
+            resource_aws_account_id=resource_aws_account_id,
+            region=resource_region,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            is_compliant=False,
+            rule=rule
+        )
+        c.main()
+    
+    for rule in rules_compliant:
+        c=ControlBrokerASFF(
+            resource_aws_account_id=resource_aws_account_id,
+            region=resource_region,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            is_compliant=True,
+            rule=rule
+
+        )
+        c.main()
