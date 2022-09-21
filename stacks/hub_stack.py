@@ -69,8 +69,8 @@ class HubStack(Stack):
         self.resource_types_subject_to_pac=[]
         for root, dirs, files in os.walk(pac_path):
             for filename in files:
-                self.resource_types_subject_to_pac.append(re_search('(AWS::\w+::\w+)\.?.+\.guard',filename))
-        
+                self.resource_types_subject_to_pac.append(re_search('(AWS--\w+--\w+)\.?.+\.guard',filename))
+        self.resource_types_subject_to_pac=[i.replace('--','::') for i in self.resource_types_subject_to_pac]        
         print(self.resource_types_subject_to_pac)
         
         self.topic_config=aws_sns.Topic.from_topic_arn(self,"Config",
