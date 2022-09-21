@@ -38,7 +38,7 @@ def lambda_handler(event, context):
     rules_not_compliant=[i['not_compliant'] for i in results if i['not_compliant']]
     print(f'rules_not_compliant:\n{rules_not_compliant}')
     
-    rules_not_compliant=sum(rules_not_compliant,[])
+    rules_not_compliant=[list(i.keys())[0] for i in rules_not_compliant]
     print(f'rules_not_compliant:\n{rules_not_compliant}')
     
     compliance_decision= not bool(rules_not_compliant)
