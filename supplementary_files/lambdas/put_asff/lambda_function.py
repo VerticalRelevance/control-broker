@@ -110,7 +110,7 @@ class ControlBrokerASFF():
             
         ]
         
-        pp(self.findings)
+        print(self.findings)
 
     def re_search(self,regex,item):
         
