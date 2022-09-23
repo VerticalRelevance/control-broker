@@ -9,13 +9,25 @@ resource "aws_codebuild_project" "terraform_cdk_wrapper_cdk_deployer" {
   }
   environment {
     compute_type                = "BUILD_GENERAL1_SMALL"
-    image                       = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
+    # image                       = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
+    image = "aws/codebuild/standard:6.0"
     type                        = "LINUX_CONTAINER"
     image_pull_credentials_type = "CODEBUILD"
-    # environment_variable {
-    #   name  = "SOME_KEY1"
-    #   value = "SOME_VALUE1"
-    # }
+    environment_variable {
+      name  = "AWS_ACCESS_KEY_ID"
+      value = aws_secretsmanager_secret.wrapper_access_key_id.name
+      type = "SECRETS_MANAGER"
+    }
+    environment_variable {
+      name  = "AWS_SECRET_ACCESS_KEY"
+      value = aws_secretsmanager_secret.wrapper_secret_access_key.name
+      type = "SECRETS_MANAGER"
+    }
+    environment_variable {
+      name  = "AWS_SESSION_TOKEN"
+      value = aws_secretsmanager_secret.wrapper_session_token.name
+      type = "SECRETS_MANAGER"
+    }
     # environment_variable {
     #   name  = "SOME_KEY2"
     #   value = "SOME_VALUE2"
@@ -80,6 +92,17 @@ resource "aws_iam_role_policy" "terraform_cdk_wrapper_deployer_policy" {
       ],
       "Action": [
         "cloudformation:*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Resource": [
+        "${aws_secretsmanager_secret_version.wrapper_access_key_id.arn}",
+        "${aws_secretsmanager_secret_version.wrapper_secret_access_key.arn}",
+        "${aws_secretsmanager_secret_version.wrapper_session_token.arn}"
+      ],
+      "Action": [
+        "secretsmanager:GetSecretValue"
       ]
     },
     {

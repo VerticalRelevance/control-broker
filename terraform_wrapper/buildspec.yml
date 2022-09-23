@@ -7,28 +7,50 @@ env:
 phases:
   install:
     runtime-versions:
-      python: 3.9
+      python: 3.10
       nodejs: 16
     commands:
       - pip install --upgrade pip
       - npm install --location=global typescript
       - npm install --location=global ts-node
       - npm install --location=global aws-cdk
-      - cdk --version
+      # - cdk --version
   build:
     commands:
-      - python3 -m venv .venv
-      - source .venv/bin/activate
+      # - python3 -m venv .venv
+      # - source .venv/bin/activate
       - pip install -r requirements.txt
-      - |
-          cat ```
-          [default]
-          aws_access_key_id=${AWS_ACCESS_KEY}
-          aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}
-          aws_session_token=${AWS_SESSION_TOKEN}
-          ``` > ~/.aws/config
+      - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+      - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+      - export AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN
+      - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+      - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+      - aws configure set aws_session_token $AWS_SESSION_TOKEN
+      - aws configure set region "us-east-1"
+      - yes "" | aws configure --profile default
+      # - export AWS_DEFAULT_REGION="us-east-1"
+      - export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query "Account" --output text)
+      # - aws sts get-caller-identity
+      - export CDK_DEFAULT_REGION=$AWS_DEFAULT_REGION
+      # - mkdir ~/.aws
+      # - echo "[default]" > ~/.aws/credentials
+      # - echo "aws_access_key_id=${AWS_ACCESS_KEY_ID}" >> ~/.aws/credentials
+      # - echo "aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" >> ~/.aws/credentials
+      # - echo "aws_session_token=${AWS_SESSION_TOKEN}" >> ~/.aws/credentials
+      # - echo "region=us-east-1" >> ~/.aws/credentials
+      # - aws configure
+      # - >
+      #   cat <<-EOF
+      #   [default]
+      #   aws_access_key_id=${AWS_ACCESS_KEY_ID}
+      #   aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}
+      #   aws_session_token=${AWS_SESSION_TOKEN}
+      #   region=us-east-1
+      #   EOF > ~/.aws/credentials
       - cdk bootstrap
       - cdk deploy
+      # - npm run cdk bootstrap -r $(aws sts get-caller-identity --query "Arn" --output text)
+      # - npm run cdk deploy -r $(aws sts get-caller-identity --query "Arn" --output text)
 
 
   
