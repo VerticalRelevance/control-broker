@@ -1,9 +1,5 @@
 version: 0.2
 
-env:
-  variables:
-    CDK_DEFAULT_ACCOUNT: "615251248113"
-    CDK_DEFAULT_REGION: "us-east-1"
 phases:
   install:
     runtime-versions:
@@ -14,7 +10,7 @@ phases:
       - npm install --location=global typescript
       - npm install --location=global ts-node
       - npm install --location=global aws-cdk
-      # - cdk --version
+      - cdk --version
   build:
     commands:
       # - python3 -m venv .venv
@@ -27,11 +23,14 @@ phases:
       - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
       - aws configure set aws_session_token $AWS_SESSION_TOKEN
       - aws configure set region "us-east-1"
-      - yes "" | aws configure --profile default
+      - yes "" | aws configure
       # - export AWS_DEFAULT_REGION="us-east-1"
-      - export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query "Account" --output text)
+      # - export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query "Account" --output text)
       # - aws sts get-caller-identity
       - export CDK_DEFAULT_REGION=$AWS_DEFAULT_REGION
+      - pwd
+      - ls -la
+      - ls ~
       # - mkdir ~/.aws
       # - echo "[default]" > ~/.aws/credentials
       # - echo "aws_access_key_id=${AWS_ACCESS_KEY_ID}" >> ~/.aws/credentials
@@ -47,8 +46,15 @@ phases:
       #   aws_session_token=${AWS_SESSION_TOKEN}
       #   region=us-east-1
       #   EOF > ~/.aws/credentials
-      - cdk bootstrap
-      - cdk deploy
+      - |
+        cdk bootstrap \
+        --profile default \
+        --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
+      - |
+        cdk deploy \
+        --profile default \
+        --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess \
+        --require-approval never --force true
       # - npm run cdk bootstrap -r $(aws sts get-caller-identity --query "Arn" --output text)
       # - npm run cdk deploy -r $(aws sts get-caller-identity --query "Arn" --output text)
 
