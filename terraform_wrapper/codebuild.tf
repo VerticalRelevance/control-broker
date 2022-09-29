@@ -1,17 +1,15 @@
 
 resource "aws_codebuild_project" "terraform_cdk_wrapper_cdk_deployer" {
-  name          = "test-project"
-  description   = "test_codebuild_project"
+  name          = var.codebuild_project_name
   build_timeout = "15"
   service_role  = aws_iam_role.terraform_cdk_wrapper_cdk_deployer_role.arn
   artifacts {
     type = "NO_ARTIFACTS"
   }
   environment {
-    compute_type                = "BUILD_GENERAL1_SMALL"
-    # image                       = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
-    image = "aws/codebuild/standard:6.0"
-    type                        = "LINUX_CONTAINER"
+    compute_type = "BUILD_GENERAL1_SMALL"
+    image = var.codebuild_project_image
+    type = "LINUX_CONTAINER" # Not parameterized because not tested with other container types
     privileged_mode = true
     image_pull_credentials_type = "CODEBUILD"
     environment_variable {
@@ -31,32 +29,39 @@ resource "aws_codebuild_project" "terraform_cdk_wrapper_cdk_deployer" {
     }
     environment_variable {
       name  = "CDK_DEFAULT_ACCOUNT"
-      value = "615251248113"
+      value = var.codebuild_cdk_target_account
       type  = "PLAINTEXT"
     }
     environment_variable {
       name  = "CDK_DEFAULT_REGION"
-      value = "us-east-1"
+      value = var.codebuild_cdk_target_region
       type  = "PLAINTEXT"
+    }
+    environment_variable {
+      name = "cdk_destroy"
+      type = "PLAINTEXT"
+      value = tostring(var.cdk_destroy)
     }
   }
   source {
-    type      = "S3"
+    type = "S3"
     location = "${aws_s3_bucket.terraform_cdk_wrapper_pipeline_bucket.id}/${aws_s3_object.control_broker_source_files_zip.key}"
-    buildspec = file("buildspec.yml")
+    buildspec = file(var.codebuild_buildspec_file_name)
   }
-  # TODO - Configure CloudWatch Logging
-  # logs_config {
-  #   cloudwatch_logs {
-  #     group_name  = "log-group"
-  #     stream_name = "log-stream"
-  #   }
-  # }
+  logs_config {
+    cloudwatch_logs {
+      group_name  = aws_cloudwatch_log_group.cloudwatch_log_group.name
+      stream_name = aws_cloudwatch_log_stream.cloudwatch_log_stream.name
+    }
+    s3_logs {
+      status   = "ENABLED"
+      location = "${aws_s3_bucket.terraform_cdk_wrapper_pipeline_bucket.id}/build-log"
+    }
+  }
 }
 
-
 resource "aws_iam_role" "terraform_cdk_wrapper_cdk_deployer_role" {
-  name = "terraform_cdk_wrapper_cdk_deployer_role"
+  name = var.codebuild_role_name
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -74,7 +79,7 @@ EOF
 }
 
 resource "aws_iam_role_policy" "terraform_cdk_wrapper_deployer_policy" {
-  name = "terraform_cdk_wrapper_deployer_policy"
+  name = var.codebuild_role_policy_name
   role = aws_iam_role.terraform_cdk_wrapper_cdk_deployer_role.name
   policy = <<POLICY
 {
@@ -122,7 +127,7 @@ resource "aws_iam_role_policy" "terraform_cdk_wrapper_deployer_policy" {
       ],
       "Resource": [
         "${aws_s3_bucket.terraform_cdk_wrapper_pipeline_bucket.arn}",
-        "${aws_s3_bucket.terraform_cdk_wrapper_pipeline_bucket.arn}/*"
+        "${aws_s3_bucket.terraform_cdk_wrapper_pipeline_bucket.arn}/*/*"
       ]
     }
   ]

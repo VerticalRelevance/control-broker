@@ -9,6 +9,5 @@ cd ../
 terraform init
 terraform validate
 yes "yes" | terraform apply
-# terraform deploy
 
 cd ops

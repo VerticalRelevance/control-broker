@@ -1,16 +1,14 @@
 resource "aws_codepipeline" "terraform_cdk_wrapper_pipeline_deployer" {
-  name     = "tf-test-pipeline"
+  name     = var.codepipeline_pipeline_name
   role_arn = aws_iam_role.terraform_cdk_wrapper_pipeline_role.arn
 
   artifact_store {
     location = aws_s3_bucket.terraform_cdk_wrapper_pipeline_bucket.bucket
     type     = "S3"
-    
-    # TODO - Add encryption
-    # encryption_key {
-    #   id   = data.aws_kms_alias.s3kmskey.arn
-    #   type = "KMS"
-    # }
+    encryption_key {
+      id   = aws_kms_key.cdk_deployer_kms_key.arn
+      type = "KMS"
+    }
   }
   stage {
     name = "Source"
@@ -23,7 +21,7 @@ resource "aws_codepipeline" "terraform_cdk_wrapper_pipeline_deployer" {
       output_artifacts = ["source_output"]
       configuration = {
         S3Bucket = aws_s3_bucket.terraform_cdk_wrapper_pipeline_bucket.id
-        S3ObjectKey = "source.zip"
+        S3ObjectKey = var.cdk_source_file_key
       }
     }
   }
@@ -48,7 +46,7 @@ resource "aws_codepipeline" "terraform_cdk_wrapper_pipeline_deployer" {
 
 # TODO - Parameterize!
 resource "aws_iam_role" "terraform_cdk_wrapper_pipeline_role" {
-  name = "terraform_cdk_wrapper_pipeline_role"
+  name = var.codepipeline_pipeline_role_name
 
   assume_role_policy = <<EOF
 {
@@ -67,7 +65,7 @@ EOF
 }
 # TODO - Parameterize!
 resource "aws_iam_role_policy" "terraform_cdk_wrapper_pipeline_policy" {
-  name = "terraform_cdk_wrapper_pipeline_policy"
+  name = var.codepipeline_pipeline_role_policy_name
   role = aws_iam_role.terraform_cdk_wrapper_pipeline_role.id
   depends_on = [
     aws_s3_object.control_broker_source_files_zip
@@ -87,7 +85,7 @@ resource "aws_iam_role_policy" "terraform_cdk_wrapper_pipeline_policy" {
       ],
       "Resource": [
         "${aws_s3_bucket.terraform_cdk_wrapper_pipeline_bucket.arn}",
-        "${aws_s3_bucket.terraform_cdk_wrapper_pipeline_bucket.arn}/*"
+        "${aws_s3_bucket.terraform_cdk_wrapper_pipeline_bucket.arn}/*/*"
       ]
     },
     {
