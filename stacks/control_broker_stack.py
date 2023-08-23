@@ -25,7 +25,6 @@ from aws_cdk import (
     aws_apigatewayv2_authorizers_alpha,
     aws_apigatewayv2_integrations_alpha,
     aws_lambda_python_alpha,
-    aws_s3objectlambda_alpha,
 )
 
 from constructs import Construct

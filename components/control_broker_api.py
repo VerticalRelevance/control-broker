@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 import aws_cdk
 from aws_cdk import (
     CfnOutput,
+    RemovalPolicy,
     aws_apigatewayv2,
     aws_apigatewayv2_alpha,
     aws_apigatewayv2_authorizers_alpha,
@@ -26,6 +27,7 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         lambda_invoked_by_apigw_eval_engine_endpoint: aws_lambda.Function,
         control_broker_results_bucket: aws_s3.Bucket,
         access_log_retention: aws_logs.RetentionDays = aws_logs.RetentionDays.ONE_DAY,
+        removal_policy=RemovalPolicy.DESTROY,
         **kwargs,
     ):
         super().__init__(scope, name, **kwargs)
@@ -36,7 +38,10 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
         self.control_broker_results_bucket = control_broker_results_bucket
 
         api_log_group = aws_logs.LogGroup(
-            self, f"{id}AccessLogs", retention=access_log_retention
+            self, f"{id}AccessLogs",
+            retention=access_log_retention,
+            removal_policy=removal_policy,
+            log_group_name=f"/aws/vendedlogs/apigateway/{name}"
         )
 
         api_log_group.grant_write(aws_iam.ServicePrincipal("apigateway.amazonaws.com"))
