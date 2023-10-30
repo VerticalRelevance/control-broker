@@ -1,6 +1,5 @@
 import json
 from typing import Any
-from urllib.parse import urljoin
 
 import aws_cdk
 from aws_cdk import (
@@ -18,6 +17,7 @@ from aws_cdk import (
 
 
 class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
+    
     CONTROL_BROKER_EVAL_ENGINE_INVOCATION_PATH = "/EvalEngine"
 
     def __init__(
@@ -68,7 +68,17 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
             },
         )
         self.urls = []
+
+        self.parsed_url = self.url.split('/')
+        self.scheme = self.parsed_url[0].rstrip(':')
+        self.netloc = self.parsed_url[2].rstrip('/')
+
         self._add_control_broker_eval_engine_invocation_route()
+
+    def _urljoin(self, path: str) -> str:
+        """Concatenate and return a URL using the base HttpApi's scheme + netloc with the desired path."""
+
+        return '{}://{}/{}'.format(self.scheme, self.netloc, path)
 
     def _add_control_broker_eval_engine_invocation_route(self):
         """Adds a route, which only handlers can call, that directly invokes the Control Broker Eval Engine."""
@@ -84,10 +94,9 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
             integration=self.handler_invocation_integration,
             authorizer=aws_apigatewayv2_authorizers_alpha.HttpIamAuthorizer(),
         )[0]
-        eval_engine_url = urljoin(
-            self.url.rstrip("/"),
-            self.CONTROL_BROKER_EVAL_ENGINE_INVOCATION_PATH.strip("/"),
-        )
+
+        eval_engine_url = self._urljoin(self.CONTROL_BROKER_EVAL_ENGINE_INVOCATION_PATH.strip('/'))
+
         self.urls.append(eval_engine_url)
         self.handler_invocation_url_mapping = aws_apigatewayv2_alpha.ParameterMapping()
         self.handler_invocation_url_mapping.overwrite_header(
@@ -131,7 +140,7 @@ class ControlBrokerApi(aws_apigatewayv2_alpha.HttpApi):
             integration=integration,
             **kwargs,
         )[0]
-        handler_url = urljoin(self.url.rstrip("/"), path.strip("/"))
+        handler_url = self._urljoin(path.strip("/"))
         self.urls.append(handler_url)
         CfnOutput(self, f"{name}HandlerUrl", value=handler_url)
         # return route
